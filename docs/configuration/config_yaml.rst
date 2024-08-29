@@ -51,7 +51,7 @@ Use the following settings to enable access control:
 
      # Whether to trust Basic Authentication headers. If you have setup Basic Authentication in front of
      # OctoPrint and the user names you use there match OctoPrint accounts, by setting this to true users will
-     # be logged into OctoPrint as the user user during Basic Authentication. Your should ONLY ENABLE THIS if your
+     # be logged into OctoPrint as the user during Basic Authentication. Your should ONLY ENABLE THIS if your
      # OctoPrint instance is only accessible through a connection locked down through Basic Authentication!
      trustBasicAuthentication: false
 
@@ -72,9 +72,9 @@ Use the following settings to enable access control:
      # If a remote user is not found, add them. Use this only if all users from the remote system can use OctoPrint.
      addRemoteUsers: false
 
-     # Secret salt used for password hashing, DO NOT TOUCH. If changed you will no longer be able to log in with your
-     # existing accounts.
-     salt: someSecretSalt
+     # Default timeout after which to require reauthentication by a user for dangerous changes, in minutes.
+     # Defaults to 5 minutes. Set to 0 to disable reauthentication requirements (SECURITY IMPACT!).
+     defaultReauthenticationTimeout: 5
 
 .. _sec-configuration-config_yaml-api:
 
@@ -452,6 +452,11 @@ Use the following settings to enable or disable OctoPrint features:
      # whether G90/G91 also influence absolute/relative mode of extruders
      g90InfluencesExtruder: false
 
+     # Replace all special characters and spaces with text equivalent to make them universally compatible.
+     # Most OS filesystems work fine with unicode characters, but just in case you can revert to the
+     # older behaviour by setting this to true.
+     enforceReallyUniversalFilenames: false
+
 .. _sec-configuration-config_yaml-folder:
 
 Folder
@@ -560,6 +565,14 @@ plugins are tracked:
      # the plugin considered compatible in any case. Only for development, do NOT use in production.
      _forcedCompatible:
      - ...
+
+     # Custom sorting of hooks and implementations provided by plugins. Two-tiered dictionary
+     # structure, plugin identifier mapping to a dictionary of order overrides mapped by
+     # sorting context/hook name
+     _sortingOrder:
+       some_plugin:
+         some_hook: 1
+         some_other_hook: 200
 
      # The rest are individual plugin settings, each tracked by their identifier, e.g.:
      some_plugin:
@@ -755,6 +768,10 @@ Use the following settings to configure the serial connection to the printer:
      # during connect.
      waitForStartOnConnect: false
 
+     # Specifies whether OctoPrint should wait to load the SD card file list until the first firmware capability
+     # report is processed.
+     waitToLoadSdFileList: false
+
      # Specifies whether OctoPrint should send linenumber + checksum with every printer command. Needed for
      # successful communication with Repetier firmware
      alwaysSendChecksum: false
@@ -808,6 +825,16 @@ Use the following settings to configure the serial connection to the printer:
      # Whether to support resends without follow-up ok or not
      supportResendsWithoutOk: false
 
+     # encoding to use when talking to a machine
+     # (ascii limits access to characters 0-127)
+     # (latin_1 enables access to the "extended" ascii characters 0-255)
+     # other values can be used:  https://docs.python.org/3/library/codecs.html#standard-encodings
+     encoding: ascii
+
+     # Whether to enable support for the shutdown action command, allowing the printer to
+     # shut down OctoPrint and the system it's running on
+     enableShutdownActionCommand: false
+
      # Whether to "manually" trigger an ok for M29 (a lot of versions of this command are buggy and
      # the response skips on the ok)
      triggerOkForM29: true
@@ -847,10 +874,6 @@ Use the following settings to configure the server:
      # If this option is true, OctoPrint will enable safe mode on the next server start and
      # reset the setting to false
      startOnceInSafeMode: false
-
-     # Signals to OctoPrint that the last startup was incomplete. OctoPrint will then startup
-     # in safe mode
-     incompleteStartup: false
 
      # Set this to true to make OctoPrint ignore incomplete startups. Helpful for development.
      ignoreIncompleteStartup: false
@@ -894,18 +917,18 @@ Use the following settings to configure the server:
        # (X-Forwarded-Host by default, see above) with forwarded requests.
        hostFallback:
 
-       # List of trusted downstream servers for which to ignore the IP address when trying to determine
-       # the connecting client's IP address. If you have OctoPrint behind more than one reverse proxy
-       # you should add their IPs here so that they won't be interpreted as the client's IP. One reverse
-       # proxy will be handled correctly by default.
+       # List of trusted proxy servers for which to ignore the IP address when trying to determine
+       # the connecting client's IP address. A reverse proxy on the same machine as OctoPrint (e.g. as
+       # found on OctoPi) will be handled correctly by the default setting of 127.0.0.1 and ::1, further
+       # proxies in front of that you'll have to add yourself.
        trustedDownstream:
-       - 192.168.1.254
-       - 192.168.23.42
+       - 127.0.0.1
+       - "::1"
 
      # Whether to allow OctoPrint to be embedded in a frame or not. Note that depending on your setup you might
      # have to set SameSite to None, Secure to true and serve OctoPrint through a reverse proxy that enables https
      # for cookies and thus logging in to work
-     allowFraming: true
+     allowFraming: false
 
      # Settings for further configuration of the cookies that OctoPrint sets (login, remember me, ...)
      cookies:

@@ -1,11 +1,8 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 __author__ = "Gina Häußge <osd@foosel.net>"
 __license__ = "GNU Affero General Public License http://www.gnu.org/licenses/agpl.html"
 __copyright__ = "Copyright (C) 2014 The OctoPrint Project - Released under terms of the AGPLv3 License"
 
-import io
+import datetime
 import logging
 
 from flask import (
@@ -26,21 +23,26 @@ import octoprint.access.users
 import octoprint.plugin
 import octoprint.server
 import octoprint.util.net as util_net
+from octoprint.access import auth_log
 from octoprint.access.permissions import Permissions
 from octoprint.events import Events, eventManager
 from octoprint.server import NO_CONTENT
 from octoprint.server.util import (
+    LoginMechanism,
     corsRequestHandler,
     corsResponseHandler,
+    csrfRequestHandler,
     loginFromApiKeyRequestHandler,
     loginFromAuthorizationHeaderRequestHandler,
     noCachingExceptGetResponseHandler,
 )
 from octoprint.server.util.flask import (
     get_json_command_from_request,
-    get_remote_address,
+    limit,
     no_firstrun_access,
     passive_login,
+    session_signature,
+    to_api_credentials_seen,
 )
 from octoprint.settings import settings as s
 from octoprint.settings import valid_boolean_trues
@@ -70,6 +72,7 @@ api.after_request(noCachingExceptGetResponseHandler)
 api.before_request(corsRequestHandler)
 api.before_request(loginFromAuthorizationHeaderRequestHandler)
 api.before_request(loginFromApiKeyRequestHandler)
+api.before_request(csrfRequestHandler)
 api.after_request(corsResponseHandler)
 
 # ~~ data from plugins
@@ -121,7 +124,7 @@ def pluginData(name):
         raise
     except Exception:
         logging.getLogger(__name__).exception(
-            "Error calling SimpleApiPlugin {}".format(name), extra={"plugin": name}
+            f"Error calling SimpleApiPlugin {name}", extra={"plugin": name}
         )
         return abort(500)
 
@@ -163,7 +166,7 @@ def pluginCommand(name):
         raise
     except Exception:
         logging.getLogger(__name__).exception(
-            "Error while executing SimpleApiPlugin {}".format(name),
+            f"Error while executing SimpleApiPlugin {name}",
             extra={"plugin": name},
         )
         return abort(500)
@@ -271,7 +274,7 @@ def apiVersion():
     return jsonify(
         server=octoprint.server.VERSION,
         api=VERSION,
-        text="OctoPrint {}".format(octoprint.server.DISPLAY_VERSION),
+        text=f"OctoPrint {octoprint.server.DISPLAY_VERSION}",
     )
 
 
@@ -285,14 +288,20 @@ def serverStatus():
 
 
 @api.route("/login", methods=["POST"])
+@limit(
+    "3/minute;5/10 minutes;10/hour",
+    deduct_when=lambda response: response.status_code == 403,
+    error_message="You have made too many failed login attempts. Please try again later.",
+)
 def login():
-    data = request.get_json()
+    data = request.get_json(silent=True)
     if not data:
         data = request.values
 
     if "user" in data and "pass" in data:
         username = data["user"]
         password = data["pass"]
+        remote_addr = request.remote_addr
 
         if "remember" in data and data["remember"] in valid_boolean_trues:
             remember = True
@@ -306,19 +315,25 @@ def login():
         if user is not None:
             if octoprint.server.userManager.check_password(username, password):
                 if not user.is_active:
+                    auth_log(
+                        f"Failed login attempt for user {username} from {remote_addr}, user is deactivated"
+                    )
                     abort(403)
 
                 user = octoprint.server.userManager.login_user(user)
                 session["usersession.id"] = user.session
+                session["usersession.signature"] = session_signature(
+                    username, user.session
+                )
                 g.user = user
 
                 login_user(user, remember=remember)
                 identity_changed.send(
                     current_app._get_current_object(), identity=Identity(user.get_id())
                 )
-                session["login_mechanism"] = "http"
+                session["login_mechanism"] = LoginMechanism.PASSWORD
+                session["credentials_seen"] = datetime.datetime.now().timestamp()
 
-                remote_addr = get_remote_address(request)
                 logging.getLogger(__name__).info(
                     "Actively logging in user {} from {}".format(
                         user.get_id(), remote_addr
@@ -333,6 +348,9 @@ def login():
                     additional_private=s().get(["server", "ipCheck", "trustedSubnets"]),
                 )
                 response["_login_mechanism"] = session["login_mechanism"]
+                response["_credentials_seen"] = to_api_credentials_seen(
+                    session["credentials_seen"]
+                )
 
                 r = make_response(jsonify(response))
                 r.delete_cookie("active_logout")
@@ -340,8 +358,18 @@ def login():
                 eventManager().fire(
                     Events.USER_LOGGED_IN, payload={"username": user.get_id()}
                 )
+                auth_log(f"Logging in user {username} from {remote_addr} via credentials")
 
                 return r
+
+            else:
+                auth_log(
+                    f"Failed login attempt for user {username} from {remote_addr}, wrong password"
+                )
+        else:
+            auth_log(
+                f"Failed login attempt for user {username} from {remote_addr}, user is unknown"
+            )
 
         abort(403)
 
@@ -369,6 +397,7 @@ def logout():
 
     if username:
         eventManager().fire(Events.USER_LOGGED_OUT, payload={"username": username})
+        auth_log(f"Logging out user {username} from {request.remote_addr}")
 
     return r
 
@@ -484,7 +513,7 @@ def _test_path(data):
                 os.makedirs(path)
             except Exception:
                 logging.getLogger(__name__).exception(
-                    "Error while trying to create {}".format(path)
+                    f"Error while trying to create {path}"
                 )
                 return jsonify(
                     path=path,
@@ -517,12 +546,12 @@ def _test_path(data):
     if check_writable_dir and check_type == "dir":
         try:
             test_path = os.path.join(path, ".testballoon.txt")
-            with io.open(test_path, "wb") as f:
+            with open(test_path, "wb") as f:
                 f.write(b"Test")
             os.remove(test_path)
         except Exception:
             logging.getLogger(__name__).exception(
-                "Error while testing if {} is really writable".format(path)
+                f"Error while testing if {path} is really writable"
             )
             return jsonify(
                 path=path,
@@ -548,7 +577,7 @@ def _test_url(data):
 
     from octoprint import util as util
 
-    class StatusCodeRange(object):
+    class StatusCodeRange:
         def __init__(self, start=None, end=None):
             self.start = start
             self.end = end
@@ -687,7 +716,7 @@ def _test_url(data):
                 response_result["content"] = content
     except Exception:
         logging.getLogger(__name__).exception(
-            "Error while running a test {} request on {}".format(method, url)
+            f"Error while running a test {method} request on {url}"
         )
         outcome = False
 
@@ -744,7 +773,7 @@ def _test_address(data):
 
     remote_addr = data.get("address")
     if not remote_addr:
-        remote_addr = get_remote_address(request)
+        remote_addr = request.remote_addr
 
     remote_addr = sanitize_address(remote_addr)
     ip = netaddr.IPAddress(remote_addr)

@@ -1,28 +1,18 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 __license__ = "GNU Affero General Public License http://www.gnu.org/licenses/agpl.html"
 __copyright__ = "Copyright (C) 2018 The OctoPrint Project - Released under terms of the AGPLv3 License"
 
+import concurrent.futures
 import hashlib
 import logging
+import time
+from urllib.parse import urlencode
 
 import requests
 from flask_babel import gettext
 
 import octoprint.plugin
-
-try:
-    # noinspection PyCompatibility
-    from urllib.parse import urlencode
-except ImportError:
-    from urllib import urlencode
-
-# noinspection PyCompatibility
-import concurrent.futures
-
 from octoprint.events import Events
-from octoprint.util import RepeatedTimer, monotonic_time
+from octoprint.util import RepeatedTimer
 from octoprint.util.version import get_octoprint_version_string
 
 TRACKING_URL = "https://tracking.octoprint.org/track/{id}/{event}/"
@@ -44,6 +34,7 @@ class TrackingPlugin(
         self._environment = None
         self._throttle_state = None
         self._helpers_get_throttle_state = None
+        self._helpers_get_unlocked_achievements = None
         self._printer_connection_parameters = None
         self._url = None
         self._ping_worker = None
@@ -52,7 +43,7 @@ class TrackingPlugin(
 
         self._record_next_firmware_info = False
 
-        self._startup_time = monotonic_time()
+        self._startup_time = time.monotonic()
 
     def initialize(self):
         self._init_id()
@@ -76,6 +67,7 @@ class TrackingPlugin(
                 "printer": True,
                 "printer_safety_check": True,
                 "throttled": True,
+                "achievements": True,
                 "slicing": True,
                 "webui_load": True,
             },
@@ -191,6 +183,11 @@ class TrackingPlugin(
         ):
             self._track_printer_safety_event(event, payload)
 
+        elif hasattr(Events, "PLUGIN_ACHIEVEMENTS_ACHIEVEMENT_UNLOCKED") and event in (
+            Events.PLUGIN_ACHIEVEMENTS_ACHIEVEMENT_UNLOCKED,
+        ):
+            self._track_achievement_unlocked_event(event, payload)
+
     ##~~ TemplatePlugin
 
     def get_template_configs(self):
@@ -233,6 +230,22 @@ class TrackingPlugin(
         if not self._settings.get_boolean(["enabled"]):
             return
 
+        if self._helpers_get_throttle_state is None:
+            # cautiously look for the get_throttled helper from pi_support
+            pi_helper = self._plugin_manager.get_helpers("pi_support", "get_throttled")
+            if pi_helper and "get_throttled" in pi_helper:
+                self._helpers_get_throttle_state = pi_helper["get_throttled"]
+
+        if self._helpers_get_unlocked_achievements is None:
+            # cautiously look for the get_unlocked_achievements helper from achievements
+            achievements_helper = self._plugin_manager.get_helpers(
+                "achievements", "get_unlocked_achievements"
+            )
+            if achievements_helper and "get_unlocked_achievements" in achievements_helper:
+                self._helpers_get_unlocked_achievements = achievements_helper[
+                    "get_unlocked_achievements"
+                ]
+
         if self._ping_worker is None:
             ping_interval = self._settings.get_int(["ping"])
             if ping_interval:
@@ -249,12 +262,6 @@ class TrackingPlugin(
                 )
                 self._pong_worker.start()
 
-        if self._helpers_get_throttle_state is None:
-            # cautiously look for the get_throttled helper from pi_support
-            pi_helper = self._plugin_manager.get_helpers("pi_support", "get_throttled")
-            if pi_helper and "get_throttled" in pi_helper:
-                self._helpers_get_throttle_state = pi_helper["get_throttled"]
-
         # now that we have everything set up, phone home.
         self._track_startup()
 
@@ -262,7 +269,7 @@ class TrackingPlugin(
         if not self._settings.get_boolean(["enabled"]):
             return
 
-        uptime = int(monotonic_time() - self._startup_time)
+        uptime = int(time.monotonic() - self._startup_time)
         printer_state = self._printer.get_state_id()
         self._track("ping", octoprint_uptime=uptime, printer_state=printer_state)
 
@@ -282,6 +289,16 @@ class TrackingPlugin(
                 plugins_thirdparty,
             )
         )
+
+        if self._helpers_get_unlocked_achievements and self._settings.get_boolean(
+            ["events", "achievements"]
+        ):
+            payload["achievements"] = ",".join(
+                map(
+                    lambda x: x.key.lower(),
+                    self._helpers_get_unlocked_achievements(),
+                )
+            )
 
         self._track("pong", body=True, **payload)
 
@@ -495,6 +512,15 @@ class TrackingPlugin(
             printer_safety_check_name=payload.get("check_name", "unknown"),
         )
 
+    def _track_achievement_unlocked_event(self, event, payload):
+        if not self._settings.get_boolean(["events", "achievements"]):
+            return
+
+        self._track(
+            "achievement_unlocked",
+            achievement=payload.get("key", "unknown"),
+        )
+
     def _track_slicing_event(self, event, payload):
         if not self._settings.get_boolean(["events", "slicing"]):
             return
@@ -523,18 +549,16 @@ class TrackingPlugin(
         # Don't print the URL or UUID! That would expose the UUID in forums/tickets
         # if pasted. It's okay for the user to know their uuid, but it shouldn't be shared.
 
-        headers = {"User-Agent": "OctoPrint/{}".format(get_octoprint_version_string())}
+        headers = {"User-Agent": f"OctoPrint/{get_octoprint_version_string()}"}
         try:
             params = urlencode(kwargs, doseq=True).replace("+", "%20")
 
             if body:
-                requests.post(url, data=params, timeout=3.1, headers=headers)
+                requests.post(url, data=params, timeout=3.05, headers=headers)
             else:
-                requests.get(url, params=params, timeout=3.1, headers=headers)
+                requests.get(url, params=params, timeout=3.05, headers=headers)
 
-            self._logger.info(
-                "Sent tracking event {}, payload: {!r}".format(event, kwargs)
-            )
+            self._logger.info(f"Sent tracking event {event}, payload: {kwargs!r}")
         except Exception:
             if self._logger.isEnabledFor(logging.DEBUG):
                 self._logger.exception(
@@ -565,6 +589,10 @@ class TrackingPlugin(
                 payload["octopi_version"] = self._environment["plugins"]["pi_support"][
                     "octopi_version"
                 ]
+            if "octopiuptodate_build" in self._environment["plugins"]["pi_support"]:
+                payload["octopiuptodate_build"] = self._environment["plugins"][
+                    "pi_support"
+                ]["octopiuptodate_build"]
 
         return payload
 
@@ -576,6 +604,6 @@ __plugin_description__ = (
 __plugin_url__ = "https://tracking.octoprint.org"
 __plugin_author__ = "Gina Häußge"
 __plugin_license__ = "AGPLv3"
-__plugin_pythoncompat__ = ">=2.7,<4"
+__plugin_pythoncompat__ = ">=3.7,<4"
 
 __plugin_implementation__ = TrackingPlugin()
