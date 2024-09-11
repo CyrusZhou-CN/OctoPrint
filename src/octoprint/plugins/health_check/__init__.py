@@ -8,6 +8,7 @@ import octoprint.access.permissions
 import octoprint.plugin
 import octoprint.settings
 from octoprint.access.groups import ADMIN_GROUP
+from octoprint.util import RepeatedTimer
 
 from .checks import OK_RESULT
 
@@ -23,9 +24,17 @@ class HealthCheckPlugin(
         super().__init__(*args, **kwargs)
 
         self._checks = {}
+        self._background_check_timer = None
 
     def initialize(self):
         self._initialize_checks()
+
+        check_interval = self._settings.get(["check_interval"])
+        if check_interval > 0:
+            self._background_check_timer = RepeatedTimer(
+                check_interval * 60, self._background_check, run_first=True
+            )
+            self._background_check_timer.start()
 
     def _initialize_checks(self):
         from .checks.filesystem_storage import FilesystemStorageCheck
@@ -61,9 +70,6 @@ class HealthCheckPlugin(
     def disabled_checks(self):
         return self._settings.get(["disabled"])
 
-    def check(self, key, force=False):
-        self._checks[key].perform_check(force=force)
-
     def check_all(self, force=False):
         result = {}
         for check in self._checks.values():
@@ -78,7 +84,37 @@ class HealthCheckPlugin(
                 self._logger.exception(
                     f"Exception while running health check {check.key}"
                 )
+
         return result
+
+    def _background_check(self, force=False):
+        from .checks import Result
+
+        result = self.check_all(force=force)
+
+        issues = {k: v for k, v in result.items() if v.result == Result.ISSUE.value}
+        warnings = {k: v for k, v in result.items() if v.result == Result.WARNING.value}
+        if issues or warnings:
+            issue_text = (
+                (
+                    "  Issues:\n"
+                    + "\n".join([f"  - {k}: {v.context!r}" for k, v in issues.items()])
+                    + "\n"
+                )
+                if issues
+                else ""
+            )
+            warning_text = (
+                (
+                    "  Warnings:\n"
+                    + "\n".join([f"  - {k}: {v.context!r}" for k, v in warnings.items()])
+                )
+                if warnings
+                else ""
+            )
+            self._logger.warning(
+                f"Health check detected problems!\n{issue_text}{warning_text}"
+            )
 
     def _settings_for_check(self, key):
         return self._settings.get(["checks", key], asdict=True, merged=True)
@@ -103,6 +139,33 @@ class HealthCheckPlugin(
     def register_custom_events(self, *args, **kwargs):
         return ["update_healthcheck"]
 
+    ##~~ Additional bundle files hook
+
+    def get_additional_bundle_files(self, *args, **kwargs):
+        def output():
+            import json
+
+            from .checks import Result
+
+            result = self.check_all()
+
+            output = "Health Check Report\n\n"
+            for k, v in result.items():
+                output += f"- {k}: {v.result}\n"
+                if v.result != Result.OK.value and v.context:
+                    output += "  Context:\n"
+                    output += "\n".join(
+                        ["  " + x for x in json.dumps(v.context, indent=2).split("\n")]
+                    )
+                    output += "\n"
+                output += "\n"
+
+            return output
+
+        return {
+            "plugin_health_check_report.log": output,
+        }
+
     ##~~ SettingsPlugin
 
     def get_settings_defaults(self):
@@ -119,6 +182,7 @@ class HealthCheckPlugin(
                 "filesystem_storage": {"issue_threshold": 95, "warning_threshold": 85},
             },
             "disabled": [],
+            "check_interval": 60,
         }
 
     def on_settings_save(self, data):
@@ -168,4 +232,5 @@ __plugin_implementation__ = HealthCheckPlugin()
 __plugin_hooks__ = {
     "octoprint.access.permissions": __plugin_implementation__.get_additional_permissions,
     "octoprint.events.register_custom_events": __plugin_implementation__.register_custom_events,
+    "octoprint.systeminfo.additional_bundle_files": __plugin_implementation__.get_additional_bundle_files,
 }

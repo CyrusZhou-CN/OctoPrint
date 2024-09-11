@@ -29,8 +29,7 @@ class PythonEolHealthCheck(HealthCheck):
         major = sys.version_info.major
         major_minor = f"{sys.version_info.major}.{sys.version_info.minor}"
 
-        # major = "3"  # for testing
-        # major_minor = "3.7"  # for testing
+        # major, major_minor = ("3", "3.7")  # for testing
 
         for python in (
             major,
