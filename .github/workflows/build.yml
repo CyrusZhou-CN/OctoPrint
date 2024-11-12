@@ -132,9 +132,6 @@ jobs:
       matrix:
         python: ["3.7", "3.12"]
     steps:
-      - name: ⬇ Checkout code
-        uses: actions/checkout@v4
-
       - name: ⬇ Download build result
         uses: actions/download-artifact@v4
         with:
@@ -142,7 +139,7 @@ jobs:
           path: dist
 
       - name: 🎭 Run E2E
-        uses: OctoPrint/OctoPrint/.github/actions/e2e@${{ github.ref }}
+        uses: OctoPrint/actions/e2e@main
         with:
           ref: ${{ github.ref }}
           deps: dist/*.whl
