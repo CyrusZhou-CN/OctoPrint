@@ -144,6 +144,7 @@ jobs:
           ref: ${{ github.ref }}
           octoprint: ${{ github.workspace }}/dist/*.whl
           python: ${{ matrix.python }}
+          suffix: "-py${{ matrix.python }}"
 
   publish-on-release:
     name: 📦 Publish build & source on GitHub release
