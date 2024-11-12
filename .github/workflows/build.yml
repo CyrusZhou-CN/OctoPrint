@@ -142,7 +142,7 @@ jobs:
         uses: OctoPrint/actions/e2e@main
         with:
           ref: ${{ github.ref }}
-          deps: dist/*.whl
+          octoprint: ${{ github.workspace }}/dist/*.whl
           python: ${{ matrix.python }}
 
   publish-on-release:
