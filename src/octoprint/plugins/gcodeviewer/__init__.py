@@ -85,12 +85,13 @@ class GcodeviewerPlugin(
     @Permissions.GCODE_VIEWER.require(403)
     @Permissions.FILES_DOWNLOAD.require(403)
     def check_skip_until_presence(self, origin, filename):
-        try:
-            path = self._file_manager.path_on_disk(origin, filename)
-        except NotImplementedError:
-            # storage doesn't support path on disk
+        if origin not in self._file_manager.registered_storages:
             flask.abort(404)
 
+        if not self._file_manager.capabilities(origin).path_on_disk:
+            flask.abort(404)
+
+        path = self._file_manager.path_on_disk(origin, filename)
         if not os.path.exists(path):
             # path doesn't exist
             flask.abort(404)
@@ -110,10 +111,10 @@ __plugin_name__ = gettext("GCode Viewer")
 __plugin_author__ = "Gina Häußge"
 __plugin_description__ = "Provides a GCODE viewer in OctoPrint's UI."
 __plugin_disabling_discouraged__ = gettext(
-    "Without this plugin the GCode Viewer in OctoPrint will no longer be " "available."
+    "Without this plugin the GCode Viewer in OctoPrint will no longer be available."
 )
 __plugin_license__ = "AGPLv3"
-__plugin_pythoncompat__ = ">=3.7,<4"
+__plugin_pythoncompat__ = ">=3.9,<4"
 __plugin_implementation__ = GcodeviewerPlugin()
 # __plugin_hooks__ = {
 # 	"octoprint.access.permissions": __plugin_implementation__.get_additional_permissions

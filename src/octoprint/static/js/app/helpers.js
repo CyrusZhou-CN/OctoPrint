@@ -752,28 +752,24 @@ function showMessageDialog(msg, options) {
         options.message = msg;
     }
 
-    var title = options.title || "";
-    var message = options.message || "";
-    var close = options.close || gettext("Close");
-    var onclose = options.onclose || undefined;
-    var onshow = options.onshow || undefined;
-    var onshown = options.onshown || undefined;
-    var nofade = options.nofade || false;
+    const title = options.title || "";
+    const message = options.message || "";
+    const close = options.close || gettext("Close");
+    const onclose = options.onclose || undefined;
+    const onshow = options.onshow || undefined;
+    const onshown = options.onshown || undefined;
+    const nofade = options.nofade || false;
 
     if (_.isString(message)) {
-        message = $("<p>" + message + "</p>");
+        message = $(`<p>${message}</p>`);
     }
 
     var modalHeader = $(
-        '<a href="javascript:void(0)" class="close" data-dismiss="modal" aria-hidden="true">&times;</a><h3>' +
-            title +
-            "</h3>"
+        `<a href="javascript:void(0)" class="close" data-dismiss="modal" aria-hidden="true">&times;</a><h3>${title}</h3>`
     );
     var modalBody = $(message);
     var modalFooter = $(
-        '<a href="javascript:void(0)" class="btn" data-dismiss="modal" aria-hidden="true">' +
-            close +
-            "</a>"
+        `<a href="javascript:void(0)" class="btn" data-dismiss="modal" aria-hidden="true">${close}</a>`
     );
 
     var modal = $("<div></div>").addClass("modal hide");
@@ -1931,4 +1927,29 @@ const xhrErrorJson = function (xhr) {
     } catch (e) {
         return null;
     }
+};
+
+const recursiveMatch = (matcher, data) => {
+    /**
+     * Return whether any leaf from matcher is container in data.
+     *
+     * @param matcher A matcher tree matched against the data tree
+     * @param data The data tree to match the matcher tree against
+     * @returns true if any leaf in a matcher tree is present in the data tree
+     */
+
+    if (!_.isPlainObject(matcher)) return true;
+
+    // process all key-value-pairs here
+    let result = false;
+    _.forOwn(matcher, (value, key) => {
+        if (data && data[key]) {
+            if (_.isPlainObject(value) && _.keys(value).length !== 0) {
+                result = result || recursiveMatch(matcher[key], data[key]);
+            } else {
+                result = true;
+            }
+        }
+    });
+    return result;
 };

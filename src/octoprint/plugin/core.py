@@ -24,21 +24,18 @@ __copyright__ = "Copyright (C) 2014 The OctoPrint Project - Released under terms
 
 import fnmatch
 import importlib.machinery
+import importlib.metadata as meta
 import importlib.util
 import inspect
 import logging
 import os
 import string
 import sys
+import threading
 from collections import OrderedDict, defaultdict, namedtuple
 from os import scandir
 
 from packaging.specifiers import SpecifierSet
-
-try:
-    import importlib.metadata as meta
-except ImportError:  # Python 3.7
-    import importlib_metadata as meta
 
 from octoprint.util import sv, time_this, to_unicode
 from octoprint.util.version import get_python_version_string, is_python_compatible
@@ -111,39 +108,20 @@ def parse_plugin_metadata(path):
         def extract_target_ids(node):
             return [x.id for x in filter(lambda x: isinstance(x, ast.Name), node.targets)]
 
-        if sys.version_info >= (3, 8, 0):
+        def extract_value(node):
+            if isinstance(node, ast.Constant):
+                return node.value
 
-            def extract_value(node):
-                if isinstance(node, ast.Constant):
-                    return node.value
+            elif (
+                isinstance(node, ast.Call)
+                and hasattr(node, "func")
+                and node.func.id == "gettext"
+                and node.args
+                and isinstance(node.args[0], ast.Constant)
+            ):
+                return node.args[0].value
 
-                elif (
-                    isinstance(node, ast.Call)
-                    and hasattr(node, "func")
-                    and node.func.id == "gettext"
-                    and node.args
-                    and isinstance(node.args[0], ast.Constant)
-                ):
-                    return node.args[0].value
-
-                return None
-
-        else:  # Python 3.7
-
-            def extract_value(node):
-                if isinstance(node, ast.Str):
-                    return node.s
-
-                elif (
-                    isinstance(node, ast.Call)
-                    and hasattr(node, "func")
-                    and node.func.id == "gettext"
-                    and node.args
-                    and isinstance(node.args[0], ast.Str)
-                ):
-                    return node.args[0].s
-
-                return None
+            return None
 
         def extract_names(node):
             if isinstance(node, ast.Assign):
@@ -933,6 +911,9 @@ class PluginManager:
         self.plugin_implementations_by_type = defaultdict(list)
 
         self._plugin_hooks = defaultdict(list)
+
+        self._plugin_apikeys_mutex = threading.RLock()
+        self._plugin_apikeys = {}
 
         self.implementation_injects = {}
         self.implementation_inject_factories = []
@@ -2316,6 +2297,25 @@ class PluginManager:
                 client(plugin, data, permissions=permissions)
             except Exception:
                 self.logger.exception("Exception while sending plugin data to client")
+
+    def generate_plugin_apikey(self, plugin, uses=1):
+        from octoprint.util import generate_api_key
+
+        apikey = generate_api_key()
+        with self._plugin_apikeys_mutex:
+            self._plugin_apikeys[apikey] = (plugin, uses)
+        return apikey
+
+    def resolve_plugin_apikey(self, apikey):
+        try:
+            with self._plugin_apikeys_mutex:
+                plugin, uses = self._plugin_apikeys.pop(apikey)
+                uses -= 1
+                if uses > 0:
+                    self._plugin_apikeys[apikey] = (plugin, uses)
+            return plugin
+        except KeyError:
+            return None
 
     def _sort_hooks(self, hook):
         self._plugin_hooks[hook] = sorted(

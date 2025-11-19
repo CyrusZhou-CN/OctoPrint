@@ -29,15 +29,15 @@ these users.
 A predefined "Read-only Access" group with no users is configured which by default grants
 read-only access to the following parts of the UI to any users assigned to this group:
 
-  * printer state
-  * available gcode files and stats (upload is disabled)
-  * temperature
-  * webcam
-  * gcode viewer
-  * terminal output (sending commands is disabled)
-  * available timelapse movies
-  * any components provided through plugins which are enabled for anonymous
-    users
+* printer state
+* available gcode files and stats (upload is disabled)
+* temperature
+* webcam
+* gcode viewer
+* terminal output (sending commands is disabled)
+* available timelapse movies
+* any components provided through plugins which are enabled for anonymous
+  users
 
 Another predefined "Operator" group is the default group for newly created users and
 by default gives access to all aspects of OctoPrint that involve regular printer
@@ -90,7 +90,7 @@ account and then set up autologin for it.
 .. warning::
 
    **Do not do this if you cannot trust EVERYONE on your local network.** And that really
-   means mean everyone. If you ignore this and then someone takes over your OctoPrint
+   means everyone. If you ignore this and then someone takes over your OctoPrint
    instance, installs malware on it and makes your printer print an endless stream of
    benchies, that's on you.
 

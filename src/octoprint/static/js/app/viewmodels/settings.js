@@ -130,6 +130,8 @@ $(function () {
         self.apiKeyVisible = ko.observable(false);
         self.revealingApiKey = ko.observable(false);
 
+        self.reauthReqs = undefined;
+
         self.appearance_name = ko.observable(undefined);
         self.appearance_color = ko.observable(undefined);
         self.appearance_colorTransparent = ko.observable();
@@ -172,79 +174,6 @@ $(function () {
         self.feature_enableDragDropUpload = ko.observable(undefined);
 
         self.gcodeAnalysis_runAt = ko.observable(undefined);
-
-        self.serial_port = ko.observable();
-        self.serial_baudrate = ko.observable();
-        self.serial_exclusive = ko.observable();
-        self.serial_lowLatency = ko.observable();
-        self.serial_portOptions = ko.observableArray([]);
-        self.serial_baudrateOptions = ko.observableArray([]);
-        self.serial_autoconnect = ko.observable(undefined);
-        self.serial_timeoutConnection = ko.observable(undefined);
-        self.serial_timeoutDetectionFirst = ko.observable(undefined);
-        self.serial_timeoutDetectionConsecutive = ko.observable(undefined);
-        self.serial_timeoutCommunication = ko.observable(undefined);
-        self.serial_timeoutCommunicationBusy = ko.observable(undefined);
-        self.serial_timeoutTemperature = ko.observable(undefined);
-        self.serial_timeoutTemperatureTargetSet = ko.observable(undefined);
-        self.serial_timeoutTemperatureAutoreport = ko.observable(undefined);
-        self.serial_timeoutSdStatus = ko.observable(undefined);
-        self.serial_timeoutSdStatusAutoreport = ko.observable(undefined);
-        self.serial_timeoutPosAutoreport = ko.observable(undefined);
-        self.serial_timeoutBaudrateDetectionPause = ko.observable(undefined);
-        self.serial_timeoutPositionLogWait = ko.observable(undefined);
-        self.serial_log = ko.observable(undefined);
-        self.serial_additionalPorts = ko.observable(undefined);
-        self.serial_additionalBaudrates = ko.observable(undefined);
-        self.serial_blacklistedPorts = ko.observable(undefined);
-        self.serial_blacklistedBaudrates = ko.observable(undefined);
-        self.serial_longRunningCommands = ko.observable(undefined);
-        self.serial_checksumRequiringCommands = ko.observable(undefined);
-        self.serial_blockedCommands = ko.observable(undefined);
-        self.serial_ignoredCommands = ko.observable(undefined);
-        self.serial_pausingCommands = ko.observable(undefined);
-        self.serial_sdCancelCommand = ko.observable(undefined);
-        self.serial_emergencyCommands = ko.observable(undefined);
-        self.serial_helloCommand = ko.observable(undefined);
-        self.serial_serialErrorBehaviour = ko.observable("cancel");
-        self.serial_triggerOkForM29 = ko.observable(undefined);
-        self.serial_waitForStart = ko.observable(undefined);
-        self.serial_waitToLoadSdFileList = ko.observable(undefined);
-        self.serial_sendChecksum = ko.observable("print");
-        self.serial_sendChecksumWithUnknownCommands = ko.observable(undefined);
-        self.serial_unknownCommandsNeedAck = ko.observable(undefined);
-        self.serial_sdRelativePath = ko.observable(undefined);
-        self.serial_sdLowerCase = ko.observable(undefined);
-        self.serial_sdAlwaysAvailable = ko.observable(undefined);
-        self.serial_swallowOkAfterResend = ko.observable(undefined);
-        self.serial_repetierTargetTemp = ko.observable(undefined);
-        self.serial_disableExternalHeatupDetection = ko.observable(undefined);
-        self.serial_ignoreIdenticalResends = ko.observable(undefined);
-        self.serial_firmwareDetection = ko.observable(undefined);
-        self.serial_blockWhileDwelling = ko.observable(undefined);
-        self.serial_useParityWorkaround = ko.observable(undefined);
-        self.serial_sanityCheckTools = ko.observable(undefined);
-        self.serial_supportResendsWithoutOk = ko.observable(undefined);
-        self.serial_logPositionOnPause = ko.observable(undefined);
-        self.serial_logPositionOnCancel = ko.observable(undefined);
-        self.serial_abortHeatupOnCancel = ko.observable(undefined);
-        self.serial_maxTimeoutsIdle = ko.observable(undefined);
-        self.serial_maxTimeoutsPrinting = ko.observable(undefined);
-        self.serial_maxTimeoutsLong = ko.observable(undefined);
-        self.serial_capAutoreportTemp = ko.observable(undefined);
-        self.serial_capAutoreportSdStatus = ko.observable(undefined);
-        self.serial_capAutoreportPos = ko.observable(undefined);
-        self.serial_capBusyProtocol = ko.observable(undefined);
-        self.serial_capEmergencyParser = ko.observable(undefined);
-        self.serial_capExtendedM20 = ko.observable(undefined);
-        self.serial_capLfnWrite = ko.observable(undefined);
-        self.serial_sendM112OnError = ko.observable(undefined);
-        self.serial_disableSdPrintingDetection = ko.observable(undefined);
-        self.serial_ackMax = ko.observable(undefined);
-        self.serial_resendRatioThreshold = ko.observable(100);
-        self.serial_resendRatioStart = ko.observable(100);
-        self.serial_ignoreEmptyPorts = ko.observable(undefined);
-        self.serial_enableShutdownActionCommand = ko.observable(undefined);
 
         self.folder_uploads = ko.observable(undefined);
         self.folder_timelapse = ko.observable(undefined);
@@ -377,21 +306,7 @@ $(function () {
             return foundDupe;
         });
 
-        self.observableCopies = {
-            feature_waitForStart: "serial_waitForStart",
-            feature_waitToLoadSdFileList: "serial_waitToLoadSdFileList",
-            feature_sendChecksum: "serial_sendChecksum",
-            feature_sdRelativePath: "serial_sdRelativePath",
-            feature_sdAlwaysAvailable: "serial_sdAlwaysAvailable",
-            feature_swallowOkAfterResend: "serial_swallowOkAfterResend",
-            feature_repetierTargetTemp: "serial_repetierTargetTemp",
-            feature_disableExternalHeatupDetection:
-                "serial_disableExternalHeatupDetection",
-            feature_ignoreIdenticalResends: "serial_ignoreIdenticalResends",
-            feature_firmwareDetection: "serial_firmwareDetection",
-            feature_blockWhileDwelling: "serial_blockWhileDwelling",
-            serial_: "feature_"
-        };
+        self.observableCopies = {};
         _.each(self.observableCopies, function (value, key) {
             if (self.hasOwnProperty(value)) {
                 self[key] = self[value];
@@ -444,29 +359,35 @@ $(function () {
                 return;
             }
 
-            self.testWebcamFfmpegPathBusy(true);
-            OctoPrint.util
-                .testExecutable(self.webcam_ffmpegPath())
-                .done(function (response) {
-                    if (!response.result) {
-                        if (!response.exists) {
-                            self.webcam_ffmpegPathText(gettext("The path doesn't exist"));
-                        } else if (!response.typeok) {
-                            self.webcam_ffmpegPathText(gettext("The path is not a file"));
-                        } else if (!response.access) {
-                            self.webcam_ffmpegPathText(
-                                gettext("The path is not an executable")
-                            );
+            self.loginState.reauthenticateIfNecessary(() => {
+                self.testWebcamFfmpegPathBusy(true);
+                OctoPrint.util
+                    .testExecutable(self.webcam_ffmpegPath())
+                    .done(function (response) {
+                        if (!response.result) {
+                            if (!response.exists) {
+                                self.webcam_ffmpegPathText(
+                                    gettext("The path doesn't exist")
+                                );
+                            } else if (!response.typeok) {
+                                self.webcam_ffmpegPathText(
+                                    gettext("The path is not a file")
+                                );
+                            } else if (!response.access) {
+                                self.webcam_ffmpegPathText(
+                                    gettext("The path is not an executable")
+                                );
+                            }
+                        } else {
+                            self.webcam_ffmpegPathText(gettext("The path is valid"));
                         }
-                    } else {
-                        self.webcam_ffmpegPathText(gettext("The path is valid"));
-                    }
-                    self.webcam_ffmpegPathOk(response.result);
-                    self.webcam_ffmpegPathBroken(!response.result);
-                })
-                .always(function () {
-                    self.testWebcamFfmpegPathBusy(false);
-                });
+                        self.webcam_ffmpegPathOk(response.result);
+                        self.webcam_ffmpegPathBroken(!response.result);
+                    })
+                    .always(function () {
+                        self.testWebcamFfmpegPathBusy(false);
+                    });
+            });
         };
 
         self.testOnlineConnectivityConfigBusy = ko.observable(false);
@@ -475,26 +396,30 @@ $(function () {
             if (!self.server_onlineCheck_port()) return;
             if (self.testOnlineConnectivityConfigBusy()) return;
 
-            self.testOnlineConnectivityConfigBusy(true);
-            OctoPrint.util
-                .testServer(
-                    self.server_onlineCheck_host(),
-                    self.server_onlineCheck_port()
-                )
-                .done(function (response) {
-                    if (!response.result) {
-                        self.server_onlineCheckText(
-                            gettext("The server is not reachable")
-                        );
-                    } else {
-                        self.server_onlineCheckText(gettext("The server is reachable"));
-                    }
-                    self.server_onlineCheckOk(response.result);
-                    self.server_onlineCheckBroken(!response.result);
-                })
-                .always(function () {
-                    self.testOnlineConnectivityConfigBusy(false);
-                });
+            self.loginState.reauthenticateIfNecessary(() => {
+                self.testOnlineConnectivityConfigBusy(true);
+                OctoPrint.util
+                    .testServer(
+                        self.server_onlineCheck_host(),
+                        self.server_onlineCheck_port()
+                    )
+                    .done(function (response) {
+                        if (!response.result) {
+                            self.server_onlineCheckText(
+                                gettext("The server is not reachable")
+                            );
+                        } else {
+                            self.server_onlineCheckText(
+                                gettext("The server is reachable")
+                            );
+                        }
+                        self.server_onlineCheckOk(response.result);
+                        self.server_onlineCheckBroken(!response.result);
+                    })
+                    .always(function () {
+                        self.testOnlineConnectivityConfigBusy(false);
+                    });
+            });
         };
 
         self.testOnlineConnectivityResolutionConfigBusy = ko.observable(false);
@@ -502,34 +427,34 @@ $(function () {
             if (!self.server_onlineCheck_name()) return;
             if (self.testOnlineConnectivityResolutionConfigBusy()) return;
 
-            self.testOnlineConnectivityResolutionConfigBusy(true);
-            OctoPrint.util
-                .testResolution(self.server_onlineCheck_name())
-                .done(function (response) {
-                    if (!response.result) {
-                        self.server_onlineCheckResolutionText(
-                            gettext("Name cannot be resolved")
-                        );
-                    } else {
-                        self.server_onlineCheckResolutionText(
-                            gettext("Name can be resolved")
-                        );
-                    }
-                    self.server_onlineCheckResolutionOk(response.result);
-                    self.server_onlineCheckResolutionBroken(!response.result);
-                })
-                .always(function () {
-                    self.testOnlineConnectivityResolutionConfigBusy(false);
-                });
+            self.loginState.reauthenticateIfNecessary(() => {
+                self.testOnlineConnectivityResolutionConfigBusy(true);
+                OctoPrint.util
+                    .testResolution(self.server_onlineCheck_name())
+                    .done(function (response) {
+                        if (!response.result) {
+                            self.server_onlineCheckResolutionText(
+                                gettext("Name cannot be resolved")
+                            );
+                        } else {
+                            self.server_onlineCheckResolutionText(
+                                gettext("Name can be resolved")
+                            );
+                        }
+                        self.server_onlineCheckResolutionOk(response.result);
+                        self.server_onlineCheckResolutionBroken(!response.result);
+                    })
+                    .always(function () {
+                        self.testOnlineConnectivityResolutionConfigBusy(false);
+                    });
+            });
         };
 
         self.testFolderConfigBusy = ko.observable(false);
         self.testFolderConfig = function (folder) {
             var observable = "folder_" + folder;
             if (!self.hasOwnProperty(observable)) return;
-
             if (self.testFolderConfigBusy()) return;
-            self.testFolderConfigBusy(true);
 
             var opts = {
                 check_type: "dir",
@@ -538,36 +463,45 @@ $(function () {
                 check_writable_dir: true
             };
             var path = self[observable]();
-            OctoPrint.util
-                .testPath(path, opts)
-                .done(function (response) {
-                    if (!response.result) {
-                        if (response.broken_symlink) {
+
+            self.loginState.reauthenticateIfNecessary(() => {
+                self.testFolderConfigBusy(true);
+
+                OctoPrint.util
+                    .testPath(path, opts)
+                    .done(function (response) {
+                        if (!response.result) {
+                            if (response.broken_symlink) {
+                                self.testFolderConfigText[folder](
+                                    gettext("The path is a broken symlink.")
+                                );
+                            } else if (!response.exists) {
+                                self.testFolderConfigText[folder](
+                                    gettext(
+                                        "The path does not exist and cannot be created."
+                                    )
+                                );
+                            } else if (!response.typeok) {
+                                self.testFolderConfigText[folder](
+                                    gettext("The path is not a folder.")
+                                );
+                            } else if (!response.access) {
+                                self.testFolderConfigText[folder](
+                                    gettext("The path is not writable.")
+                                );
+                            }
+                        } else {
                             self.testFolderConfigText[folder](
-                                gettext("The path is a broken symlink.")
-                            );
-                        } else if (!response.exists) {
-                            self.testFolderConfigText[folder](
-                                gettext("The path does not exist and cannot be created.")
-                            );
-                        } else if (!response.typeok) {
-                            self.testFolderConfigText[folder](
-                                gettext("The path is not a folder.")
-                            );
-                        } else if (!response.access) {
-                            self.testFolderConfigText[folder](
-                                gettext("The path is not writable.")
+                                gettext("The path is valid")
                             );
                         }
-                    } else {
-                        self.testFolderConfigText[folder](gettext("The path is valid"));
-                    }
-                    self.testFolderConfigOk[folder](response.result);
-                    self.testFolderConfigBroken[folder](!response.result);
-                })
-                .always(function () {
-                    self.testFolderConfigBusy(false);
-                });
+                        self.testFolderConfigOk[folder](response.result);
+                        self.testFolderConfigBroken[folder](!response.result);
+                    })
+                    .always(function () {
+                        self.testFolderConfigBusy(false);
+                    });
+            });
         };
 
         self.onSettingsHidden = function () {
@@ -621,6 +555,8 @@ $(function () {
                     self.translationUploadFilename(undefined);
                 }
             });
+
+            self.requestReauthReqData();
         };
 
         self.onAllBound = function (allViewModels) {
@@ -886,6 +822,16 @@ $(function () {
             OctoPrint.languages.delete(locale, pack).done(self.fromTranslationResponse);
         };
 
+        self.requestReauthReqData = () => {
+            return OctoPrint.settings
+                .getReauthRequirements()
+                .done(self.fromReauthReqsResponse);
+        };
+
+        self.fromReauthReqsResponse = (response) => {
+            self.reauthReqs = response.requirements;
+        };
+
         /**
          * Fetches the settings as currently stored in this client instance.
          */
@@ -904,89 +850,6 @@ $(function () {
                             ",",
                             true
                         );
-                    }
-                },
-                serial: {
-                    additionalPorts: function () {
-                        return commentableLinesToArray(self.serial_additionalPorts());
-                    },
-                    additionalBaudrates: function () {
-                        return _.map(
-                            splitTextToArray(
-                                self.serial_additionalBaudrates(),
-                                ",",
-                                true,
-                                function (item) {
-                                    return !isNaN(parseInt(item));
-                                }
-                            ),
-                            function (item) {
-                                return parseInt(item);
-                            }
-                        );
-                    },
-                    blacklistedPorts: function () {
-                        return commentableLinesToArray(self.serial_blacklistedPorts());
-                    },
-                    blacklistedBaudrates: function () {
-                        return _.map(
-                            splitTextToArray(
-                                self.serial_blacklistedBaudrates(),
-                                ",",
-                                true,
-                                function (item) {
-                                    return !isNaN(parseInt(item));
-                                }
-                            ),
-                            function (item) {
-                                return parseInt(item);
-                            }
-                        );
-                    },
-                    longRunningCommands: function () {
-                        return splitTextToArray(
-                            self.serial_longRunningCommands(),
-                            ",",
-                            true
-                        );
-                    },
-                    checksumRequiringCommands: function () {
-                        return splitTextToArray(
-                            self.serial_checksumRequiringCommands(),
-                            ",",
-                            true
-                        );
-                    },
-                    blockedCommands: function () {
-                        return splitTextToArray(self.serial_blockedCommands(), ",", true);
-                    },
-                    ignoredCommands: function () {
-                        return splitTextToArray(self.serial_ignoredCommands(), ",", true);
-                    },
-                    pausingCommands: function () {
-                        return splitTextToArray(self.serial_pausingCommands(), ",", true);
-                    },
-                    emergencyCommands: function () {
-                        return splitTextToArray(
-                            self.serial_emergencyCommands(),
-                            ",",
-                            true
-                        );
-                    },
-                    externalHeatupDetection: function () {
-                        return !self.serial_disableExternalHeatupDetection();
-                    },
-                    alwaysSendChecksum: function () {
-                        return self.serial_sendChecksum() === "always";
-                    },
-                    neverSendChecksum: function () {
-                        return self.serial_sendChecksum() === "never";
-                    },
-                    ignoreErrorsFromFirmware: function () {
-                        return self.serial_serialErrorBehaviour() === "ignore";
-                    },
-                    disconnectOnErrors: function () {
-                        return self.serial_serialErrorBehaviour() === "disconnect";
                     }
                 },
                 scripts: {
@@ -1035,8 +898,8 @@ $(function () {
                                         _.isNumber(profile.chamber)
                                             ? profile.chamber
                                             : _.isNumber(parseInt(profile.chamber))
-                                            ? parseInt(profile.chamber)
-                                            : 0
+                                              ? parseInt(profile.chamber)
+                                              : 0
                                     )
                                 });
                             } catch (ex) {
@@ -1146,61 +1009,6 @@ $(function () {
                 feature: {
                     autoUppercaseBlacklist: function (value) {
                         self.feature_autoUppercaseBlacklist(value.join(", "));
-                    }
-                },
-                serial: {
-                    additionalPorts: function (value) {
-                        self.serial_additionalPorts(value.join("\n"));
-                    },
-                    additionalBaudrates: function (value) {
-                        self.serial_additionalBaudrates(value.join(", "));
-                    },
-                    blacklistedPorts: function (value) {
-                        self.serial_blacklistedPorts(value.join("\n"));
-                    },
-                    blacklistedBaudrates: function (value) {
-                        self.serial_blacklistedBaudrates(value.join(", "));
-                    },
-                    longRunningCommands: function (value) {
-                        self.serial_longRunningCommands(value.join(", "));
-                    },
-                    checksumRequiringCommands: function (value) {
-                        self.serial_checksumRequiringCommands(value.join(", "));
-                    },
-                    blockedCommands: function (value) {
-                        self.serial_blockedCommands(value.join(", "));
-                    },
-                    ignoredCommands: function (value) {
-                        self.serial_ignoredCommands(value.join(", "));
-                    },
-                    pausingCommands: function (value) {
-                        self.serial_pausingCommands(value.join(", "));
-                    },
-                    emergencyCommands: function (value) {
-                        self.serial_emergencyCommands(value.join(", "));
-                    },
-                    externalHeatupDetection: function (value) {
-                        self.serial_disableExternalHeatupDetection(!value);
-                    },
-                    alwaysSendChecksum: function (value) {
-                        if (value) {
-                            self.serial_sendChecksum("always");
-                        }
-                    },
-                    neverSendChecksum: function (value) {
-                        if (value) {
-                            self.serial_sendChecksum("never");
-                        }
-                    },
-                    ignoreErrorsFromFirmware: function (value) {
-                        if (value) {
-                            self.serial_serialErrorBehaviour("ignore");
-                        }
-                    },
-                    disconnectOnErrors: function (value) {
-                        if (value) {
-                            self.serial_serialErrorBehaviour("disconnect");
-                        }
                     }
                 },
                 terminalFilters: function (value) {
@@ -1338,6 +1146,12 @@ $(function () {
             self.hide();
         };
 
+        self.changesRequireReauth = (data) => {
+            if (!self.reauthReqs) return false;
+            const requiresReauth = self.reauthReqs;
+            return recursiveMatch(requiresReauth, data);
+        };
+
         self.saveData = function (data, successCallback, setAsSending) {
             var options;
             if (_.isPlainObject(successCallback)) {
@@ -1367,31 +1181,55 @@ $(function () {
                 delete data.folder;
             }
 
-            self.active = true;
-            return OctoPrint.settings
-                .save(data)
-                .done(function (data, status, xhr) {
-                    self.ignoreNextUpdateEvent = !self.sawUpdateEventWhileSending;
-                    self.active = false;
+            const perform = () => {
+                self.active = true;
+                return OctoPrint.settings
+                    .save(data)
+                    .done(function (data, status, xhr) {
+                        self.ignoreNextUpdateEvent = !self.sawUpdateEventWhileSending;
+                        self.active = false;
 
-                    self.receiving(true);
-                    self.sending(false);
+                        self.receiving(true);
+                        self.sending(false);
 
-                    try {
-                        self.fromResponse(data);
-                        if (options.success) options.success(data, status, xhr);
-                    } finally {
-                        self.receiving(false);
-                    }
-                })
-                .fail(function (xhr, status, error) {
-                    self.sending(false);
-                    self.active = false;
-                    if (options.error) options.error(xhr, status, error);
-                })
-                .always(function (xhr, status) {
-                    if (options.complete) options.complete(xhr, status);
-                });
+                        try {
+                            self.fromResponse(data);
+                            if (options.success) options.success(data, status, xhr);
+                        } finally {
+                            self.receiving(false);
+                        }
+                    })
+                    .fail(function (xhr, status, error) {
+                        self.sending(false);
+                        self.active = false;
+                        if (options.error) options.error(xhr, status, error);
+                    })
+                    .always(function (xhr, status) {
+                        if (options.complete) options.complete(xhr, status);
+                    });
+            };
+
+            // do we need to reauthenticate?
+            if (self.changesRequireReauth(data)) {
+                const deferred = $.Deferred();
+                self.loginState
+                    .reauthenticateIfNecessary(() => {
+                        perform()
+                            .done(() => {
+                                deferred.resolveWith(arguments);
+                            })
+                            .fail(() => {
+                                deferred.rejectWith(arguments);
+                            });
+                    })
+                    .fail(() => {
+                        self.sending(false);
+                        deferred.reject();
+                    });
+                return deferred.promise();
+            } else {
+                return perform();
+            }
         };
 
         self.onEventSettingsUpdated = function () {
@@ -1447,6 +1285,11 @@ $(function () {
             }
         };
 
+        self.onEventPluginPluginmanagerEnabledPlugin =
+            self.onEventPluginPluginmanagerDisabledPlugin = () => {
+                self.requestReauthReqData();
+            };
+
         self._resetScrollPosition = function () {
             $("#settings_dialog_content", self.settingsDialog).scrollTop(0);
 
@@ -1482,6 +1325,7 @@ $(function () {
             // the settings might have changed if the server was just restarted,
             // better refresh them now
             self.requestData();
+            self.requestReauthReqData();
         };
 
         self.onUserPermissionsChanged =
@@ -1491,6 +1335,7 @@ $(function () {
                     // we might have other user rights now, refresh (but only if startup has fully completed)
                     if (!self._startupComplete) return;
                     self.requestData();
+                    self.requestReauthReqData();
                 };
 
         self.onUserCredentialsOutdated = () => {

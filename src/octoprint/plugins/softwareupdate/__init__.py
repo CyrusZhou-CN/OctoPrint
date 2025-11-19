@@ -41,20 +41,10 @@ from octoprint.util.version import (
 
 from . import cli, exceptions, updaters, util, version_checks
 
-# OctoPi 0.17 w/ Python 3
-MINIMUM_PYTHON = "3.7"
-MINIMUM_SETUPTOOLS = "40.8"
-MINIMUM_PIP = "20.3"
-
-# OctoPi 0.18+
-# MINIMUM_PYTHON = "3.7"
-# MINIMUM_SETUPTOOLS = "51.1"
-# MINIMUM_PIP = "20.3"
-
 # OctoPi 1.0.0+
-# MINIMUM_PYTHON = "3.9"
-# MINIMUM_SETUPTOOLS = "44.1"
-# MINIMUM_PIP = "22.3"
+MINIMUM_PYTHON = "3.9"
+MINIMUM_SETUPTOOLS = "44.1"
+MINIMUM_PIP = "22.3"
 
 
 DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
@@ -679,25 +669,16 @@ class SoftwareUpdatePlugin(
                     "update_script": default_update_script,
                     "restart": "octoprint",
                     "stable_branch": {
-                        "branch": "master",
-                        "commitish": ["master", "main"],
+                        "branch": "stable",
+                        "commitish": ["main"],
                         "name": "Stable",
                     },
                     "prerelease_branches": [
                         {
-                            "branch": "rc/maintenance",
-                            "commitish": ["rc/maintenance", "next"],  # maintenance RCs
-                            "name": "Maintenance RCs",
-                        },
-                        {
-                            "branch": "rc/devel",
-                            "commitish": [
-                                "rc/maintenance",
-                                "rc/devel",
-                                "next",
-                            ],  # devel & maintenance RCs
-                            "name": "Devel RCs",
-                        },
+                            "branch": "prerelease",
+                            "commitish": ["next"],
+                            "name": "Release Candidates",
+                        }
                     ],
                 },
             },
@@ -939,7 +920,7 @@ class SoftwareUpdatePlugin(
                     self._settings.set(["credentials", key], credentials[key])
 
     def get_settings_version(self):
-        return 9
+        return 10
 
     def on_settings_migrate(self, target, current=None):
         if current is None or current < 6:
@@ -1069,6 +1050,24 @@ class SoftwareUpdatePlugin(
         if current is None or current < 8:
             # remove check_providers again
             self._settings.remove(["check_providers"])
+
+        if current is None or current < 10:
+            configured_checks = self._settings.get(["checks"], incl_defaults=False)
+            if configured_checks is not None and "octoprint" in configured_checks:
+                octoprint_check = dict(configured_checks["octoprint"])
+                prerelease_channel = octoprint_check.get("prerelease_channel")
+                if prerelease_channel:
+                    lookup = {
+                        "master": "stable",
+                        "rc/maintenance": "prerelease",
+                        "rc/devel": "prerelease",
+                    }
+                    # force=True as path is not part of the default config
+                    self._settings.set(
+                        ["checks", "octoprint", "prerelease_channel"],
+                        lookup.get(prerelease_channel, prerelease_channel),
+                        force=True,
+                    )
 
     def _clean_settings_check(self, key, data, defaults, delete=None, save=True):
         if not data:
@@ -2566,7 +2565,7 @@ def _register_custom_events(*args, **kwargs):
 
 __plugin_name__ = "Software Update"
 __plugin_author__ = "Gina Häußge"
-__plugin_url__ = "https://docs.octoprint.org/en/master/bundledplugins/softwareupdate.html"
+__plugin_url__ = "https://docs.octoprint.org/en/main/bundledplugins/softwareupdate.html"
 __plugin_description__ = "Allows receiving update notifications and performing updates of OctoPrint and plugins"
 __plugin_disabling_discouraged__ = gettext(
     "Without this plugin OctoPrint will no longer be able to "
@@ -2574,7 +2573,7 @@ __plugin_disabling_discouraged__ = gettext(
     "your system at risk."
 )
 __plugin_license__ = "AGPLv3"
-__plugin_pythoncompat__ = ">=3.7,<4"
+__plugin_pythoncompat__ = ">=3.9,<4"
 
 
 def __plugin_load__():

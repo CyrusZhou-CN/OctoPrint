@@ -18,7 +18,7 @@ meta:
 ci/cd:
   - changed-files:
       - any-glob-to-any-file:
-          - .github/fixtures/**
+          - .github/ci/**
           - .github/workflows/**
           - .github/dependabot.yml
           - .github/issue-validation.yml
@@ -33,6 +33,22 @@ docker:
 tests:
   - changed-files:
       - any-glob-to-any-file: tests/**
+
+# new branching strategy
+
+"targets dev":
+  - base-branch: dev
+
+"targets main":
+  - base-branch: main
+
+"targets bugfix":
+  - base-branch: bugfix
+
+"targets next":
+  - base-branch: next
+
+# old branching strategy
 
 "targets maintenance":
   - base-branch: maintenance

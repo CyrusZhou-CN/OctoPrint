@@ -3,9 +3,6 @@
 Plugin Tutorial
 ===============
 
-.. contents::
-   :local:
-
 Over the course of this little tutorial we'll build a full fledged, installable OctoPrint plugin that displays "Hello World!"
 at some locations throughout OctoPrint and also offers some other basic functionality to give you an idea of what
 you can achieve with OctoPrint's plugin system.
@@ -59,7 +56,7 @@ We'll start at the most basic form a plugin can take - just a few simple lines o
    __plugin_name__ = "Hello World"
    __plugin_version__ = "1.0.0"
    __plugin_description__ = "A quick \"Hello World\" example plugin for OctoPrint"
-   __plugin_pythoncompat__ = ">=3.7,<4"
+   __plugin_pythoncompat__ = ">=3.9,<4"
 
 Saving this as ``helloworld.py`` in ``~/.octoprint/plugins`` yields you something resembling these log entries upon server startup::
 
@@ -108,7 +105,7 @@ Apart from being discovered by OctoPrint, our plugin does nothing yet. We want t
    __plugin_name__ = "Hello World"
    __plugin_version__ = "1.0.0"
    __plugin_description__ = "A quick \"Hello World\" example plugin for OctoPrint"
-   __plugin_pythoncompat__ = ">=3.7,<4"
+   __plugin_pythoncompat__ = ">=3.9,<4"
    __plugin_implementation__ = HelloWorldPlugin()
 
 and restart OctoPrint. You now get this output in the log::
@@ -143,7 +140,7 @@ as a simple python file following the naming convention ``<plugin identifier>.py
 that can be done in one file. Distributing multiple files and getting your users to install them in the right way
 so that OctoPrint will be able to actually find and load them is certainly not impossible, but we want to do it in the
 best way possible, meaning we want to make our plugin a fully installable Python module that your users will be able to
-install directly via `OctoPrint's built-in Plugin Manager <https://docs.octoprint.org/en/master/bundledplugins/pluginmanager.html>`_
+install directly via `OctoPrint's built-in Plugin Manager <https://docs.octoprint.org/en/main/bundledplugins/pluginmanager.html>`_
 or alternatively manually utilizing Python's standard package manager ``pip`` directly.
 
 So let's begin. We'll use the `cookiecutter <https://github.com/audreyr/cookiecutter>`_ template for OctoPrint plugins
@@ -206,17 +203,18 @@ This will create a project structure in the ``OctoPrint-HelloWorld`` folder we j
    babel.cfg
    MANIFEST.in
    README.md
+   pyproject.toml
    requirements.txt
    setup.py
-   setup.cfg
+   Taskfile.yml
 
 While we'll need some of those folders later on, we'll now delete everything that we don't need right now first, that
 will make it easier to understand what folder does what later on. Delete the following folders and anything in them:
 
-  * ``extras``
-  * ``translations``
-  * ``octoprint_helloworld/static``
-  * ``octoprint_helloworld/templates``
+* ``extras``
+* ``translations``
+* ``octoprint_helloworld/static``
+* ``octoprint_helloworld/templates``
 
 The final project structure should look like this for now::
 
@@ -227,89 +225,62 @@ The final project structure should look like this for now::
    babel.cfg
    MANIFEST.in
    README.md
+   pyproject.toml
    requirements.txt
-   setup.cfg
    setup.py
+   Taskfile.yml
 
-Out of curiosity, take a look into the ``setup.py`` file. The cookiecutter template should have prefilled all the
+Out of curiosity, take a look into the ``pyproject.toml`` file. The cookiecutter template should have prefilled all the
 configuration parameters for you:
 
-.. code-block:: python
+.. code-block:: toml
 
-   # coding=utf-8
+   [build-system]
+   requires = ["setuptools>=68", "wheel"]
+   build-backend = "setuptools.build_meta"
 
-   ########################################################################################################################
-   ### Do not forget to adjust the following variables to your own plugin.
+   [project]
+   name = "OctoPrint-Helloworld"
+   version = "1.0.0"
+   description = "A quick "Hello World" example plugin for OctoPrint"
+   authors = [
+       {name = "Your name", email = "you@somewhere.net"}
+   ]
+   readme = {file = "README.md", content-type = "text/markdown"}
+   dynamic = [
+       "license"
+   ]
 
-   # The plugin's identifier, has to be unique
-   plugin_identifier = "helloworld"
+   requires-python = ">=3.7, <4"
 
-   # The plugin's python package, should be "octoprint_<plugin identifier>", has to be unique
-   plugin_package = "octoprint_helloworld"
+   # any additional requirements (besides OctoPrint) should be listed here
+   dependencies = []
 
-   # The plugin's human readable name. Can be overwritten within OctoPrint's internal data via __plugin_name__ in the
-   # plugin module
-   plugin_name = "OctoPrint-Helloworld"
+   [tool.setuptools]
+   include-package-data = true
 
-   # The plugin's version. Can be overwritten within OctoPrint's internal data via __plugin_version__ in the plugin module
-   plugin_version = "1.0.0"
+   [tool.setuptools.packages.find]
+   include = [
+       "octoprint_helloworld",
+       "octoprint_helloworld.*"
+   ]
 
-   # The plugin's description. Can be overwritten within OctoPrint's internal data via __plugin_description__ in the plugin
-   # module
-   plugin_description = """A quick "Hello World" example plugin for OctoPrint"""
+   [project.entry-points."octoprint.plugin"]
+   helloworld = "octoprint_helloworld"
 
-   # The plugin's author. Can be overwritten within OctoPrint's internal data via __plugin_author__ in the plugin module
-   plugin_author = "Your name"
+   [project.urls]
+   Homepage = "https://github.com/yourGithubName/OctoPrint-Helloworld"
 
-   # The plugin's author's mail address.
-   plugin_author_email = "you@somewhere.net"
-
-   # The plugin's homepage URL. Can be overwritten within OctoPrint's internal data via __plugin_url__ in the plugin module
-   plugin_url = "https://github.com/yourGithubName/OctoPrint-Helloworld"
-
-   # The plugin's license. Can be overwritten within OctoPrint's internal data via __plugin_license__ in the plugin module
-   plugin_license = "AGPLv3"
-
-   # Any additional requirements besides OctoPrint should be listed here
-   plugin_requires = []
-
-   ### --------------------------------------------------------------------------------------------------------------------
-   ### More advanced options that you usually shouldn't have to touch follow after this point
-   ### --------------------------------------------------------------------------------------------------------------------
-
-   # Additional package data to install for this plugin. The subfolders "templates", "static" and "translations" will
-   # already be installed automatically if they exist. Note that if you add something here you'll also need to update
-   # MANIFEST.in to match to ensure that python setup.py sdist produces a source distribution that contains all your
-   # files. This is sadly due to how python's setup.py works, see also http://stackoverflow.com/a/14159430/2028598
-   plugin_additional_data = []
-
-   # Any additional python packages you need to install with your plugin that are not contained in <plugin_package>.*
-   plugin_additional_packages = []
-
-   # Any python packages within <plugin_package>.* you do NOT want to install with your plugin
-   plugin_ignored_packages = []
-
-   # Additional parameters for the call to setuptools.setup. If your plugin wants to register additional entry points,
-   # define dependency links or other things like that, this is the place to go. Will be merged recursively with the
-   # default setup parameters as provided by octoprint_setuptools.create_plugin_setup_parameters using
-   # octoprint.util.dict_merge.
-   #
-   # Example:
-   #     plugin_requires = ["someDependency==dev"]
-   #     additional_setup_parameters = {"dependency_links": ["https://github.com/someUser/someRepo/archive/master.zip#egg=someDependency-dev"]}
-   # "python_requires": ">=3,<4" blocks installation on Python 2 systems, to prevent confused users and provide a helpful error.
-   # Remove it if you would like to support Python 2 as well as 3 (not recommended).
-   additional_setup_parameters = {"python_requires": ">=3,<4"}
-
-   ########################################################################################################################
-
-   # ... remaining setup.py content ...
+   [project.optional-dependencies]
+   develop = [
+       "go-task-bin"
+   ]
 
 Now all that's left to do is to move our ``helloworld.py`` into the ``octoprint_helloworld`` folder and renaming it to
 ``__init__.py``. Make sure to delete the copy under ``~/.octoprint/plugins`` in the process, including the ``.pyc`` file!
 
-The plugin is now ready to be installed via ``python setup.py install``. However, since we are still
-working on our plugin, it makes more sense to use ``python setup.py develop`` for now -- this way the plugin becomes
+The plugin is now ready to be installed via ``pip install .``. However, since we are still
+working on our plugin, it makes more sense to use ``pip install -e .`` for now -- this way the plugin becomes
 discoverable by OctoPrint, however we don't have to reinstall it after any changes we will still do. We can have the
 ``octoprint dev plugin:install`` command do everything for us here, it will ensure to use the python binary belonging
 to your OctoPrint installation::
@@ -318,15 +289,11 @@ to your OctoPrint installation::
    >> /home/gina/.pyenv/versions/3.11.2/envs/octoprint-py311/bin/python -m pip install -e .
    Obtaining file:///home/gina/devel/OctoPrint-Helloworld
 
-     Preparing metadata (setup.py): started
-
-     Preparing metadata (setup.py): finished with status 'done'
-
    [...]
 
    Installing collected packages: OctoPrint-Helloworld
 
-     Running setup.py develop for OctoPrint-Helloworld
+   [...]
 
    Successfully installed OctoPrint-Helloworld-0.1.0
 
@@ -346,7 +313,7 @@ Restart OctoPrint. Your plugin should still be properly discovered and the log l
 
 Looks like it still works!
 
-Something is still a bit ugly though. Take a look into ``__init__.py`` and ``setup.py``. It seems like we have a bunch
+Something is still a bit ugly though. Take a look into ``__init__.py`` and ``pyproject.toml``. It seems like we have a bunch
 of information now defined twice:
 
 .. code-block:: python
@@ -357,25 +324,19 @@ of information now defined twice:
    __plugin_description__ = "A quick \"Hello World\" example plugin for OctoPrint"
 
 .. code-block:: python
-   :caption: setup.py
+   :caption: pyproject.toml
 
    # ...
 
-   # The plugin's human readable name. Can be overwritten within OctoPrint's internal data via __plugin_name__ in the
-   # plugin module
-   plugin_name = "OctoPrint-Helloworld"
-
-   # The plugin's version. Can be overwritten within OctoPrint's internal data via __plugin_version__ in the plugin module
-   plugin_version = "1.0.0"
-
-   # The plugin's description. Can be overwritten within OctoPrint's internal data via __plugin_description__ in the plugin
-   # module
-   plugin_description = """A quick "Hello World" example plugin for OctoPrint"""
+   [project]
+   name = "OctoPrint-Helloworld"
+   version = "1.0.0"
+   description = "A quick "Hello World" example plugin for OctoPrint"
 
    # ...
 
 The nice thing about our plugin now being a proper Python package is that OctoPrint can and will access the metadata defined
-within ``setup.py``! So, we don't really need to define all this data twice. Remove ``__plugin_name__``, ``__plugin_version__``
+within ``pyproject.toml``! So, we don't really need to define all this data twice. Remove ``__plugin_name__``, ``__plugin_version__``
 and ``__plugin_description__`` from ``__init__.py``, but leave ``__plugin_implementation__`` and ``__plugin_pythoncompat__``:
 
 .. code-block:: python
@@ -386,7 +347,7 @@ and ``__plugin_description__`` from ``__init__.py``, but leave ``__plugin_implem
        def on_after_startup(self):
            self._logger.info("Hello World!")
 
-   __plugin_pythoncompat__ = ">=3.7,<4"
+   __plugin_pythoncompat__ = ">=3.9,<4"
    __plugin_implementation__ = HelloWorldPlugin()
 
 and restart OctoPrint::
@@ -409,7 +370,7 @@ Our "Hello World" Plugin still gets detected fine, but it's now listed under the
            self._logger.info("Hello World!")
 
    __plugin_name__ = "Hello World"
-   __plugin_pythoncompat__ = ">=3.7,<4"
+   __plugin_pythoncompat__ = ">=3.9,<4"
    __plugin_implementation__ = HelloWorldPlugin()
 
 
@@ -420,7 +381,7 @@ Restart OctoPrint again::
    | Hello World (1.0.0) = /home/gina/devel/OctoPrint-HelloWorld/octoprint_helloworld
    [...]
 
-Much better! You can override pretty much all of the metadata defined within ``setup.py`` from within your Plugin itself --
+Much better! You can override pretty much all of the metadata defined within ``pyproject.toml`` from within your Plugin itself --
 take a look at :ref:`the available control properties <sec-plugins-controlproperties>` for all available
 overrides.
 
@@ -455,7 +416,7 @@ add the :class:`TemplatePlugin` to our ``HelloWorldPlugin`` class:
            self._logger.info("Hello World!")
 
    __plugin_name__ = "Hello World"
-   __plugin_pythoncompat__ = ">=3.7,<4"
+   __plugin_pythoncompat__ = ">=3.9,<4"
    __plugin_implementation__ = HelloWorldPlugin()
 
 Next, we'll create a sub folder ``templates`` underneath our ``octoprint_helloworld`` folder, and within that a file
@@ -476,9 +437,10 @@ Our plugin's directory structure should now look like this::
    babel.cfg
    MANIFEST.in
    README.md
+   pyproject.toml
    requirements.txt
    setup.py
-   setup.cfg
+   Taskfile.yml
 
 Restart OctoPrint and open the web interface in your browser (make sure to clear your browser's cache!).
 
@@ -522,7 +484,7 @@ Let's take a look at how all that would look in our plugin's ``__init__.py``:
            return dict(url="https://en.wikipedia.org/wiki/Hello_world")
 
    __plugin_name__ = "Hello World"
-   __plugin_pythoncompat__ = ">=3.7,<4"
+   __plugin_pythoncompat__ = ">=3.9,<4"
    __plugin_implementation__ = HelloWorldPlugin()
 
 Restart OctoPrint. You should see something like this::
@@ -556,7 +518,7 @@ Adjust your plugin's ``__init__.py`` like this:
            return dict(url=self._settings.get(["url"]))
 
    __plugin_name__ = "Hello World"
-   __plugin_pythoncompat__ = ">=3.7,<4"
+   __plugin_pythoncompat__ = ">=3.9,<4"
    __plugin_implementation__ = HelloWorldPlugin()
 
 Also adjust your plugin's ``templates/helloworld_navbar.jinja2`` like this:
@@ -659,7 +621,7 @@ again since we don't use that anymore:
        ]
 
    __plugin_name__ = "Hello World"
-   __plugin_pythoncompat__ = ">=3.7,<4"
+   __plugin_pythoncompat__ = ">=3.9,<4"
    __plugin_implementation__ = HelloWorldPlugin()
 
 Restart OctoPrint and shift-reload your browser. Your link in the navigation bar should still point to the URL we
@@ -724,9 +686,10 @@ look like this::
    babel.cfg
    MANIFEST.in
    README.md
+   pyproject.toml
    requirements.txt
    setup.py
-   setup.cfg
+   Taskfile.yml
 
 We need to tell OctoPrint about this new static asset so that it will properly inject it into the page. For this we
 just need to subclass :class:`~octoprint.plugin.AssetPlugin` and override its method :func:`~octoprint.plugin.AssetPlugin.get_assets`
@@ -759,7 +722,7 @@ like so:
         )
 
    __plugin_name__ = "Hello World"
-   __plugin_pythoncompat__ = ">=3.7,<4"
+   __plugin_pythoncompat__ = ">=3.9,<4"
    __plugin_implementation__ = HelloWorldPlugin()
 
 Note how we did not add another entry to the return value of :func:`~octoprint.plugin.TemplatePlugin.get_template_configs`.
@@ -878,8 +841,10 @@ First we'll create a new folder within our plugin's ``static`` folder called ``c
    babel.cfg
    MANIFEST.in
    README.md
+   pyproject.toml
    requirements.txt
    setup.py
+   Taskfile.yml
 
 Put something like the following into ``helloworld.css``:
 
@@ -935,7 +900,7 @@ a reference to our CSS file:
         )
 
    __plugin_name__ = "Hello World"
-   __plugin_pythoncompat__ = ">=3.7,<4"
+   __plugin_pythoncompat__ = ">=3.9,<4"
    __plugin_implementation__ = HelloWorldPlugin()
 
 OctoPrint by default bundles all CSS, JavaScript and LESS files to reduce the amount of requests necessary to fully
@@ -983,8 +948,10 @@ in the process. The folder structure of our plugin should now look like this::
    babel.cfg
    MANIFEST.in
    README.md
+   pyproject.toml
    requirements.txt
    setup.py
+   Taskfile.yml
 
 Then adjust our returned assets to include our LESS file as well:
 
@@ -1018,7 +985,7 @@ Then adjust our returned assets to include our LESS file as well:
        )
 
    __plugin_name__ = "Hello World"
-   __plugin_pythoncompat__ = ">=3.7,<4"
+   __plugin_pythoncompat__ = ">=3.9,<4"
    __plugin_implementation__ = HelloWorldPlugin()
 
 

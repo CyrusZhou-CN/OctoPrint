@@ -25,6 +25,8 @@ $(function () {
         OctoPrint.options.locale = l10n;
     }
 
+    OctoPrint.options.apiVersion = VERSION.split(".", 3).join(".");
+
     //~~ some CoreUI specific stuff we put into OctoPrint.coreui
 
     OctoPrint.coreui = (function () {
@@ -269,32 +271,6 @@ $(function () {
     babel.Translations.load(catalog).install();
 
     moment.locale(LOCALE);
-
-    // Dummy translation requests for dynamic strings supplied by the backend
-    // noinspection BadExpressionStatementJS
-    [
-        // printer states
-        gettext("Offline"),
-        gettext("Offline after error"),
-        gettext("Error"),
-        gettext("Opening serial connection"),
-        gettext("Detecting serial connection"),
-        gettext("Connecting"),
-        gettext("Operational"),
-        gettext("Starting"),
-        gettext("Starting print from SD"),
-        gettext("Starting to send file to SD"),
-        gettext("Printing from SD"),
-        gettext("Sending file to SD"),
-        gettext("Printing"),
-        gettext("Paused"),
-        gettext("Closed"),
-        gettext("Transferring file to SD"),
-        gettext("Pausing"),
-        gettext("Resuming"),
-        gettext("Cancelling"),
-        gettext("Finishing")
-    ];
 
     //~~ Initialize PNotify
 
@@ -1062,7 +1038,7 @@ $(function () {
             // onServerConnect/onServerReconnect on the LoginStateViewModel with this in place.
             return viewModelMap["loginStateViewModel"]
                 .requestData()
-                .done(function () {
+                .done(() => {
                     // Only mark our data updater as initialized once we've done our initial
                     // passive login request.
                     //
@@ -1070,10 +1046,21 @@ $(function () {
                     // overriding each other's session during app initialization
                     dataUpdater.initialized();
                 })
-                .fail(function () {
-                    viewModelMap["uiStateViewModel"].showLoadingError(
-                        "Passive login failed."
-                    );
+                .fail((error) => {
+                    if (
+                        error.status === 400 &&
+                        error.responseJSON &&
+                        error.responseJSON.error &&
+                        error.responseJSON.error.includes("CSRF")
+                    ) {
+                        // trigger reload overlay on CSRF error during server connect's passive login
+                        showReloadOverlay();
+                        hideOfflineOverlay();
+                    } else {
+                        viewModelMap["uiStateViewModel"].showLoadingError(
+                            "Passive login failed."
+                        );
+                    }
                 });
         };
 

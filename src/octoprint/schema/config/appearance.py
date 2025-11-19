@@ -2,7 +2,6 @@ __license__ = "GNU Affero General Public License http://www.gnu.org/licenses/agp
 __copyright__ = "Copyright (C) 2022 The OctoPrint Project - Released under terms of the AGPLv3 License"
 
 from enum import Enum
-from typing import List
 
 from octoprint.schema import BaseModel
 from octoprint.vendor.with_attrs_docs import with_attrs_docs
@@ -20,7 +19,7 @@ class ColorEnum(str, Enum):
 
 @with_attrs_docs
 class ComponentOrderConfig(BaseModel):
-    navbar: List[str] = [
+    navbar: list[str] = [
         "settings",
         "systemmenu",
         "plugin_announcements",
@@ -32,7 +31,7 @@ class ComponentOrderConfig(BaseModel):
     ]
     """Order of navbar items."""
 
-    sidebar: List[str] = [
+    sidebar: list[str] = [
         "plugin_firmware_check_warning",
         "plugin_firmware_check_info",
         "connection",
@@ -41,7 +40,7 @@ class ComponentOrderConfig(BaseModel):
     ]
     """Order of sidebar items."""
 
-    tab: List[str] = [
+    tab: list[str] = [
         "temperature",
         "control",
         "plugin_gcodeviewer",
@@ -50,9 +49,9 @@ class ComponentOrderConfig(BaseModel):
     ]
     """Order of tabs."""
 
-    settings: List[str] = [
+    settings: list[str] = [
         "section_printer",
-        "serial",
+        "plugin_serial_connector",
         "printerprofiles",
         "temperatures",
         "terminalfilters",
@@ -80,10 +79,10 @@ class ComponentOrderConfig(BaseModel):
     ]
     """Order of settings."""
 
-    usersettings: List[str] = ["access", "interface"]
+    usersettings: list[str] = ["access", "interface"]
     """Order of user settings."""
 
-    wizard: List[str] = [
+    wizard: list[str] = [
         "plugin_softwareupdate_update",
         "plugin_backup",
         "plugin_corewizard_acl",
@@ -91,7 +90,7 @@ class ComponentOrderConfig(BaseModel):
     ]
     """Order of wizards."""
 
-    about: List[str] = [
+    about: list[str] = [
         "about",
         "plugin_pi_support",
         "supporters",
@@ -106,27 +105,27 @@ class ComponentOrderConfig(BaseModel):
     ]
     """Order of about dialog items."""
 
-    generic: List[str] = []
+    generic: list[str] = []
     """Order of generic items."""
 
 
 @with_attrs_docs
 class ComponentDisabledConfig(BaseModel):
-    navbar: List[str] = []
+    navbar: list[str] = []
     """Disabled navbar items."""
-    sidebar: List[str] = []
+    sidebar: list[str] = []
     """Disabled sidebar items."""
-    tab: List[str] = []
+    tab: list[str] = []
     """Disabled tabs."""
-    settings: List[str] = []
+    settings: list[str] = []
     """Disabled settings."""
-    usersettings: List[str] = []
+    usersettings: list[str] = []
     """Disabled user settings."""
-    wizard: List[str] = []
+    wizard: list[str] = []
     """Disabled wizards."""
-    about: List[str] = []
+    about: list[str] = []
     """Disabled about dialog items."""
-    generic: List[str] = []
+    generic: list[str] = []
     """Disabled generic items."""
 
 
@@ -137,6 +136,33 @@ class ComponentConfig(BaseModel):
 
     disabled: ComponentDisabledConfig = ComponentDisabledConfig()
     """Disabled components per container. If a component is included here it will not be included in OctoPrint's UI at all. Note that this might mean that critical functionality will not be available if no replacement is registered."""
+
+
+class ThumbnailAlignmentEnum(str, Enum):
+    left = "left"
+    right = "right"
+    center = "center"
+
+
+@with_attrs_docs
+class ThumbnailConfig(BaseModel):
+    filelistEnabled: bool = True
+    """Whether to display thumbnails for printables on the file list, if available."""
+
+    filelistScale: int = 25
+    """Percentage of file list width to use for thumbnail. Note that if the image is smaller, it won't be scaled up."""
+
+    filelistAlignment: ThumbnailAlignmentEnum = ThumbnailAlignmentEnum.left
+    """Alignment of thumbnail in file list."""
+
+    filelistPreview: bool = False
+    """Whether to enable a preview popover with the full thumbnail size when hovering over the thumbnail in the file list."""
+
+    stateEnabled: bool = True
+    """Whether to display thumbnails for printable on the state panel, if available."""
+
+    stateScale: int = 75
+    """Percentage of state panel width to use for thumbnail. Note that if the image is smaller, it won't be scaled up."""
 
 
 @with_attrs_docs
@@ -156,13 +182,19 @@ class AppearanceConfig(BaseModel):
     """Default language of OctoPrint. If left unset OctoPrint will try to match up available languages with the user's browser settings."""
 
     showFahrenheitAlso: bool = False
+    """Show temperatures in Celsius as well as in Fahrenheit."""
 
     fuzzyTimes: bool = True
+    """Display fuzzy times for print time estimations."""
 
     closeModalsWithClick: bool = True
+    """Allow closing modals with a click outside of them."""
 
     showInternalFilename: bool = True
     """Show the internal filename in the files sidebar, if necessary."""
 
     components: ComponentConfig = ComponentConfig()
     """Configures the order and availability of the UI components."""
+
+    thumbnails: ThumbnailConfig = ThumbnailConfig()
+    """Configured how thumbnails are shown in the UI"""

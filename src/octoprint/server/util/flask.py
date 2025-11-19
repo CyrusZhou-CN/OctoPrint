@@ -12,7 +12,7 @@ import os
 import threading
 import time
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Union
+from typing import Any, Union
 
 import flask
 import flask.json
@@ -44,6 +44,7 @@ from octoprint.util import DefaultOrderedDict, deprecated, yaml
 from octoprint.util.json import JsonEncoding
 from octoprint.util.net import is_lan_address, usable_trusted_proxies_from_settings
 from octoprint.util.tz import UTC_TZ, is_timezone_aware
+from octoprint.util.version import is_version_compatible, parse_specifier, parse_version
 
 # ~~ monkey patching
 
@@ -1424,23 +1425,13 @@ def check_lastmodified(lastmodified: Union[int, float, datetime]) -> bool:
         return False
 
     if isinstance(lastmodified, (int, float)):
-        # max(86400, lastmodified) is workaround for https://bugs.python.org/issue29097,
-        # present in CPython 3.6.x up to 3.7.1.
-        #
-        # I think it's fair to say that we'll never encounter lastmodified values older than
-        # 1970-01-02 so this is a safe workaround.
-        #
-        # Timestamps are defined as seconds since epoch aka 1970/01/01 00:00:00Z, so we
-        # use UTC as timezone here.
-        lastmodified = datetime.fromtimestamp(
-            max(86400, lastmodified), tz=UTC_TZ
-        ).replace(microsecond=0)
+        lastmodified = datetime.fromtimestamp(lastmodified, tz=UTC_TZ).replace(
+            microsecond=0
+        )
 
     if not isinstance(lastmodified, datetime):
         raise ValueError(
-            "lastmodified must be a datetime or float or int instance but, got {} instead".format(
-                lastmodified.__class__
-            )
+            f"lastmodified must be a datetime, float or int instance, got {lastmodified.__class__} instead"
         )
 
     if not is_timezone_aware(lastmodified):
@@ -1577,7 +1568,9 @@ def get_flask_user_from_request(request):
     apikey = octoprint.server.util.get_api_key(request)
     if apikey is not None:
         # user from api key?
-        user = octoprint.server.util.get_user_for_apikey(apikey)
+        user = octoprint.server.util.get_user_for_apikey(
+            apikey, remote_address=request.remote_addr
+        )
 
     if user is None:
         # user still None -> current session user
@@ -2027,8 +2020,8 @@ class ReverseProxyInfo(BaseModel):
     server_port: int
     server_path: str
     cookie_suffix: str
-    trusted_proxies: List[str] = []
-    headers: Dict[str, str] = {}
+    trusted_proxies: list[str] = []
+    headers: dict[str, str] = {}
 
 
 def get_reverse_proxy_info():
@@ -2060,3 +2053,55 @@ def get_reverse_proxy_info():
         trusted_proxies=trusted_proxies,
         headers=headers,
     )
+
+
+##~~ API versioning
+
+
+class ApiVersioned:
+    def __init__(self, f):
+        self.default_handler = f
+        self.version_handlers = {}
+        functools.update_wrapper(self, f)
+
+    def __call__(self, *args, **kwargs):
+        handler = self._get_handler_for_request()
+        return handler(*args, **kwargs)
+
+    def version(self, specifier):
+        def decorator(f):
+            self.version_handlers[parse_specifier(specifier)] = f
+            return f
+
+        return decorator
+
+    def _get_handler_for_request(self):
+        request_version = get_api_version_from_request()
+
+        if request_version:
+            request_version = parse_version(request_version)
+            for specifier, handler in self.version_handlers.items():
+                if is_version_compatible(request_version.base_version, specifier):
+                    return handler
+
+        return self.default_handler
+
+
+def api_versioned(func):
+    if callable(func):
+        return ApiVersioned(func)
+    return ApiVersioned
+
+
+def get_api_version_from_request():
+    return flask.request.headers.get(
+        "X-OctoPrint-Api-Version", flask.request.values.get("api_version")
+    )
+
+
+def api_version_matches(specifier):
+    request_version = get_api_version_from_request()
+    if request_version:
+        request_version = parse_version(request_version)
+        return is_version_compatible(request_version.base_version, specifier)
+    return False

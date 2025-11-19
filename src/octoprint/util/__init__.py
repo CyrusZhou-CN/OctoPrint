@@ -27,7 +27,7 @@ from collections.abc import Iterable, MutableMapping, Set
 from functools import wraps
 from glob import escape as glob_escape  # noqa: F401
 from time import monotonic as monotonic_time  # noqa: F401
-from typing import Union
+from typing import IO, Optional, Union
 
 from frozendict import frozendict
 
@@ -582,6 +582,9 @@ def dict_merge(a, b, leaf_merger=None, in_place=False):
     if b is None:
         b = {}
 
+    if not isinstance(a, dict):
+        raise ValueError("a must be a dict")
+
     if not isinstance(b, dict):
         return b
 
@@ -717,7 +720,7 @@ def dict_minimal_mergediff(source, target):
     return result
 
 
-def dict_contains_keys(keys, dictionary):
+def dict_contains_all_keys(keys, dictionary):
     """
     Recursively deep-checks if ``dictionary`` contains all keys found in ``keys``.
 
@@ -726,14 +729,14 @@ def dict_contains_keys(keys, dictionary):
         >>> positive = dict(foo="some_other_bar", fnord=dict(b=100))
         >>> negative = dict(foo="some_other_bar", fnord=dict(b=100, d=20))
         >>> dictionary = dict(foo="bar", fnord=dict(a=1, b=2, c=3))
-        >>> dict_contains_keys(positive, dictionary)
+        >>> dict_contains_all_keys(positive, dictionary)
         True
-        >>> dict_contains_keys(negative, dictionary)
+        >>> dict_contains_all_keys(negative, dictionary)
         False
 
     Arguments:
-        a (dict): The dictionary to check for the keys from ``b``.
-        b (dict): The dictionary whose keys to check ``a`` for.
+        keys (dict): The dictionary whose keys to check ``dictionary`` for.
+        dictionary (dict): The dictionary to check for the keys from ``keys``.
 
     Returns:
         boolean: True if all keys found in ``b`` are also present in ``a``, False otherwise.
@@ -750,6 +753,44 @@ def dict_contains_keys(keys, dictionary):
                 return False
 
     return True
+
+
+dict_contains_keys = dict_contains_all_keys
+
+
+def dict_contains_any_keys(keys, dictionary):
+    """
+    Recursively deep-checks if ``dictionary`` contains any keys found in ``keys``.
+
+    Example::
+
+        >>> positive = dict(foo="some_other_bar")
+        >>> negative = dict(fnord=dict(e=True))
+        >>> dictionary = dict(foo="bar", fnord=dict(a=1, b=2, c=3))
+        >>> dict_contains_any_keys(positive, dictionary)
+        True
+        >>> dict_contains_any_keys(negative, dictionary)
+        False
+
+    Arguments:
+        keys (dict): The dictionary whose keys to check ``dictionary`` for.
+        dictionary (dict): The dictionary to check for the keys from ``keys``.
+
+    Returns:
+        boolean: True if any keys found in ``b`` are also present in ``a``, False otherwise.
+    """
+
+    if not isinstance(keys, dict) or not isinstance(dictionary, dict):
+        return False
+
+    for k, v in keys.items():
+        if dictionary and k in dictionary:
+            if isinstance(v, dict) and len(v) > 0:
+                if dict_contains_any_keys(v, dictionary[k]):
+                    return True
+            else:
+                return True
+    return False
 
 
 def dict_flatten(dictionary, prefix="", separator="."):
@@ -933,22 +974,24 @@ def guess_mime_type(data):
     return filetype.guess_mime(data)
 
 
-def parse_mime_type(mime):
-    import cgi
-
-    if not mime or not isinstance(mime, (str, bytes)):
+def parse_mime_type(line: str):
+    if not line or not isinstance(line, (str, bytes)):
         raise ValueError("mime must be a non empty str")
 
-    mime, params = cgi.parse_header(mime)
+    if ";" in line:
+        part1, part2 = line.split(";", maxsplit=1)
+    else:
+        part1 = line
+        part2 = ""
 
-    if mime == "*":
-        mime = "*/*"
+    if part1 == "*":
+        part1 = "*/*"
 
-    parts = mime.split("/") if "/" in mime else None
-    if not parts or len(parts) != 2:
+    if "/" not in part1:
         raise ValueError("mime must be a mime type of format type/subtype")
 
-    mime_type, mime_subtype = parts
+    mime, params = parse_content_type_line(f"{part1};{part2}")
+    mime_type, mime_subtype = mime.split("/", maxsplit=1)
     return mime_type.strip(), mime_subtype.strip(), params
 
 
@@ -967,6 +1010,13 @@ def mime_type_matches(mime, other):
     )
 
     return type_matches and subtype_matches
+
+
+def parse_content_type_line(line: str) -> (str, dict):
+    from email.policy import EmailPolicy
+
+    header = EmailPolicy.header_factory("content-type", line)
+    return (header.content_type, dict(header.params))
 
 
 @contextlib.contextmanager
@@ -1076,19 +1126,26 @@ BOMS = {
 }
 
 
-def get_bom(filename, encoding):
+def get_bom(file_obj: Union[str, IO], encoding: str) -> Optional[bytes]:
     """
     Check if the file has a BOM and if so return it.
 
     Params:
-        filename (str): The file to check.
+        file_obj (str or IO): The file to check, either a path or an IO object.
         encoding (str): The encoding to check for.
 
     Returns:
         (bytes) the BOM or None if there is no BOM.
     """
-    with open(filename, mode="rb") as f:
-        header = f.read(4)
+
+    if isinstance(file_obj, str):
+        with open(file_obj, mode="rb") as f:
+            header = f.read(4)
+    else:
+        pos = file_obj.tell()
+        file_obj.seek(0)
+        header = file_obj.read(4)
+        file_obj.seek(pos)
 
     for enc, bom in BOMS.items():
         if header.startswith(bom) and encoding.lower() == enc:
@@ -1382,7 +1439,7 @@ class ResettableTimer(threading.Thread):
                 self.is_reset = False
             self._event.wait(self.interval)
 
-        if not self._event.isSet():
+        if not self._event.is_set():
             self.function(*self.args, **self.kwargs)
         with self._mutex:
             self._event.set()

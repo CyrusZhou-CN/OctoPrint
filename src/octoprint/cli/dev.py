@@ -2,6 +2,7 @@ __author__ = "Gina Häußge <osd@foosel.net>"
 __license__ = "GNU Affero General Public License http://www.gnu.org/licenses/agpl.html"
 __copyright__ = "Copyright (C) 2015 The OctoPrint Project - Released under terms of the AGPLv3 License"
 
+import re
 import sys
 
 import click
@@ -255,6 +256,56 @@ class OctoPrintDevelCommands(click.MultiCommand):
 
         return command
 
+    def plugin_migrate_to_pyproject(self):
+        try:
+            from octoprint_plugin_tool import migrate_to_pyproject
+        except ImportError:
+            return None
+
+        @click.command("migrate-to-pyproject")
+        @click.option(
+            "--path", help="Path of the local plugin development folder to migrate"
+        )
+        @click.option(
+            "--force",
+            "force",
+            is_flag=True,
+            help="Force migration, even if setup.py looks wrong",
+        )
+        @click.option(
+            "--rename-package",
+            "rename_package",
+            is_flag=True,
+            help="Automatically rename package to recommended naming scheme",
+        )
+        def command(path, force, rename_package):
+            """
+            Migrates a plugin based on OctoPrint's setup.py template to the use of pyproject.toml and a Taskfile
+            """
+
+            import os
+
+            def log(message: str, warning: bool = False, error: bool = False):
+                click.echo(message, err=error)
+
+            if not path:
+                path = os.getcwd()
+            path = os.path.normpath(path)
+
+            click.echo(f"Migrating plugin at {path}")
+
+            if migrate_to_pyproject(path, force=force, rename=rename_package, log=log):
+                click.echo("... done!")
+                click.echo()
+                click.echo(
+                    "PLEASE REVIEW THE CHANGES THOROUGHLY AND MAKE SURE TO TEST YOUR PLUGIN AND ITS INSTALLATION!"
+                )
+
+            else:
+                click.echo("... failed!", err=True)
+
+        return command
+
     def css_build(self):
         @click.command("build")
         @click.option(
@@ -318,7 +369,10 @@ class OctoPrintDevelCommands(click.MultiCommand):
             "--all", "all_files", is_flag=True, help="Watch & build all less files"
         )
         @click.option(
-            "--list", "list_files", is_flag=True, help="List all available files and exit"
+            "--list",
+            "list_files",
+            is_flag=True,
+            help="List all available files and exit",
         )
         def command(files, all_files, list_files):
             import os
@@ -470,3 +524,62 @@ class OctoPrintDevelCommands(click.MultiCommand):
 def cli():
     """Additional commands for development tasks."""
     pass
+
+
+def _get_pep508_name(name: str) -> str:
+    PROJECT_NAME_VALIDATOR = re.compile(
+        r"^([A-Z0-9]|[A-Z0-9][A-Z0-9._-]*[A-Z0-9])$", flags=re.IGNORECASE
+    )
+
+    PROJECT_NAME_INVALID = re.compile(r"[^A-Z0-9.-]", flags=re.IGNORECASE)
+
+    if PROJECT_NAME_VALIDATOR.match(name):
+        return name
+
+    name = PROJECT_NAME_INVALID.sub("-", name)
+    if not PROJECT_NAME_VALIDATOR.match(name):
+        raise ValueError(f"{name} is not PEP508 compliant")
+
+    return name
+
+
+def _get_spdx_license(license: str) -> str:
+    SPDX_LICENSE_LUT = {
+        "agpl-3.0": "AGPL-3.0-or-later",
+        "agplv3": "AGPL-3.0-or-later",
+        "agpl v3": "AGPL-3.0-or-later",
+        "apache 2": "Apache-2.0",
+        "apache 2.0": "Apache-2.0",
+        "apache-2.0": "Apache-2.0",
+        "apache license 2.0": "Apache-2.0",
+        "bsd-3-clause": "BSD-3-Clause",
+        "cc by-nc-sa 4.0": "CC-BY-NC-SA-4.0",
+        "cc by-nd": "CC-BY-ND-4.0",
+        "gnu affero general public license": "LicenseRef-AGPL",
+        "gnu general public license v3.0": "GPL-3.0-or-later",
+        "gnuv3": "GPL-3.0-or-later",
+        "gnu v3.0": "GPL-3.0-or-later",
+        "gpl-3.0 license": "GPL-3.0-or-later",
+        "gplv3": "GPL-3.0-or-later",
+        "mit": "MIT",
+        "mit license": "MIT",
+        "unlicence": "Unlicense",
+    }  # extracted from plugins.octoprint.org/plugins.json on 2025-06-05
+
+    SPDX_IDSTRING_INVALID = re.compile(r"[^A-Z0-9.-]", flags=re.IGNORECASE)
+
+    from packaging.licenses import (
+        InvalidLicenseExpression,
+        canonicalize_license_expression,
+    )
+
+    try:
+        return canonicalize_license_expression(
+            SPDX_LICENSE_LUT.get(
+                license.lower(),
+                license,
+            )
+        )
+    except InvalidLicenseExpression:
+        license = SPDX_IDSTRING_INVALID.sub("-", license)
+        return f"LicenseRef-{license}"

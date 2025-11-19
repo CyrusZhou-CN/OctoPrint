@@ -3,7 +3,7 @@ __license__ = "GNU Affero General Public License http://www.gnu.org/licenses/agp
 __copyright__ = "Copyright (C) 2014 The OctoPrint Project - Released under terms of the AGPLv3 License"
 
 """
-The SSDP/UPNP implementations has been largely inspired by https://gist.github.com/schlamar/2428250
+The SSDP/UPNP implementations have been largely inspired by https://gist.github.com/schlamar/2428250
 
 For a spec see http://www.upnp.org/specs/arch/UPnP-arch-DeviceArchitecture-v1.0.pdf
 """
@@ -80,7 +80,7 @@ class DiscoveryPlugin(
             "upnpUuid": None,
             "zeroConf": [],
             "model": {
-                "name": None,
+                "name": "OctoPrint",
                 "description": None,
                 "number": None,
                 "url": None,
@@ -802,4 +802,4 @@ __plugin_disabling_discouraged__ = gettext(
     "discoverable on the network via Bonjour and uPnP."
 )
 __plugin_license__ = "AGPLv3"
-__plugin_pythoncompat__ = ">=3.7,<4"
+__plugin_pythoncompat__ = ">=3.9,<4"

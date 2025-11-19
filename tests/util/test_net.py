@@ -1,9 +1,9 @@
 __license__ = "GNU Affero General Public License http://www.gnu.org/licenses/agpl.html"
 __copyright__ = "Copyright (C) 2017 The OctoPrint Project - Released under terms of the AGPLv3 License"
 
-import socket
 from unittest import mock
 
+import ifaddr
 import pytest
 
 import octoprint.util.net
@@ -13,27 +13,13 @@ def patched_interfaces():
     return ["eth0"]
 
 
-def patched_ifaddresses(addr, netmask):
-    if addr == "eth0":
-        return {
-            socket.AF_INET: [
-                {"addr": "192.168.123.10", netmask: "255.255.255.0"},
-                {"addr": "12.1.1.10", netmask: "255.0.0.0"},
-            ],
-            socket.AF_INET6: [
-                {"addr": "2a01:4f8:1c0c:6958::1", netmask: "ffff:ffff:ffff:ffff::/64"}
-            ],
-        }
-
-    return {}
-
-
-def patched_ifaddresses_mask(addr):
-    return patched_ifaddresses(addr, "mask")
-
-
-def patched_ifaddresses_netmask(addr):
-    return patched_ifaddresses(addr, "netmask")
+def patched_ifaddr_get_adapters():
+    ips = [
+        ifaddr.IP("192.168.123.10", 24, "192.168.123.10"),
+        ifaddr.IP("12.1.1.10", 8, "12.1.1.10"),
+        ifaddr.IP(("2a01:4f8:1c0c:6958::1", 0, 0), 64, "2a01:4f8:1c0c:6958::1"),
+    ]
+    return [ifaddr.Adapter("eth0", "eth0", ips, 0)]
 
 
 @pytest.mark.parametrize(
@@ -56,17 +42,38 @@ def patched_ifaddresses_netmask(addr):
     ],
 )
 def test_is_lan_address(input_address, input_additional, expected):
-    with mock.patch(
-        "netifaces.interfaces", side_effect=patched_interfaces
-    ), mock.patch.object(octoprint.util.net, "HAS_V6", True):
-        for side_effect in (patched_ifaddresses_mask, patched_ifaddresses_netmask):
-            with mock.patch("netifaces.ifaddresses", side_effect=side_effect):
-                assert (
-                    octoprint.util.net.is_lan_address(
-                        input_address, additional_private=input_additional
-                    )
-                    == expected
-                )
+    with (
+        mock.patch("ifaddr.get_adapters", side_effect=patched_ifaddr_get_adapters),
+        mock.patch.object(octoprint.util.net, "HAS_V6", True),
+    ):
+        assert (
+            octoprint.util.net.is_lan_address(
+                input_address, additional_private=input_additional
+            )
+            == expected
+        )
+
+
+@pytest.mark.parametrize(
+    "input_address,expected",
+    [
+        (None, False),
+        ("", False),
+        ("127.0.0.1", True),
+        ("127.100.200.1", True),
+        ("::1", True),
+        ("192.168.123.234", False),
+        ("172.24.0.1", False),
+        ("10.1.2.3", False),
+        ("fc00::1", False),
+        ("::ffff:192.168.1.1", False),
+        ("::ffff:8.8.8.8", False),
+        ("11.1.2.3", False),
+    ],
+)
+def test_is_loopback_address(input_address, expected):
+    with mock.patch.object(octoprint.util.net, "HAS_V6", True):
+        assert octoprint.util.net.is_loopback_address(input_address) == expected
 
 
 @pytest.mark.parametrize(
@@ -97,6 +104,7 @@ def test_unmap_v4_in_v6(address, expected):
 @pytest.mark.parametrize(
     "address,expected",
     [
+        (ifaddr.IP("127.0.0.1", 8, "127.0.0.1"), "127.0.0.0/8"),
         ({"mask": "192.168.0.0/24"}, "192.168.0.0/24"),
         ({"netmask": "192.168.0.0/24"}, "192.168.0.0/24"),
     ],

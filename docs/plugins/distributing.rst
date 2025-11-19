@@ -5,9 +5,6 @@ Distributing your plugin
 
 You can distribute a plugin with OctoPrint via two ways.
 
-.. contents::
-   :local:
-
 .. _sec-plugins-distribution-manual:
 
 Manual file distribution
@@ -23,12 +20,17 @@ like your plugin) or a package (a folder named like your plugin + ``__init.py__`
 Proper packages installable via pip
 -----------------------------------
 
-You can have your users install it via ``pip`` and register it for the `entry point <http://setuptools.readthedocs.io/en/latest/setuptools.html#dynamic-discovery-of-services-and-plugins>`_ ``octoprint.plugin`` via
-your plugin's ``setup.py``, this way it will be found automatically by OctoPrint upon initialization of the
-plugin subsystem [#f1]_.
+You can have your users install it via ``pip`` and register it for the `entry point <https://packaging.python.org/en/latest/guides/creating-and-discovering-plugins/#using-package-metadata>`_ ``octoprint.plugin`` via
+your plugin's ``pyproject.toml``, this way it will be found automatically by OctoPrint upon initialization of the
+plugin subsystem [#f1]_:
+
+.. code-block:: toml
+
+   [project.entry-points."octoprint.plugin"]
+   <your plugin's identifier> = "<your plugin's package name>"
 
 For an example of how the directory structure and related files would look like in this case, please take a
-look at the `helloworld example from OctoPrint's example plugins <https://github.com/OctoPrint/Plugin-Examples/tree/master/helloworld>`_.
+look at one of OctoPrint's bundled but externally maintained plugins, e.g. `OctoPrint-FileCheck <https://github.com/OctoPrint/OctoPrint-FileCheck/>`_.
 
 This variant is highly recommended for pretty much any plugin besides the most basic ones since it also allows
 requirements management and pretty much any thing else that Python's setuptools provide to the developer.
@@ -73,9 +75,9 @@ After you published the new release, you can verify it on your installed octopri
 with force checking the updates under the advanced options (in the software updates menu in the settings).
 The new versions will appear to the plugin users in the next 24 hours (it depends on their cache refreshes).
 
-The `Software Update Plugin <https://docs.octoprint.org/en/master/bundledplugins/softwareupdate.html#>`_ has options to define multiple release channels,
+The `Software Update Plugin <https://docs.octoprint.org/en/main/bundledplugins/softwareupdate.html#>`_ has options to define multiple release channels,
 and you can let the users decide if they want to test your pre-releases or not.
 This can be achieved with defining ``stable_branch`` and ``prerelease_branches`` in the ``get_update_information`` function,
 and creating github releases to the newly configured branches too.
-For more information you can check the `Software Update Plugin documentation <https://docs.octoprint.org/en/master/bundledplugins/softwareupdate.html#version-checks>`_
+For more information you can check the `Software Update Plugin documentation <https://docs.octoprint.org/en/main/bundledplugins/softwareupdate.html#version-checks>`_
 or read a more step-by-step writeup `here <https://github.com/cp2004/OctoPrint-Knowledge/blob/main/release-channels.md>`_.

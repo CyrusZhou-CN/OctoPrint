@@ -3,7 +3,7 @@ name: Test install of branches and latest release twice per day
 on:
   push:
     branches:
-      - master
+      - main
   workflow_dispatch:
   schedule:
     - cron: "0 */12 * * *"
@@ -13,26 +13,26 @@ jobs:
     name: Install branch
     strategy:
       matrix:
-        os: ["ubuntu-22.04"] # change back to ubuntu-latest once we drop Python 3.7
-        python: ["3.7", "3.8", "3.9", "3.10", "3.11"]
-        branch: ["master", "release"]
+        os: ["ubuntu-latest"]
+        python: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        branch: ["main", "release"]
     runs-on: ${{ matrix.os }}
     steps:
       - name: ⬇ Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
           path: src
 
       - name: 🐍 Set up Python ${{ matrix.python }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
 
       # Checkout code and install
       - name: ⬇ Checkout code to test
         if: ${{ matrix.branch != 'release' }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ matrix.branch }}
           fetch-depth: 0
@@ -58,7 +58,7 @@ jobs:
       - name: 🏗 Create base config for test server
         run: |
           mkdir e2econfig
-          cp -r src/.github/fixtures/with_acl/* e2econfig
+          cp -r src/.github/ci/e2econfig/* e2econfig
 
           # ensure enabled rate limiter
           yq -i '.devel.enableRateLimiter = true' e2econfig/config.yaml
