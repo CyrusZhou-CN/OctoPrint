@@ -8,6 +8,8 @@ $(function () {
 
         self.stats = undefined;
         self.statsFetched = ko.observable(false);
+        self.yearStats = undefined;
+        self.yearStatsFetched = ko.observable(false);
         self.dummy = ko.observable();
 
         self.achievements = ko.observableArray([]);
@@ -52,45 +54,78 @@ $(function () {
             if (!self.statsFetched()) {
                 return "n/a";
             }
-            if (self.stats.prints_started() === 0) {
+            return self._prints(self.stats);
+        });
+        self.printsYear = ko.pureComputed(() => {
+            if (!self.yearStatsFetched()) {
+                return "n/a";
+            }
+            return self._prints(self.yearStats);
+        });
+
+        self._prints = (stats) => {
+            if (stats.prints_started() === 0) {
                 return gettext("No prints yet");
             }
             return _.sprintf(gettext("%(prints)s (%(finished)s finished)"), {
-                prints: this.stats.prints_started(),
-                finished: self.stats.prints_finished()
+                prints: stats.prints_started(),
+                finished: stats.prints_finished()
             });
-        });
+        };
 
         self.duration = ko.pureComputed(() => {
             if (!self.statsFetched()) {
                 return "n/a";
             }
-            if (!self.stats.print_duration_finished()) {
+            return self._duration(self.stats);
+        });
+
+        self.durationYear = ko.pureComputed(() => {
+            if (!self.yearStatsFetched()) {
+                return "n/a";
+            }
+            return self._duration(self.yearStats);
+        });
+
+        self._duration = (stats) => {
+            if (!stats.print_duration_finished()) {
                 return _.sprintf(gettext("%(total)s"), {
-                    total: formatDuration(self.stats.print_duration_total())
+                    total: formatDuration(stats.print_duration_total())
                 });
             } else {
                 return _.sprintf(gettext("%(total)s (%(finished)s finished)"), {
-                    total: formatDuration(self.stats.print_duration_total()),
-                    finished: formatDuration(self.stats.print_duration_finished())
+                    total: formatDuration(stats.print_duration_total()),
+                    finished: formatDuration(stats.print_duration_finished())
                 });
             }
-        });
+        };
 
         self.longestPrint = ko.pureComputed(() => {
             self.dummy();
             if (!self.statsFetched()) {
                 return "n/a";
             }
+            return self._longestPrint(self.stats);
+        });
+
+        self.longestPrintYear = ko.pureComputed(() => {
+            self.dummy();
+            if (!self.yearStatsFetched()) {
+                return "n/a";
+            }
+            return self._longestPrint(self.yearStats);
+        });
+
+        self._longestPrint = (stats) => {
             return _.sprintf(
                 gettext("%(duration)s (finished on %(date)s, %(timeSince)s)"),
                 {
-                    duration: formatDuration(self.stats.longest_print_duration()),
-                    date: formatDate(self.stats.longest_print_date()),
-                    timeSince: formatTimeAgo(self.stats.longest_print_date())
+                    duration: formatDuration(stats.longest_print_duration()),
+                    date: formatDate(stats.longest_print_date()),
+                    timeSince: formatTimeAgo(stats.longest_print_date())
                 }
             );
-        });
+        };
 
         self.hiddenAchievementsText = ko.pureComputed(() => {
             return _.sprintf(gettext("... and %(count)s hidden achievements!"), {
@@ -186,6 +221,33 @@ $(function () {
             );
         };
 
+        self.resetYear = () => {
+            if (
+                !self.loginState.hasPermission(
+                    self.access.permissions.PLUGIN_ACHIEVEMENTS_RESET
+                )
+            ) {
+                return;
+            }
+
+            showConfirmationDialog(
+                gettext(
+                    "This will reset this year's stats. This action cannot be undone!"
+                ),
+                () => {
+                    self.resetting(true);
+                    OctoPrint.plugins.achievements
+                        .resetYear()
+                        .done(() => {
+                            self.requestData();
+                        })
+                        .always(() => {
+                            self.resetting(false);
+                        });
+                }
+            );
+        };
+
         self.requestData = () => {
             if (
                 !self.loginState.hasPermission(
@@ -199,6 +261,7 @@ $(function () {
 
         self.fromResponse = (response) => {
             self.fromStatsResponse(response.stats);
+            self.fromYearStatsResponse(response.current_year);
             self.fromAchievementsResponse(response.achievements);
 
             const achieved = _.filter(
@@ -221,6 +284,15 @@ $(function () {
                 self.statsFetched(true);
             } else {
                 ko.mapping.fromJS(response, self.stats);
+            }
+        };
+
+        self.fromYearStatsResponse = (response) => {
+            if (self.yearStats === undefined) {
+                self.yearStats = ko.mapping.fromJS(response);
+                self.yearStatsFetched(true);
+            } else {
+                ko.mapping.fromJS(response, self.yearStats);
             }
         };
 

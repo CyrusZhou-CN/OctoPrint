@@ -44,7 +44,7 @@ details the better!
 
 #### How was it tested? How can it be tested by the reviewer?
 
-#### Was any kind of genAI (ChatGPT, Copilot etc) involved in creating this PR?
+#### Was any kind of genAI (ChatGPT, Copilot etc) involved in creating this PR? Which one and how?
 
 #### Any background context you want to provide?
 

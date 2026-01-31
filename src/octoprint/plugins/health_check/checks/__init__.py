@@ -6,11 +6,14 @@ import hashlib
 import logging
 from enum import Enum
 
+from pydantic import computed_field
+
 from octoprint.schema import BaseModel
 
 
 class Result(Enum):
     OK: str = "ok"
+    INFO: str = "info"
     WARNING: str = "warning"
     ISSUE: str = "issue"
 
@@ -19,10 +22,10 @@ class CheckResult(BaseModel):
     result: Result = Result.OK
     context: dict = {}
 
-    @property  # TODO: Turn this into a computed field once Python 3.7 is dropped
+    @computed_field
     def hash(self) -> str:
         hash = hashlib.sha1()
-        hash.update(self.model_dump_json().encode())
+        hash.update(self.model_dump_json(exclude="hash").encode())
         return hash.hexdigest()
 
 

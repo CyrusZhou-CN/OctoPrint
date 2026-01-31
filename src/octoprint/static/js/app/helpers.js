@@ -753,7 +753,7 @@ function showMessageDialog(msg, options) {
     }
 
     const title = options.title || "";
-    const message = options.message || "";
+    let message = options.message || "";
     const close = options.close || gettext("Close");
     const onclose = options.onclose || undefined;
     const onshow = options.onshow || undefined;
@@ -1232,24 +1232,25 @@ function showProgressModal(options, promise) {
     var outputClassSuccess = options.outputClassSuccess || "";
     var outputClassFailure = options.outputClassFailure || "text-error";
 
-    var modalHeader = $("<h3>" + title + "</h3>");
+    var modalHeader = $("<h3> " + title + "</h3>");
+    var icon = $('<i class="fa fa-spinner fa-spin"></i>');
+    modalHeader.prepend(icon);
+
     var paragraph = $("<p>" + message + "</p>");
 
     var progress = $('<div class="progress progress-text-centered"></div>');
     var progressBar = $('<div class="bar"></div>').addClass(barClassSuccess);
     var progressText = $('<span class="progress-text-back"></span>');
 
-    if (max === undefined) {
-        progress.addClass("progress-striped active");
-        progressBar.width("100%");
-    }
+    // initially set progress bar to 100% & active to show that something is happening in the background
+    progress.addClass("progress-striped active");
+    progressBar.width("100%");
 
     progress.append(progressBar).append(progressText);
 
     var button = $('<button class="btn">' + buttonText + "</button>")
         .prop("disabled", true)
-        .attr("data-dismiss", "modal")
-        .attr("aria-hidden", "true");
+        .attr("data-dismiss", "modal");
 
     var modalBody = $("<div></div>")
         .addClass("modal-body")
@@ -1273,10 +1274,15 @@ function showProgressModal(options, promise) {
     modal.modal({keyboard: false, backdrop: "static", show: true});
 
     var counter = 0;
+    var value = 100;
     promise
         .progress(function () {
+            var status = false;
             var short, long, success;
-            if (arguments.length === 2) {
+            if (arguments.length === 1) {
+                status = success = true;
+                short = long = arguments[0];
+            } else if (arguments.length === 2) {
                 short = long = arguments[0];
                 success = arguments[1];
             } else if (arguments.length === 3) {
@@ -1285,17 +1291,23 @@ function showProgressModal(options, promise) {
                 success = arguments[2];
             } else {
                 throw Error(
-                    "Invalid parameters for showProgressModal, expected either (text, success) or (short, long, success)"
+                    "Invalid parameters for showProgressModal progress, expected either (status), (text, success) or (short, long, success)"
                 );
             }
 
-            var value;
-
-            if (max === undefined || max <= 0) {
-                value = 100;
-            } else {
+            if (!status) {
                 counter++;
                 value = Math.max(Math.min((counter * 100) / max, 100), 0);
+            }
+
+            // if we got a value & max, remove stripes & active animation
+            if (
+                value > 0 &&
+                max &&
+                max > 0 &&
+                progress.hasClass("progress-striped active")
+            ) {
+                progress.removeClass("progress-striped active");
             }
 
             // update progress bar
@@ -1312,30 +1324,28 @@ function showProgressModal(options, promise) {
             }
 
             // if not successful, apply failure class
-            if (!success && !progressBar.hasClass(barClassFailure)) {
+            if (!status && !success && !progressBar.hasClass(barClassFailure)) {
                 progressBar.removeClass(barClassSuccess).addClass(barClassFailure);
             }
 
             if (output && pre) {
-                if (success) {
-                    pre.append(
-                        $("<span class='" + outputClassSuccess + "'>" + long + "</span>")
-                    );
-                } else {
-                    pre.append(
-                        $("<span class='" + outputClassFailure + "'>" + long + "</span>")
-                    );
-                }
+                pre.append(
+                    $(
+                        `<span class='${success || status ? outputClassSuccess : outputClassFailure}'>${long}</span>`
+                    )
+                );
                 pre.scrollTop(pre[0].scrollHeight - pre.height());
             }
         })
         .done(function () {
             button.prop("disabled", false);
+            icon.removeClass("fa-spinner fa-spin").addClass("fa-check");
             if (close) {
                 modal.modal("hide");
             }
         })
         .fail(function () {
+            icon.removeClass("fa-spinner fa-spin").addClass("fa-x");
             button.prop("disabled", false);
         });
 

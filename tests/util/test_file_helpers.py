@@ -28,10 +28,11 @@ class BomAwareOpenTest(unittest.TestCase):
         """Tests that the contents of a UTF8 file with BOM are loaded correctly (without the BOM)."""
 
         # test
-        with octoprint.util.bom_aware_open(
-            self.filename_utf8_with_bom, encoding="utf-8"
-        ) as f:
-            contents = f.readlines()
+        with self.assertWarns(DeprecationWarning):
+            with octoprint.util.bom_aware_open(
+                self.filename_utf8_with_bom, encoding="utf-8"
+            ) as f:
+                contents = f.readlines()
 
         # assert
         self.assertEqual(len(contents), 3)
@@ -41,10 +42,11 @@ class BomAwareOpenTest(unittest.TestCase):
         """Tests that the contents of a UTF8 file without BOM are loaded correctly."""
 
         # test
-        with octoprint.util.bom_aware_open(
-            self.filename_utf8_without_bom, encoding="utf-8"
-        ) as f:
-            contents = f.readlines()
+        with self.assertWarns(DeprecationWarning):
+            with octoprint.util.bom_aware_open(
+                self.filename_utf8_without_bom, encoding="utf-8"
+            ) as f:
+                contents = f.readlines()
 
         # assert
         self.assertEqual(len(contents), 3)
@@ -54,10 +56,11 @@ class BomAwareOpenTest(unittest.TestCase):
         """Tests that the contents of a UTF8 file loaded as ASCII are replaced correctly if "replace" is specified on errors."""
 
         # test
-        with octoprint.util.bom_aware_open(
-            self.filename_utf8_with_bom, errors="replace"
-        ) as f:
-            contents = f.readlines()
+        with self.assertWarns(DeprecationWarning):
+            with octoprint.util.bom_aware_open(
+                self.filename_utf8_with_bom, errors="replace"
+            ) as f:
+                contents = f.readlines()
 
         # assert
         self.assertEqual(len(contents), 3)
@@ -67,8 +70,9 @@ class BomAwareOpenTest(unittest.TestCase):
     def test_bom_aware_open_encoding_error(self):
         """Tests that an encoding error is thrown if not suppressed when opening a UTF8 file as ASCII."""
         try:
-            with octoprint.util.bom_aware_open(self.filename_utf8_without_bom) as f:
-                f.readlines()
+            with self.assertWarns(DeprecationWarning):
+                with octoprint.util.bom_aware_open(self.filename_utf8_without_bom) as f:
+                    f.readlines()
             self.fail("Expected an exception")
         except UnicodeDecodeError:
             pass
@@ -77,13 +81,14 @@ class BomAwareOpenTest(unittest.TestCase):
         """Tests that the parameters are propagated properly in text mode."""
 
         with mock.patch("builtins.open", wraps=open) as mock_open:
-            with octoprint.util.bom_aware_open(
-                self.filename_utf8_without_bom,
-                mode="rt",
-                encoding="utf-8",
-                errors="ignore",
-            ) as f:
-                f.readlines()
+            with self.assertWarns(DeprecationWarning):
+                with octoprint.util.bom_aware_open(
+                    self.filename_utf8_without_bom,
+                    mode="rt",
+                    encoding="utf-8",
+                    errors="ignore",
+                ) as f:
+                    f.readlines()
 
         calls = [
             mock.call(self.filename_utf8_without_bom, mode="rb"),
@@ -98,14 +103,14 @@ class BomAwareOpenTest(unittest.TestCase):
 
     def test_bom_aware_open_parameters_binary_mode(self):
         """Tests that binary mode raises an AssertionError."""
-        self.assertRaises(
-            AssertionError,
-            octoprint.util.bom_aware_open,
-            self.filename_utf8_without_bom,
-            mode="rb",
-            encoding="utf-8",
-            errors="ignore",
-        )
+        with self.assertWarns(DeprecationWarning):
+            with self.assertRaises(AssertionError):
+                octoprint.util.bom_aware_open(
+                    self.filename_utf8_without_bom,
+                    mode="rb",
+                    encoding="utf-8",
+                    errors="ignore",
+                )
 
 
 class GetBomTest(unittest.TestCase):

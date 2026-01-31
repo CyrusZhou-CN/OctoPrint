@@ -41,7 +41,7 @@ class FeatureConfig(BaseModel):
     """Commands that should never be auto-uppercased when sent to the printer through the Terminal tab."""
 
     g90InfluencesExtruder: bool = False
-    """Whether ``G90``/``G91`` also influence absolute/relative mode of extruders."""
+    """Whether ``G90``/``G91`` also influence absolute/relative mode of extruders. This is **only** used for filament usage calculation in the GCODE analyser and the bundled GCODE viewer!"""
 
     enforceReallyUniversalFilenames: bool = False
     """

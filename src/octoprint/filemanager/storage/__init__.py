@@ -3,6 +3,7 @@ __license__ = "GNU Affero General Public License http://www.gnu.org/licenses/agp
 __copyright__ = "Copyright (C) 2014 The OctoPrint Project - Released under terms of the AGPLv3 License"
 
 
+import datetime
 from typing import IO, TYPE_CHECKING, Any, Optional
 
 from octoprint.filemanager.util import AbstractFileWrapper
@@ -15,25 +16,41 @@ if TYPE_CHECKING:
 
 class StorageCapabilities(BaseModel):
     write_file: bool = False
+    """Storage supports writing files"""
     read_file: bool = False
+    """Storage supports reading files"""
     remove_file: bool = False
+    """Storage supports removing files"""
     copy_file: bool = False
+    """Storage supports internally copying files"""
     move_file: bool = False
+    """Storage supports internally moving files"""
 
     add_folder: bool = False
+    """Storage supports adding folders"""
     remove_folder: bool = False
+    """Storage supports removing folders"""
     copy_folder: bool = False
+    """Storage supports internally copying folders"""
     move_folder: bool = False
+    """Storage supports internally moving folders"""
 
     metadata: bool = False
+    """Storage supports metadata"""
     history: bool = False
+    """Storage supports history"""
     thumbnails: bool = False
+    """Storage supports file thumbnails"""
 
     path_on_disk: bool = False
+    """Storage can provide a path on disk to files"""
+
+    concurrent_printing: bool = True
+    """Storage supports concurrent printing"""
 
 
 class HistoryEntry(BaseModel):
-    timestamp: float
+    timestamp: datetime.datetime
     success: bool
     printerProfile: str
     printTime: Optional[float] = None
@@ -89,7 +106,7 @@ class StorageEntry(BaseModel):
     path: str
     user: Optional[str] = None
 
-    date: Optional[int] = None
+    date: Optional[datetime.datetime] = None
     size: Optional[int] = None
 
     entry_type: str
@@ -113,14 +130,19 @@ class StorageThumbnail(BaseModel):
     printable: str
     sizehint: str
     mime: str = "application/octet-stream"
+    last_modified: Optional[datetime.datetime] = None
     size: int = -1
-    last_modified: int = -1
 
 
 class StorageMeta(BaseModel):
     key: str
     name: str
     capabilities: StorageCapabilities
+
+
+class StorageUsage(BaseModel):
+    used: int
+    total: int
 
 
 class StorageInterface:
@@ -430,23 +452,29 @@ class StorageInterface:
         """
         raise NotImplementedError()
 
-    def copy_file(self, source, destination) -> str:
+    def copy_file(
+        self, source: str, destination: str, allow_overwrite: bool = False
+    ) -> str:
         """
         Copies the file ``source`` to ``destination``
 
         :param string source: path to the source file
         :param string destination: path to destination
+        :param bool allow_overwrite: whether to allow overwriting an already existing destination file
 
         :return: the path in the storage to the copy of the file
         """
         raise NotImplementedError()
 
-    def move_file(self, source, destination) -> str:
+    def move_file(
+        self, source: str, destination: str, allow_overwrite: bool = False
+    ) -> str:
         """
         Moves the file ``source`` to ``destination``
 
         :param string source: path to the source file
         :param string destination: path to destination
+        :param bool allow_overwrite: whether to allow overwriting an already existing destination file
 
         :return: the new path in the storage to the file
         """
@@ -460,11 +488,12 @@ class StorageInterface:
         """
         raise NotImplementedError()
 
-    def get_metadata(self, path):
+    def get_metadata(self, path, default=None):
         """
         Retrieves the metadata for the file ``path``.
 
         :param path: virtual path to the file for which to retrieve the metadata
+        :param default: default value to return if there is no associated metadata
         :return: the metadata associated with the file
         """
         raise NotImplementedError()
@@ -660,6 +689,9 @@ class StorageInterface:
         :return: the path in storage to ``path``
         """
         raise NotImplementedError()
+
+    def get_usage(self) -> Optional[StorageUsage]:
+        return None
 
     def _convert_storage_entry_to_dict(self, entry: StorageEntry) -> dict:
         """Converts StorageEntry tree to legacy dict structure"""

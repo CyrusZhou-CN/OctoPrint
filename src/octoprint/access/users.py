@@ -2,6 +2,7 @@ __license__ = "GNU Affero General Public License http://www.gnu.org/licenses/agp
 __copyright__ = "Copyright (C) 2014 The OctoPrint Project - Released under terms of the AGPLv3 License"
 
 import hashlib
+import hmac
 import logging
 import os
 import secrets
@@ -65,12 +66,12 @@ class UserManager(GroupChangeListener):
             self._settings.getInt(["accessControl", "sessionStaleAfter"]) * 60
         )
 
-        self._login_status_listeners = []
+        self._login_status_listeners: list["LoginStatusListener"] = []
 
-    def register_login_status_listener(self, listener):
+    def register_login_status_listener(self, listener: "LoginStatusListener"):
         self._login_status_listeners.append(listener)
 
-    def unregister_login_status_listener(self, listener):
+    def unregister_login_status_listener(self, listener: "LoginStatusListener"):
         self._login_status_listeners.remove(listener)
 
     def anonymous_user_factory(self):
@@ -340,6 +341,16 @@ class UserManager(GroupChangeListener):
                     extra={"callback": fqcn(listener)},
                 )
 
+    def _trigger_on_user_added(self, user: "User"):
+        for listener in self._login_status_listeners:
+            try:
+                listener.on_user_added(user)
+            except Exception:
+                self._logger.exception(
+                    f"Error in on_user_added on {listener!r}",
+                    extra={"callback": fqcn(listener)},
+                )
+
     def _trigger_on_user_modified(self, user):
         if isinstance(user, str):
             # user id
@@ -506,6 +517,9 @@ class LoginStatusListener:
         pass
 
     def on_user_logged_out(self, user, stale=False):
+        pass
+
+    def on_user_added(self, user):
         pass
 
     def on_user_modified(self, user):
@@ -687,6 +701,8 @@ class FilebasedUserManager(UserManager):
         )
         self._dirty = True
         self._save()
+
+        self._trigger_on_user_added(self._users[username])
 
     def change_user_activation(self, username, active):
         if username not in self._users:
@@ -934,7 +950,9 @@ class FilebasedUserManager(UserManager):
 
         elif apikey is not None:
             for user in self._users.values():
-                if apikey == user._apikey:
+                if user._apikey is None:
+                    continue
+                if hmac.compare_digest(apikey, user._apikey):
                     return user
             return None
 

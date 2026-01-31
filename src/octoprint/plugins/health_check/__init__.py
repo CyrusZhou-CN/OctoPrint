@@ -40,6 +40,7 @@ class HealthCheckPlugin(
         from .checks.filesystem_storage import FilesystemStorageCheck
         from .checks.global_api_key import GlobalApiKeyCheck
         from .checks.octoprint_freshness import OctoPrintFreshnessCheck
+        from .checks.only_admins import OnlyAdminsCheck
         from .checks.python_eol import PythonEolHealthCheck
 
         for clz in (
@@ -47,6 +48,7 @@ class HealthCheckPlugin(
             PythonEolHealthCheck,
             FilesystemStorageCheck,
             GlobalApiKeyCheck,
+            OnlyAdminsCheck,
         ):
             if clz.key in self.disabled_checks:
                 continue
@@ -184,6 +186,8 @@ class HealthCheckPlugin(
                 "filesystem_storage": {"issue_threshold": 95, "warning_threshold": 85},
             },
             "disabled": [],
+            "ignore_info_results": False,
+            "ignore_warning_results": False,
             "check_interval": 60,
         }
 
@@ -205,10 +209,16 @@ class HealthCheckPlugin(
             force=request.values.get("refresh") in octoprint.settings.valid_boolean_trues
         )
 
+        ignore_info_results = self._settings.get_boolean(["ignore_info_results"])
+        ignore_warning_results = self._settings.get_boolean(["ignore_warning_results"])
+
         health = {}
         for k, v in result.items():
+            if (ignore_info_results and v.result == "info") or (
+                ignore_warning_results and v.result == "warning"
+            ):
+                continue
             health[k] = v.model_dump()
-            health[k]["hash"] = v.hash
         return flask.jsonify(health=health)
 
     def is_api_protected(self):
@@ -223,6 +233,12 @@ class HealthCheckPlugin(
                 "template": "health_check_navbar.jinja2",
                 "styles": ["display: none"],
                 "data_bind": "visible: loginState.hasPermission(access.permissions.PLUGIN_HEALTH_CHECK_CHECK)",
+            },
+            {
+                "type": "settings",
+                "name": "Healthchecks",
+                "template": "health_check_settings.jinja2",
+                "custom_bindings": False,
             },
         ]
 

@@ -7,12 +7,10 @@ import sys
 
 import click
 
-click.disable_unicode_literals_warning = True
 
-
-class OctoPrintDevelCommands(click.MultiCommand):
+class OctoPrintDevelCommands(click.Group):
     """
-    Custom `click.MultiCommand <http://click.pocoo.org/5/api/#click.MultiCommand>`_
+    Custom `click.Group <https://click.palletsprojects.com/en/stable/api/#click.Group>`_
     implementation that provides commands relevant for (plugin) development
     based on availability of development dependencies.
     """
@@ -21,7 +19,7 @@ class OctoPrintDevelCommands(click.MultiCommand):
     groups = ("plugin", "css")
 
     def __init__(self, *args, **kwargs):
-        click.MultiCommand.__init__(self, *args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         from functools import partial
 

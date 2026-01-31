@@ -18,16 +18,62 @@ $(function () {
         self.copyMoveDialog = undefined;
 
         self.selectedFiles = ko.observableArray([]);
+        self.currentStorage = ko.observable("local");
+        self.currentStorage.subscribe(() => {
+            self.deselectAll();
+            self.changeFolderByPath(self.currentPath(), self.currentStorage());
+        });
+
+        self.selectedIndices = () => {
+            const files = self.filesAndFolders();
+            const selected = self.selectedFiles();
+            const indices = selected.map((item) => files.indexOf(item));
+            indices.sort((a, b) => a - b);
+            return indices;
+        };
+
+        self.selectedRanges = () => {
+            const indices = self.selectedIndices();
+            log.debug("UPMGR: Selected indices", indices);
+
+            const selectedRanges = [];
+            let lastIdx = -1;
+            let startIdx = -1;
+
+            for (let i = 0; i < indices.length; i++) {
+                const idx = indices[i];
+                if (lastIdx > -1 && idx == lastIdx + 1) {
+                    // the range continues
+                } else {
+                    // we found the start of a new range
+                    if (startIdx > -1 && lastIdx > -1) {
+                        // push the current one
+                        selectedRanges.push([startIdx, lastIdx]);
+                    }
+                    startIdx = idx;
+                }
+
+                lastIdx = idx;
+            }
+
+            if (startIdx > -1 && lastIdx > -1) {
+                selectedRanges.push([startIdx, lastIdx]);
+            }
+
+            return selectedRanges;
+        };
+
         self.currentPath = ko.observable("");
         self.listStyle = ko.observable("folders_files");
 
-        if (self.files.hasOwnProperty("allItems")) {
-            self.files.allItems.subscribe(function (newValue) {
-                self.listHelper.updateItems(newValue);
-                self.selectedFiles([]);
-                self.changeFolderByPath(self.currentPath());
-            });
-        }
+        self.currentStorageCapabilities = ko.pureComputed(() => {
+            const storage = self.currentStorage();
+            return self.files.storageCapabilities(storage);
+        });
+        self.currentStorageCanAddFolder = ko.pureComputed(() => {
+            const storage = self.currentStorage();
+            return self.files.storageCanAddFolder(storage);
+        });
 
         self.listHelper = new ItemListHelper(
             "uploadmanagerList",
@@ -119,12 +165,6 @@ $(function () {
                         data["prints"]["success"] > 0
                     );
                 },
-                sd: (data) => {
-                    return data["origin"] && data["origin"] == "printer";
-                },
-                local: (data) => {
-                    return !(data["origin"] && data["origin"] == "printer");
-                },
                 machinecode: (data) => {
                     return data["type"] && data["type"] == "machinecode";
                 },
@@ -134,10 +174,7 @@ $(function () {
             },
             "nameAsc",
             [],
-            [
-                ["sd", "local"],
-                ["machinecode", "model"]
-            ],
+            [["machinecode", "model"]],
             0
         );
 
@@ -241,6 +278,8 @@ $(function () {
         });
 
         self.showDialog = () => {
+            self.currentStorage(self.files.currentStorage());
+
             if (!self.dialog.hasClass("in")) {
                 self.dialog
                     .modal({
@@ -282,26 +321,32 @@ $(function () {
             const last = self._lastClickedItem;
             self._lastClickedItem = data;
 
-            if (self.isSelected(data)) {
-                self.selectedFiles.remove(data);
-            } else {
-                if (!event.ctrlKey) {
-                    // single selection if ctrl isn't pressed
-                    self.selectedFiles.removeAll();
-                }
-                self.selectedFiles.push(data);
-            }
+            // Command for Mac, Control for everything else
+            const isMacOS = OctoPrint.coreui.browser.is_mac;
+            const multiSelectEnabled =
+                (!isMacOS && event.ctrlKey) || (isMacOS && event.metaKey);
 
-            if (event.shiftKey && last) {
+            const isShiftSelect = event.shiftKey && last;
+
+            if (isShiftSelect) {
                 // handle shift click
                 const files = self.filesAndFolders();
                 const indexCurrent = files.indexOf(data);
                 const indexLast = files.indexOf(last);
+                log.debug(
+                    "UPMGR: Current index:",
+                    indexCurrent,
+                    ", last index:",
+                    indexLast
+                );
+
+                const selectedRanges = self.selectedRanges();
+                log.debug("UPMGR: Selected ranges", selectedRanges);
 
                 if (
                     indexCurrent >= 0 &&
                     indexLast >= 0 &&
-                    Math.abs(indexCurrent - indexLast) > 1
+                    Math.abs(indexCurrent - indexLast) > 0
                 ) {
                     let from, to;
                     if (indexCurrent > indexLast) {
@@ -312,19 +357,58 @@ $(function () {
                         to = indexLast;
                     }
 
-                    for (let i = from; i <= to; i++) {
-                        if (i === indexCurrent || i === indexLast) {
-                            // already handled
-                            continue;
+                    let range = undefined;
+                    selectedRanges.forEach(([start, end]) => {
+                        if (start <= indexLast && indexLast <= end) {
+                            range = [start, end];
                         }
+                    });
+                    log.debug("UPMGR: Current range", range);
 
+                    const currentWithinRange =
+                        range && range[0] <= indexCurrent && indexCurrent <= range[1];
+                    const currentAboveRange =
+                        !currentWithinRange && range && range[0] > indexCurrent;
+                    const currentBelowRange =
+                        !currentWithinRange && range && range[1] < indexCurrent;
+                    const rangeLength = range ? range[1] - range[0] : -1;
+
+                    log.debug(
+                        "UPMGR:",
+                        "within",
+                        currentWithinRange,
+                        ", above",
+                        currentAboveRange,
+                        ", below",
+                        currentBelowRange
+                    );
+
+                    for (let i = from; i <= to; i++) {
                         const item = files[i];
-                        if (self.isSelected(item)) {
-                            self.selectedFiles.remove(item);
-                        } else {
+                        const selected = self.isSelected(item);
+                        if (rangeLength > 0 && selected) {
+                            if (
+                                (currentWithinRange && i !== indexCurrent) ||
+                                (currentAboveRange && i > range[0]) ||
+                                (currentBelowRange && i < range[1])
+                            ) {
+                                self.selectedFiles.remove(item);
+                            }
+                        } else if (!selected) {
                             self.selectedFiles.push(item);
                         }
                     }
+                }
+            } else {
+                if (!multiSelectEnabled) {
+                    // single selection & no shift: remove all first
+                    self.selectedFiles.removeAll();
+                }
+
+                if (self.isSelected(data)) {
+                    self.selectedFiles.remove(data);
+                } else {
+                    self.selectedFiles.push(data);
                 }
             }
         };
@@ -358,23 +442,27 @@ $(function () {
         self.changeFolder = (data) => {
             self.deselectAll();
 
-            self.currentPath(OctoPrint.files.pathForEntry(data));
+            self.currentPath(data.path);
             self.listHelper.updateItems(data.children);
         };
 
-        self.changeFolderByPath = (path) => {
+        self.changeFolderByPath = (path, storage) => {
+            storage = storage || self.currentStorage();
+
             self.deselectAll();
 
-            const element = self.files.elementByPath(path, {
-                children: self.files.allItems()
-            });
+            const element = self.files.elementByPathAndStorage(path, storage);
             if (element) {
                 self.currentPath(path);
                 self.listHelper.updateItems(element.children);
             } else {
                 self.currentPath("");
-                self.listHelper.updateItems(self.files.allItems());
+                self.listHelper.updateItems(self.files.itemsForStorage(storage));
             }
+        };
+        self.changeStorage = (key) => {
+            if (self.files.availableStorages().indexOf(key) < 0) return;
+            self.currentStorage(key);
         };
 
         self.navigateUp = () => {
@@ -423,7 +511,6 @@ $(function () {
         };
 
         self.templateFor = function (data) {
-            if (data.origin === "printer") return "uploadmanager_template_printer";
             return "uploadmanager_template_" + data.type;
         };
 
@@ -432,9 +519,7 @@ $(function () {
         };
 
         self.checkSelectedOrigin = (origin) => {
-            return _.every(self.selectedFiles(), (item) => {
-                return item.hasOwnProperty("origin") && item.origin === origin;
-            });
+            return self.currentStorage() === origin;
         };
 
         self.enableUploadSD = () => {
@@ -457,44 +542,114 @@ $(function () {
             return self.files.slicing.enableSlicingDialog();
         });
         self.enableSlicing = () => {
-            const files = self.selectedFiles();
-            if (files.length !== 1) return false;
+            const selected = self.selectedFiles();
+            if (!selected || selected.length !== 1) return false;
 
-            return files[0].type == "model" && self.files.enableSlicing(files[0]);
+            const data = selected[0];
+
+            return data.type == "model" && self.files.enableSlicing(data);
         };
         self.enableLoad = (printAfterLoad) => {
-            const files = self.selectedFiles();
-            if (files.length !== 1) return false;
+            const selected = self.selectedFiles();
+            if (!selected || selected.length !== 1) return false;
 
-            return files[0].type == "machinecode" && printAfterLoad
-                ? self.files.enableSelectAndPrint(files[0], printAfterLoad)
-                : self.files.enableSelect(files[0]);
+            const data = selected[0];
+
+            return data.type == "machinecode" && printAfterLoad
+                ? self.files.enableSelectAndPrint(data, printAfterLoad)
+                : self.files.enableSelect(data);
         };
-        self.enableRename = () => {
+        self.renameSupported = () => {
+            // rename supported: in storage move is possible
+            const selected = self.selectedFiles();
+            if (!selected || selected.length === 0) return false;
+
+            const data = selected[0];
+            if (!data) return false;
+
+            const type = data.type;
+            const capabilities = self.files.storageCapabilities(data.origin);
+
+            const inStorageRenamePossible =
+                (type != "folder" && capabilities.move_file) ||
+                (type == "folder" && capabilities.move_folder);
+
             return (
                 self.loginState.hasAllPermissions(
                     self.access.permissions.FILES_UPLOAD,
                     self.access.permissions.FILES_DELETE
-                ) &&
-                self.selectedFiles().length == 1 &&
-                self.checkSelectedOrigin("local")
+                ) && inStorageRenamePossible
             );
         };
+        self.enableRename = () => {
+            // rename enabled: only one item selected
+            const selected = self.selectedFiles();
+            if (!selected || selected.length !== 1) return false;
+
+            return self.renameSupported();
+        };
         self.enableCopy = () => {
+            // copy enabled: in or cross storage creation is possible
+            const selected = self.selectedFiles();
+            if (!selected || selected.length === 0) return false;
+
+            const data = selected[0];
+            if (!data) return false;
+
+            const type = data.type;
+            const capabilities = self.files.storageCapabilities(data.origin);
+
+            const inStorageCopyPossible =
+                (type != "folder" && capabilities.copy_file) ||
+                (type == "folder" && capabilities.copy_folder);
+            const crossStorageCopyPossible = _.any(
+                _.map(
+                    (storage) =>
+                        storage.key !== data.origin &&
+                        ((type === "folder" && storage.capabilities.add_folder) ||
+                            (type !== "folder" && storage.capabilities.upload_file)),
+                    self.files.storageOptions()
+                )
+            );
+
             return (
                 self.loginState.hasPermission(self.access.permissions.FILES_UPLOAD) &&
-                self.selectedFiles().length > 0 &&
-                self.checkSelectedOrigin("local")
+                (inStorageCopyPossible || crossStorageCopyPossible)
             );
         };
         self.enableMove = () => {
+            // move enabled: rename is possible or in storage remove & cross storage creation is possible
+            const renamePossible = self.renameSupported();
+
+            const selected = self.selectedFiles();
+            if (!selected || selected.length === 0) return false;
+
+            const data = selected[0];
+            if (!data) return false;
+
+            const type = data.type;
+            const capabilities = self.files.storageCapabilities(data.origin);
+
+            const inStorageRemovePossible =
+                (type != "folder" && capabilities.remove_file) ||
+                (type == "folder" && capabilities.remove_folder);
+            const crossStorageMovePossible = _.any(
+                _.map(
+                    (storage) =>
+                        storage.key !== data.origin &&
+                        ((type === "folder" && storage.capabilities.add_folder) ||
+                            (type !== "folder" && storage.capabilities.upload_file)) &&
+                        inStorageRemovePossible,
+                    self.files.storageOptions()
+                )
+            );
+
             return (
                 self.loginState.hasAllPermissions(
                     self.access.permissions.FILES_UPLOAD,
                     self.access.permissions.FILES_DELETE
                 ) &&
-                self.selectedFiles().length > 0 &&
-                self.checkSelectedOrigin("local")
+                (renamePossible || crossStorageMovePossible)
             );
         };
 
@@ -507,7 +662,11 @@ $(function () {
         self.downloadUrl = ko.pureComputed(() => {
             const files = self.selectedFiles();
             if (files.length === 0) return "";
-            if (!_.all(files, (item) => item.origin === "local")) return "";
+
+            const currentStorage = self.currentStorage();
+            if (!self.files.storageCapabilities(currentStorage).read_file) return "";
+
+            if (!_.all(files, (item) => item.origin === currentStorage)) return "";
 
             // pick all files & ensure they can all be downloaded
             const allFiles = _.filter(files, (item) => item.type !== "folder");
@@ -525,7 +684,8 @@ $(function () {
             if (downloadables.length === 0) return "";
 
             if (downloadables.length > 1 || downloadables[0].type === "folder") {
-                const bulkUrl = OctoPrint.files.bulkDownloadUrlLocal(
+                const bulkUrl = OctoPrint.files.bulkDownloadUrl(
+                    currentStorage,
                     _.map(_collectFiles(downloadables), (item) => item.path)
                 );
                 if (BASEURL.length + bulkUrl.length >= 2000) return "";
@@ -561,6 +721,8 @@ $(function () {
         };
 
         self.showAddFolderDialog = () => {
+            if (!self.currentStorageCanAddFolder()) return;
+
             if (!self.loginState.hasPermission(self.access.permissions.FILES_UPLOAD))
                 return;
 
@@ -578,8 +740,9 @@ $(function () {
                     return true;
                 },
                 onproceed: (value) => {
+                    const storage = self.currentStorage();
                     const path = self.currentPath();
-                    OctoPrint.files.createFolder("local", value, path).fail((jqXHR) => {
+                    OctoPrint.files.createFolder(storage, value, path).fail((jqXHR) => {
                         showMessageDialog({
                             title: gettext("Operation failed"),
                             message: _.sprintf(
@@ -650,11 +813,36 @@ $(function () {
             const files = self.selectedFiles();
             if (files.length === 0) return;
 
+            const hasFiles = _.any(_.map((f) => f.type !== "folder", files));
+            const hasFolders = _.any(_.map((f) => f.type === "folder", files));
+
             const location = files[0].origin;
+            const capabilities = self.files.storageCapabilities(location);
+            const inStorageCopyPossible =
+                (!hasFiles || capabilities.copy_file) &&
+                (!hasFolders || capabilities.copy_folder);
+            const inStorageMovePossible =
+                (!hasFiles || capabilities.move_file) &&
+                (!hasFolders || capabilities.move_folder);
+            const inStorageActionPossible =
+                (action === "copy" && inStorageCopyPossible) ||
+                (action === "move" && inStorageMovePossible);
 
             const titleElement = $("[data-id='title']", self.copyMoveDialog);
-            const sourceElement = $("[data-id='source']", self.copyMoveDialog);
-            const selectElement = $("[data-id='select']", self.copyMoveDialog);
+            const sourceStorageElement = $(
+                "[data-id='sourceStorage']",
+                self.copyMoveDialog
+            );
+            const selectStorageElement = $(
+                "[data-id='selectStorage']",
+                self.copyMoveDialog
+            );
+            const sourcePathElement = $("[data-id='sourcePath']", self.copyMoveDialog);
+            const selectPathElement = $("[data-id='selectPath']", self.copyMoveDialog);
+            const allowOverwriteElement = $(
+                "[data-id='allowOverwrite']",
+                self.copyMoveDialog
+            );
             const proceedElement = $("[data-id='proceed']", self.copyMoveDialog);
 
             if (action === "copy") {
@@ -665,72 +853,175 @@ $(function () {
                 return;
             }
 
-            const currentPath = "/" + self.currentPath();
-            sourceElement.text(currentPath);
+            sourceStorageElement.text(location);
 
-            const folders = _collectFolders(location);
-            selectElement.empty();
-            _.each(folders, (folder) => {
-                const element = $("<option></option>").text(folder).val(folder);
-                if (folder === currentPath) {
+            const storageOptions = self.files.storageOptions();
+            selectStorageElement.empty();
+            _.each(storageOptions, (storage) => {
+                if (storage === location && !inStorageActionPossible) {
+                    // skip current storage if it doesn't support copy/move
+                    return;
+                }
+                if (
+                    storage !== location &&
+                    ((hasFiles && !self.files.storageCanUpload(storage)) ||
+                        (hasFolders && !self.files.storageCanAddFolder(storage)))
+                ) {
+                    // skip other storages that can't write files or add folders
+                    return;
+                }
+
+                const element = $("<option></option>")
+                    .text(storage.name)
+                    .val(storage.key);
+                if (storage.key === location) {
                     element.attr("selected", "selected");
                 }
-                selectElement.append(element);
+                selectStorageElement.append(element);
             });
 
-            proceedElement.unbind("click").bind("click", () => {
-                const destination = $("option:selected", selectElement).val();
+            const currentPath = "/" + self.currentPath();
+            sourcePathElement.text(currentPath);
+
+            const updateFolders = (loc) => {
+                const folders = _collectFolders(loc);
+                selectPathElement.empty();
+                _.each(folders, (folder) => {
+                    const element = $("<option></option>").text(folder).val(folder);
+                    if (folder === currentPath) {
+                        element.attr("selected", "selected");
+                    }
+                    selectPathElement.append(element);
+                });
+            };
+
+            selectStorageElement.off("change.upmgr").on("change.upmgr", () => {
+                const destinationStorage = $(
+                    "option:selected",
+                    selectStorageElement
+                ).val();
+                updateFolders(destinationStorage);
+            });
+            updateFolders(location);
+
+            proceedElement.off("click.upmgr").on("click.upmgr", () => {
+                const destinationStorage = $(
+                    "option:selected",
+                    selectStorageElement
+                ).val();
+                const destinationPath = $("option:selected", selectPathElement).val();
+                const allowOverwrite = !!allowOverwriteElement.prop("checked");
                 self.copyMoveDialog.modal("hide");
                 if (action === "copy") {
-                    self.copy(destination);
+                    self.copy(destinationStorage, destinationPath, allowOverwrite);
                 } else if (action === "move") {
-                    self.move(destination);
+                    self.move(destinationStorage, destinationPath, allowOverwrite);
                 }
             });
+
+            allowOverwriteElement.prop("checked", false);
 
             self.copyMoveDialog.modal("show");
         };
 
-        self.copy = (destination) => {
+        self.copy = (storage, destination, allowOverwrite) => {
             if (!self.enableCopy()) return;
+            if (!storage) return;
             if (!destination) return;
 
             destination = destination.substr(1);
-            if (destination === self.currentPath()) return;
+            if (storage == self.currentStorage() && destination === self.currentPath())
+                return;
 
             self._bulkAction(
                 (file) => {
-                    return OctoPrint.files.copy(file.origin, file.path, destination);
+                    if (file.origin === storage) {
+                        return OctoPrint.files.copy(file.origin, file.path, destination);
+                    } else {
+                        return OctoPrint.files.copyAcrossStorage(
+                            file.origin,
+                            file.path,
+                            storage,
+                            destination + "/",
+                            allowOverwrite
+                        );
+                    }
                 },
                 gettext("Copying"),
                 _.sprintf(gettext("Copying %%(count)d items to %(destination)s..."), {
                     destination
                 }),
-                gettext("Copied %(filename)s..."),
-                gettext("Copying %(filename)s failed, continuing..."),
-                gettext("Copying %(filename)s failed: %(error)s"),
+                _.sprintf(
+                    gettext("Copying %%(filename)s to %(storage)s:%(destination)s..."),
+                    {storage, destination}
+                ),
+                _.sprintf(
+                    gettext("Copied %%(filename)s to %(storage)s:%(destination)s..."),
+                    {storage, destination}
+                ),
+                _.sprintf(
+                    gettext(
+                        "Copying %%(filename)s to %(storage)s:%(destination)s failed, continuing..."
+                    ),
+                    {storage, destination}
+                ),
+                _.sprintf(
+                    gettext(
+                        "Copying %%(filename)s to %(storage)s:%(destination)s failed: %(error)s"
+                    ),
+                    {storage, destination}
+                ),
                 (file) => file.path != destination
             );
         };
 
-        self.move = (destination) => {
+        self.move = (storage, destination, allowOverwrite) => {
             if (!self.enableMove()) return;
+            if (!storage) return;
             if (!destination) return;
 
             destination = destination.substr(1);
-            if (destination === self.currentPath()) return;
+            if (storage == self.currentStorage() && destination === self.currentPath())
+                return;
 
             self._bulkAction(
                 (file) => {
-                    return OctoPrint.files.move(file.origin, file.path, destination);
+                    if (file.origin === storage) {
+                        return OctoPrint.files.move(file.origin, file.path, destination);
+                    } else {
+                        return OctoPrint.files.moveAcrossStorage(
+                            file.origin,
+                            file.path,
+                            storage,
+                            destination + "/",
+                            allowOverwrite
+                        );
+                    }
                 },
                 gettext("Moving"),
                 _.sprintf(gettext("Moving %%(count)d items to %(destination)s..."), {
                     destination
                 }),
-                gettext("Moved %(filename)s..."),
-                gettext("Moving %(filename)s failed, continuing..."),
-                gettext("Moving %(filename)s failed: %(error)s"),
+                _.sprintf(
+                    gettext("Moving %%(filename)s to %(storage)s:%(destination)s..."),
+                    {storage, destination}
+                ),
+                _.sprintf(
+                    gettext("Moved %%(filename)s to %(storage)s:%(destination)s..."),
+                    {storage, destination}
+                ),
+                _.sprintf(
+                    gettext(
+                        "Moving %%(filename)s to %(storage)s:%(destination)s failed, continuing..."
+                    ),
+                    {storage, destination}
+                ),
+                _.sprintf(
+                    gettext(
+                        "Moving %%(filename)s to %(storage)s:%(destination)s failed: %(error)s"
+                    ),
+                    {storage, destination}
+                ),
                 (file) => file.path != destination
             );
         };
@@ -772,6 +1063,7 @@ $(function () {
                     },
                     gettext("Deleting"),
                     gettext("Deleting %(count)d items..."),
+                    gettext("Deleting %(filename)s..."),
                     gettext("Deleted %(filename)s..."),
                     gettext("Deletion of %(filename)s failed, continuing..."),
                     gettext("Deletion of %(filename)s failed: %(error)s")
@@ -789,6 +1081,7 @@ $(function () {
             callback,
             title,
             message,
+            inProgress,
             ok,
             nokShort,
             nokLong,
@@ -800,77 +1093,59 @@ $(function () {
                     : self.selectedFiles();
             if (!files || files.length === 0) return;
 
-            if (files.length > 1) {
-                // bulk operation
-                const handler = (file) => {
-                    const filename = `${file.origin}:${file.path}`;
-
-                    return callback(file)
-                        .done(() => {
-                            deferred.notify(
-                                _.sprintf(ok, {
-                                    filename: _.escape(filename)
-                                }),
-                                true
-                            );
-                        })
-                        .fail((jqXHR) => {
-                            const short = _.sprintf(nokShort, {
-                                filename: _.escape(filename)
-                            });
-                            const long = _.sprintf(nokLong, {
-                                filename: _.escape(filename),
-                                error: _.escape(_errorFromJqXHR(jqXHR))
-                            });
-                            deferred.notify(short, long, false);
-                        });
-                };
-
-                const deferred = $.Deferred();
-                const promise = deferred.promise();
-
-                const options = {
-                    title: title,
-                    message: _.sprintf(message, {
-                        count: files.length
-                    }),
-                    max: files.length,
-                    output: true
-                };
-                showProgressModal(options, promise);
-
-                self.files.ignoreUpdatedFilesEvent = true;
-                const requests = [];
-                _.each(files, (file) => {
-                    const request = handler(file);
-                    requests.push(request);
-                });
-                $.when.apply($, _.map(requests, wrapPromiseWithAlways)).done(() => {
-                    self.files.ignoreUpdatedFilesEvent = false;
-                    deferred.resolve();
-                    self.deselectAll();
-                    self.files.requestData();
-                });
-
-                return promise;
-            } else {
-                // only one file
-                const file = self.selectedFiles()[0];
+            const handler = (file) => {
                 const filename = `${file.origin}:${file.path}`;
+
+                deferred.notify(_.sprintf(inProgress, {filename: _.escape(filename)}));
                 return callback(file)
                     .done(() => {
-                        self.deselectAll();
+                        deferred.notify(
+                            _.sprintf(ok, {
+                                filename: _.escape(filename)
+                            }),
+                            true
+                        );
                     })
                     .fail((jqXHR) => {
-                        showMessageDialog({
-                            title: gettext("Operation failed"),
-                            message: _.sprintf(nokLong, {
-                                filename: _.escape(filename),
-                                error: _.escape(_errorFromJqXHR(jqXHR))
-                            })
+                        const short = _.sprintf(nokShort, {
+                            filename: _.escape(filename)
                         });
+                        const long = _.sprintf(nokLong, {
+                            filename: _.escape(filename),
+                            error: _.escape(_errorFromJqXHR(jqXHR))
+                        });
+                        deferred.notify(short, long, false);
                     });
-            }
+            };
+
+            const deferred = $.Deferred();
+            const promise = deferred.promise();
+
+            const options = {
+                title: title,
+                message: _.sprintf(message, {
+                    count: files.length
+                }),
+                max: files.length,
+                output: true,
+                close: files.length == 1
+            };
+            showProgressModal(options, promise);
+
+            self.files.ignoreUpdatedFilesEvent = true;
+            const requests = [];
+            _.each(files, (file) => {
+                const request = handler(file);
+                requests.push(request);
+            });
+            $.when.apply($, _.map(requests, wrapPromiseWithAlways)).done(() => {
+                self.files.ignoreUpdatedFilesEvent = false;
+                deferred.resolve();
+                self.deselectAll();
+                self.files.requestData();
+            });
+
+            return promise;
         };
 
         self.onStartup = () => {
@@ -889,6 +1164,18 @@ $(function () {
             const button = $("<div class='accordion-heading-button btn-group'></div>");
             button.append(link);
             button.insertAfter("#files_wrapper .accordion-heading .settings-trigger");
+        };
+
+        self.onStartupComplete = () => {
+            self.files.storageFiles.subscribe(() => {
+                self.deselectAll();
+                self.changeFolderByPath(self.currentPath(), self.currentStorage());
+            });
+            self.files.availableStorages.subscribe((val) => {
+                if (val.indexOf(self.currentStorage()) < 0) {
+                    self.currentStorage("local");
+                }
+            });
         };
 
         self.fromCurrentData = self.fromHistoryData = (data) => {

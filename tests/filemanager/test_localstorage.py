@@ -433,7 +433,9 @@ class LocalStorageTest(unittest.TestCase):
 
         self._add_and_verify_folder("empty", "empty")
 
-        file_list = self.storage.list_files()
+        with self.assertWarns(DeprecationWarning):
+            file_list = self.storage.list_files()
+
         self.assertEqual(4, len(file_list))
         self.assertTrue("bp_case.stl" in file_list)
         self.assertTrue("bp_case.gcode" in file_list)
@@ -479,7 +481,9 @@ class LocalStorageTest(unittest.TestCase):
         def filter_machinecode(node: StorageEntry) -> bool:
             return node["type"] == "machinecode"
 
-        file_list = self.storage.list_files(filter=filter_machinecode)
+        with self.assertWarns(DeprecationWarning):
+            file_list = self.storage.list_files(filter=filter_machinecode)
+
         self.assertTrue(3, len(file_list))
         self.assertTrue("bp_case.gcode" in file_list)
         self.assertTrue("content" in file_list)
@@ -509,7 +513,9 @@ class LocalStorageTest(unittest.TestCase):
 
         self._add_and_verify_folder("empty", "empty")
 
-        file_list = self.storage.list_files(recursive=False)
+        with self.assertWarns(DeprecationWarning):
+            file_list = self.storage.list_files(recursive=False)
+
         self.assertTrue(3, len(file_list))
         self.assertTrue("bp_case.gcode" in file_list)
         self.assertTrue("content" in file_list)

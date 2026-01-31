@@ -69,6 +69,9 @@ class Stats(StatsBase):
 
 
 class YearlyStats(StatsBase):
+    year: int = 0
+    """Year tracked by these stats"""
+
     achievements: int = 0
     """Number of achievements unlocked."""
 

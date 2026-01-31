@@ -97,6 +97,11 @@ $(function () {
         self.sd = ko.pureComputed(() => {
             return self.filedata() ? self.filedata()["origin"] === "printer" : undefined;
         });
+        self.fileid = ko.pureComputed(() => {
+            if (!self.filedata()) return undefined;
+            const data = self.filedata();
+            return `${data.origin}:${data.path}`;
+        });
 
         self.thumbnailLink = ko.pureComputed(() => {
             const data = self.filedata();
@@ -156,7 +161,6 @@ $(function () {
 
         self.filament = ko.observableArray([]);
         self.estimatedPrintTime = ko.observable(undefined);
-        self.lastPrintTime = ko.observable(undefined);
 
         self.currentHeight = ko.observable(undefined);
 
@@ -174,7 +178,6 @@ $(function () {
         self.titlePauseButton = ko.observable(self.TITLE_PAUSE_BUTTON_UNPAUSED);
 
         var estimatedPrintTimeStringHlpr = function (fmt) {
-            if (self.lastPrintTime()) return fmt(self.lastPrintTime());
             if (self.estimatedPrintTime()) return fmt(self.estimatedPrintTime());
             return "-";
         };
@@ -347,8 +350,6 @@ $(function () {
 
             if (data.type == "folder") {
                 return "fa-regular fa-folder";
-            } else if (data.origin == "printer") {
-                return "fa-solid fa-sd-card";
             } else if (data.type == "machinecode") {
                 return "fa-regular fa-file-lines";
             } else if (data.type == "model") {
@@ -418,9 +419,11 @@ $(function () {
                         !currentFileKey.startsWith(futureFileKey + ":") &&
                         !futureFileKey.startsWith(currentFileKey + ":")
                     ) {
-                        self._loadFileData(data.file.origin, data.file.path).then(() => {
-                            self._cachedFileKey = futureFileKey;
-                        });
+                        self._loadFileData(data.file.origin, data.file.path).always(
+                            () => {
+                                self._cachedFileKey = futureFileKey;
+                            }
+                        );
                     }
                 }
             } else {
@@ -432,7 +435,6 @@ $(function () {
             self._syncMetadata(data);
 
             self.estimatedPrintTime(data.estimatedPrintTime);
-            self.lastPrintTime(data.lastPrintTime);
 
             const result = [];
             if (
@@ -497,9 +499,14 @@ $(function () {
         };
 
         self._loadFileData = (origin, path) => {
-            return OctoPrint.files.get(origin, path).then((data) => {
-                self.filedata(data);
-            });
+            return OctoPrint.files
+                .get(origin, path)
+                .then((data) => {
+                    self.filedata(data);
+                })
+                .fail(() => {
+                    self.filedata(undefined);
+                });
         };
 
         self._checkResendRatioCriticality = function () {

@@ -11,7 +11,7 @@
 <div class="row-fluid">
     <a href="javascript:void(0)"
        class="btn span6"
-       data-bind="click: function() { if(!setup() || decision()){disableUsage()}}, enable: !setup() || decision(), css: {disabled: setup() && !decision()}">
+       data-bind="click: function() { if((!setup() || decision()) && !active()){disableUsage()}}, enable: (!setup() || decision()) && !active(), css: {disabled: (setup() && !decision()) || active()}">
         <i class="fas fa-spinner fa-spin"
            style="display: none"
            data-bind="visible: active() && decision() === false"></i>
@@ -19,7 +19,7 @@
     </a>
     <a href="javascript:void(0)"
        class="btn btn-primary span6"
-       data-bind="click: function() { if(!setup() || !decision()){enableUsage()}}, enable: !setup() || !decision(), css: {disabled: setup() && decision()}">
+       data-bind="click: function() { if((!setup() || !decision()) && !active()){enableUsage()}}, enable: (!setup() || !decision()) && !active(), css: {disabled: (setup() && decision()) || active()}">
         <i class="fas fa-spinner fa-spin"
            style="display: none"
            data-bind="visible: active() && decision() === true"></i>

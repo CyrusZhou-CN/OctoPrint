@@ -28,9 +28,9 @@ LOGGING_CONFIG = {
 # ~~ "octoprint plugin:command" commands
 
 
-class OctoPrintPluginCommands(click.MultiCommand):
+class OctoPrintPluginCommands(click.Group):
     """
-    Custom `click.MultiCommand <http://click.pocoo.org/5/api/#click.MultiCommand>`_
+    Custom `click.Group <https://click.palletsprojects.com/en/stable/api/#click.Group>`_
     implementation that collects commands from the plugin hook
     :ref:`octoprint.cli.commands <sec-plugins-hook-cli-commands>`.
 
@@ -46,7 +46,7 @@ class OctoPrintPluginCommands(click.MultiCommand):
     sep = ":"
 
     def __init__(self, *args, **kwargs):
-        click.MultiCommand.__init__(self, *args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         self.settings = None
         self.plugin_manager = None

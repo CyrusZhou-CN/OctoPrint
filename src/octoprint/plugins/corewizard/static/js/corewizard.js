@@ -12,6 +12,8 @@ $(function () {
 
         self.required = false;
 
+        self.active = ko.observable(false);
+
         self.passwordMismatch = ko.pureComputed(function () {
             return self.password() !== self.confirmedPassword();
         });
@@ -49,16 +51,27 @@ $(function () {
         };
 
         self._sendData = function (data, callback) {
-            OctoPrint.postJson("plugin/corewizard/acl", data).done(function () {
-                self.setup(true);
+            self.active(true);
 
-                // we now log the user in
-                var user = data.user;
-                var pass = data.pass1;
-                self.loginStateViewModel.login(user, pass, true).done(function () {
-                    if (callback) callback();
+            OctoPrint.postJson("plugin/corewizard/acl", data)
+                .done(() => {
+                    self.setup(true);
+
+                    // we now log the user in
+                    const user = data.user;
+                    const pass = data.pass1;
+                    self.loginStateViewModel
+                        .login(user, pass, true)
+                        .done(() => {
+                            if (callback) callback();
+                        })
+                        .always(() => {
+                            self.active(false);
+                        });
+                })
+                .fail(() => {
+                    self.active(false);
                 });
-            });
         };
 
         self._showDecisionNeededDialog = function () {
@@ -121,7 +134,7 @@ $(function () {
 
         self.decision = ko.observable();
         self.required = false;
-        self.active = false;
+        self.active = ko.observable(false);
 
         self.enableOnlineCheck = function () {
             self.settingsViewModel.server_onlineCheck_enabled(true);
@@ -180,7 +193,7 @@ $(function () {
         };
 
         self._sendData = function () {
-            var data = {
+            const data = {
                 server: {
                     onlineCheck: {
                         enabled: self.settingsViewModel.server_onlineCheck_enabled(),
@@ -191,11 +204,15 @@ $(function () {
                 }
             };
 
-            self.active = true;
-            self.settingsViewModel.saveData(data).done(function () {
-                self.setup(true);
-                self.active = false;
-            });
+            self.active(true);
+            self.settingsViewModel
+                .saveData(data)
+                .done(() => {
+                    self.setup(true);
+                })
+                .always(() => {
+                    self.active(false);
+                });
         };
     }
 
@@ -208,7 +225,7 @@ $(function () {
 
         self.decision = ko.observable();
         self.required = false;
-        self.active = false;
+        self.active = ko.observable(false);
 
         self.enablePluginBlacklist = function () {
             self.settingsViewModel.server_pluginBlacklist_enabled(true);
@@ -259,15 +276,15 @@ $(function () {
 
         self._showDecisionNeededDialog = function () {
             showMessageDialog({
-                title: gettext("Please set up the plugin blacklist processing"),
+                title: gettext("Please set up the plugin blocklist processing"),
                 message: gettext(
-                    "You haven't yet decided on whether to enable or disable the plugin blacklist processing. You need to either enable or disable it before continuing."
+                    "You haven't yet decided on whether to enable or disable the plugin blocklist processing. You need to either enable or disable it before continuing."
                 )
             });
         };
 
         self._sendData = function () {
-            var data = {
+            const data = {
                 server: {
                     pluginBlacklist: {
                         enabled: self.settingsViewModel.server_pluginBlacklist_enabled()
@@ -275,11 +292,15 @@ $(function () {
                 }
             };
 
-            self.active = true;
-            self.settingsViewModel.saveData(data).done(function () {
-                self.setup(true);
-                self.active = false;
-            });
+            self.active(true);
+            self.settingsViewModel
+                .saveData(data)
+                .done(() => {
+                    self.setup(true);
+                })
+                .always(() => {
+                    self.active(false);
+                });
         };
     }
 

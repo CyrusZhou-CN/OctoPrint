@@ -36,3 +36,18 @@
         </div>
     </div>
 </form>
+
+<h3>{{ _("Instance Stats Settings") }}</h3>
+
+<h4>{{ _("Reset stats of current year") }}</h4>
+
+<form class="form-horizontal" onsubmit="return false;">
+    <div class="control-group">
+        <div class="controls">
+            <button class="btn btn-danger"
+                    data-bind="click: function() { if (!$root.resetting()) { resetYear() } }, css: {disabled: resetting}">
+                <i class="fa fa-spinner fa-spin" data-bind="visible: resetting"></i> {{ _("Reset the stats of the current year") }}
+            </button>
+        </div>
+    </div>
+</form>

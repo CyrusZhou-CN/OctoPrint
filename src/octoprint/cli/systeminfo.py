@@ -75,33 +75,30 @@ def get_systeminfo_bundle(systeminfo, logbase, printer=None, plugin_manager=None
         z = ZipStream(sized=True)
 
     if printer and printer.is_operational():
+        connection = printer.current_connection
+        if connection:
+            systeminfo["printer.connector"] = connection.connector
+
         firmware_info = printer.firmware_info
         if firmware_info:
-            # add firmware to systeminfo so it's included in systeminfo.txt
+            # add firmware name to systeminfo so it's included in systeminfo.txt
             systeminfo["printer.firmware"] = firmware_info["name"]
+
+            firmware_data = firmware_info.get("data")
+            if firmware_data and isinstance(firmware_data, dict):
+                z.add(
+                    to_bytes(
+                        "\n".join(
+                            [firmware_info["name"]]
+                            + [f"{k}:{v}" for k, v in firmware_data.items()]
+                        )
+                    ),
+                    arcname="firmware.txt",
+                )
 
         # Add printer log, if available
         if hasattr(printer, "_log"):
             z.add(to_bytes("\n".join(printer._log)), arcname="terminal.txt")
-
-        # Add reconstructed M115 response, if available
-        if printer._connection and printer._connection.firmware_info:
-            connection = printer._connection
-            m115 = "Reconstructed M115 response:\n\n>>> M115\n<<< "
-            m115 += " ".join([f"{k}:{v}" for k, v in connection.firmware_info.items()])
-
-            if connection.firmware_capabilities:
-                m115 += (
-                    "\n<<< "
-                    + "\n<<< ".join(
-                        [
-                            f"Cap:{k}:{'1' if v else '0'}"
-                            for k, v in connection.firmware_capabilities.items()
-                        ]
-                    )
-                    + "\n\n"
-                )
-            z.add(to_bytes(m115), arcname="m115.txt")
 
     # add systeminfo
     systeminfotxt = []

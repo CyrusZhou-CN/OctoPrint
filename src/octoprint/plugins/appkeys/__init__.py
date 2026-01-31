@@ -1,3 +1,4 @@
+import hmac
 import os
 import threading
 import time
@@ -620,7 +621,14 @@ class AppKeysPlugin(
 
         with self._keys_lock:
             for user_id, data in self._keys.items():
-                if any(filter(lambda x: x.api_key == api_key, data)):
+                if any(
+                    filter(
+                        lambda x: x.api_key is not None
+                        and api_key is not None
+                        and hmac.compare_digest(x.api_key, api_key),
+                        data,
+                    )
+                ):
                     return self._user_manager.find_user(userid=user_id)
         return None
 

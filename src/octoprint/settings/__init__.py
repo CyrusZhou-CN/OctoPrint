@@ -1844,6 +1844,21 @@ class Settings:
             current = current[key]
         return current
 
+    def _preprocess_value(self, value, preprocessor):
+        if preprocessor is None:
+            return value
+
+        if callable(preprocessor):
+            return preprocessor(value)
+
+        if isinstance(preprocessor, dict) and isinstance(value, dict):
+            result = {}
+            for k, v in value.items():
+                result[k] = self._preprocess_value(v, preprocessor.get(k))
+            return result
+
+        return value
+
     def _get_value(
         self,
         path,
@@ -1908,8 +1923,7 @@ class Settings:
                     # no default value, so nothing to merge
                     pass
 
-            if callable(preprocessor):
-                value = preprocessor(value)
+            value = self._preprocess_value(value, preprocessor)
 
             if do_copy:
                 if isinstance(value, KeysView):
@@ -2175,8 +2189,7 @@ class Settings:
         except NoSuchSettingsPath:
             pass
 
-        if callable(preprocessor):
-            value = preprocessor(value)
+        value = self._preprocess_value(value, preprocessor)
 
         try:
             current = chain.get_by_path(path)

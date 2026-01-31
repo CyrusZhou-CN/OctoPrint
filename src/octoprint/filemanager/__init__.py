@@ -23,6 +23,7 @@ from .storage import (
     StorageInterface,
     StorageMeta,
     StorageThumbnail,
+    StorageUsage,
 )
 from .storage.local import LocalFileStorage  # noqa: F401
 from .util import AbstractFileWrapper, DiskFileWrapper, StreamWrapper  # noqa: F401
@@ -376,7 +377,7 @@ class FileManager:
         return list(self._storage_managers.keys())
 
     @property
-    def registered_storage_meta(self) -> dict[str:StorageMeta]:
+    def registered_storage_meta(self) -> dict[str, StorageMeta]:
         return {
             key: StorageMeta(
                 key=key, name=storage.name, capabilities=storage.capabilities
@@ -851,7 +852,9 @@ class FileManager:
                 "operation": "add",
             },
         )
-        eventManager().fire(Events.UPDATED_FILES, {"type": "printables"})
+        eventManager().fire(
+            Events.UPDATED_FILES, {"type": "printables", "storage": location}
+        )
         return path_in_storage
 
     def read_file(self, storage: str, path: str) -> IO:
@@ -886,19 +889,27 @@ class FileManager:
                 "operation": "remove",
             },
         )
-        eventManager().fire(Events.UPDATED_FILES, {"type": "printables"})
+        eventManager().fire(
+            Events.UPDATED_FILES, {"type": "printables", "storage": location}
+        )
 
-    def copy_file(self, storage, source, destination):
+    def copy_file(self, storage, source, destination, allow_overwrite=False):
         if not self._storage(storage).capabilities.copy_file:
             raise StorageError(
                 f"File copy on {storage} is not supported", code=StorageError.UNSUPPORTED
             )
 
-        path_in_storage = self._storage(storage).copy_file(source, destination)
-        if not self.has_analysis(storage, path_in_storage):
-            queue_entry = self._analysis_queue_entry(storage, path_in_storage)
-            if queue_entry:
-                self._analysis_queue.enqueue(queue_entry)
+        try:
+            path_in_storage = self._storage(storage).copy_file(
+                source, destination, allow_overwrite=allow_overwrite
+            )
+        except Exception:
+            raise
+        finally:
+            if not self.has_analysis(storage, path_in_storage):
+                queue_entry = self._analysis_queue_entry(storage, path_in_storage)
+                if queue_entry:
+                    self._analysis_queue.enqueue(queue_entry)
 
         _, name = self._storage(storage).split_path(path_in_storage)
         eventManager().fire(
@@ -911,19 +922,27 @@ class FileManager:
                 "operation": "copy",
             },
         )
-        eventManager().fire(Events.UPDATED_FILES, {"type": "printables"})
+        eventManager().fire(
+            Events.UPDATED_FILES, {"type": "printables", "storage": storage}
+        )
 
-    def move_file(self, storage, source, destination):
+    def move_file(self, storage, source, destination, allow_overwrite=False):
         source_in_storage = self._storage(storage).path_in_storage(source)
         destination_in_storage = self._storage(storage).path_in_storage(destination)
 
         queue_entry = self._analysis_queue_entry(storage, source_in_storage)
         self._analysis_queue.dequeue(queue_entry)
-        path = self._storage(storage).move_file(source_in_storage, destination_in_storage)
-        if not self.has_analysis(storage, path):
-            queue_entry = self._analysis_queue_entry(storage, path)
-            if queue_entry:
-                self._analysis_queue.enqueue(queue_entry)
+        try:
+            path = self._storage(storage).move_file(
+                source_in_storage, destination_in_storage, allow_overwrite=allow_overwrite
+            )
+        except Exception:
+            raise
+        finally:
+            if not self.has_analysis(storage, path):
+                queue_entry = self._analysis_queue_entry(storage, path)
+                if queue_entry:
+                    self._analysis_queue.enqueue(queue_entry)
 
         _, source_name = self._storage(storage).split_path(source_in_storage)
         _, destination_name = self._storage(storage).split_path(destination_in_storage)
@@ -964,7 +983,9 @@ class FileManager:
             },
         )
 
-        eventManager().fire(Events.UPDATED_FILES, {"type": "printables"})
+        eventManager().fire(
+            Events.UPDATED_FILES, {"type": "printables", "storage": storage}
+        )
 
     def add_folder(self, storage, path, ignore_existing=True, display=None, user=None):
         path_in_storage = self._storage(storage).add_folder(
@@ -976,7 +997,9 @@ class FileManager:
             Events.FOLDER_ADDED,
             {"storage": storage, "path": path_in_storage, "name": name},
         )
-        eventManager().fire(Events.UPDATED_FILES, {"type": "printables"})
+        eventManager().fire(
+            Events.UPDATED_FILES, {"type": "printables", "storage": storage}
+        )
         return path_in_storage
 
     def remove_folder(self, storage, path, recursive=True):
@@ -992,10 +1015,14 @@ class FileManager:
             Events.FOLDER_REMOVED,
             {"storage": storage, "path": path_in_storage, "name": name},
         )
-        eventManager().fire(Events.UPDATED_FILES, {"type": "printables"})
+        eventManager().fire(
+            Events.UPDATED_FILES, {"type": "printables", "storage": storage}
+        )
 
-    def copy_folder(self, storage, source, destination):
-        path_in_storage = self._storage(storage).copy_folder(source, destination)
+    def copy_folder(self, storage, source, destination, allow_overwrite=False):
+        path_in_storage = self._storage(storage).copy_folder(
+            source, destination, allow_overwrite=allow_overwrite
+        )
         self._determine_analysis_backlog(
             storage, self._storage(storage), root=path_in_storage
         )
@@ -1005,21 +1032,27 @@ class FileManager:
             Events.FOLDER_ADDED,
             {"storage": storage, "path": path_in_storage, "name": name},
         )
-        eventManager().fire(Events.UPDATED_FILES, {"type": "printables"})
+        eventManager().fire(
+            Events.UPDATED_FILES, {"type": "printables", "storage": storage}
+        )
 
-    def move_folder(self, storage, source, destination):
+    def move_folder(self, storage, source, destination, allow_overwrite=False):
         source_in_storage = self._storage(storage).path_in_storage(source)
         destination_in_storage = self._storage(storage).path_in_storage(destination)
 
         self._analysis_queue.dequeue_folder(storage, source_in_storage)
         self._analysis_queue.pause()
-        destination_in_storage = self._storage(storage).move_folder(
-            source_in_storage, destination_in_storage
-        )
-        self._determine_analysis_backlog(
-            storage, self._storage(storage), root=destination_in_storage
-        )
-        self._analysis_queue.resume()
+        try:
+            destination_in_storage = self._storage(storage).move_folder(
+                source_in_storage, destination_in_storage, allow_overwrite=allow_overwrite
+            )
+        except Exception:
+            raise
+        finally:
+            self._determine_analysis_backlog(
+                storage, self._storage(storage), root=destination_in_storage
+            )
+            self._analysis_queue.resume()
 
         _, source_name = self._storage(storage).split_path(source_in_storage)
         _, destination_name = self._storage(storage).split_path(destination_in_storage)
@@ -1047,7 +1080,9 @@ class FileManager:
             },
         )
 
-        eventManager().fire(Events.UPDATED_FILES, {"type": "printables"})
+        eventManager().fire(
+            Events.UPDATED_FILES, {"type": "printables", "storage": storage}
+        )
 
     def copy_file_across_storage(
         self,
@@ -1055,6 +1090,7 @@ class FileManager:
         source_path: str,
         destination_storage: str,
         destination_path: str,
+        allow_overwrite: bool = False,
         progress_callback: Callable = None,
     ) -> None:
         self._action_across_storage(
@@ -1063,6 +1099,7 @@ class FileManager:
             source_path,
             destination_storage,
             destination_path,
+            allow_overwrite=allow_overwrite,
             progress_callback=progress_callback,
         )
 
@@ -1072,6 +1109,7 @@ class FileManager:
         source_path: str,
         destination_storage: str,
         destination_path: str,
+        allow_overwrite: bool = False,
         progress_callback: Callable = None,
     ) -> None:
         self._action_across_storage(
@@ -1080,6 +1118,7 @@ class FileManager:
             source_path,
             destination_storage,
             destination_path,
+            allow_overwrite=allow_overwrite,
             progress_callback=progress_callback,
         )
 
@@ -1090,6 +1129,7 @@ class FileManager:
         source_path: str,
         destination_storage: str,
         destination_path: str,
+        allow_overwrite: bool = False,
         progress_callback: Callable = None,
     ) -> None:
         storage_src = self._storage(source_storage)
@@ -1112,7 +1152,7 @@ class FileManager:
         # get metadata for source
         metadata = {}
         if storage_src.capabilities.metadata:
-            metadata = storage_src.get_metadata(source_path)
+            metadata = storage_src.get_metadata(source_path, default={})
 
         # get file object for source
         source_file = storage_src.read_file(source_path)
@@ -1120,77 +1160,119 @@ class FileManager:
 
         # write it to the destination storage
         def callback(*args, **kwargs):
-            if kwargs.get("done", False) or kwargs.get("failed", False):
-                _, destination_name = storage_dst.split_path(destination_in_storage)
+            try:
+                if kwargs.get("done", False):
+                    _, destination_name = storage_dst.split_path(destination_in_storage)
 
-                if action == "copy_file":
-                    # trigger FILE_ADDED
-                    eventManager.fire(
-                        Events.FILE_ADDED,
+                    if action == "copy_file":
+                        # trigger FILE_ADDED
+                        eventManager().fire(
+                            Events.FILE_ADDED,
+                            {
+                                "storage": destination_storage,
+                                "path": destination_in_storage,
+                                "name": destination_name,
+                                "type": get_file_type(destination_name),
+                                "operation": "copy",
+                            },
+                        )
+
+                    elif action == "move_file":
+                        # delete source file
+                        try:
+                            storage_src.remove_file(source_in_storage)
+                        except Exception as exc:
+                            self._logger.exception(
+                                f"Error while removing file from storage {source_storage}"
+                            )
+                            raise StorageError(
+                                f"Unexpected error while file from storage {source_storage}",
+                                code=StorageError.UNKNOWN,
+                                cause=exc,
+                            ) from exc
+
+                        # trigger FILE_REMOVED, FILE_ADDED, FILE_MOVED
+                        eventManager().fire(
+                            Events.FILE_REMOVED,
+                            {
+                                "storage": source_storage,
+                                "path": source_in_storage,
+                                "name": source_name,
+                                "type": get_file_type(source_name),
+                                "operation": "move",
+                            },
+                        )
+
+                        eventManager().fire(
+                            Events.FILE_ADDED,
+                            {
+                                "storage": destination_storage,
+                                "path": destination_in_storage,
+                                "name": destination_name,
+                                "type": get_file_type(destination_name),
+                                "operation": "move",
+                            },
+                        )
+
+                        eventManager().fire(
+                            Events.FILE_MOVED,
+                            {
+                                "source_storage": source_storage,
+                                "source_path": source_in_storage,
+                                "source_name": source_name,
+                                "source_type": get_file_type(source_name),
+                                "destination_storage": destination_storage,
+                                "destination_path": destination_in_storage,
+                                "destination_name": destination_name,
+                                "destination_type": get_file_type(destination_name),
+                                # backwards compatibility
+                                "storage": source_storage,
+                            },
+                        )
+
+                    eventManager().fire(
+                        Events.UPDATED_FILES,
                         {
-                            "storage": destination_storage,
-                            "path": destination_in_storage,
-                            "name": destination_name,
-                            "type": get_file_type(destination_name),
-                            "operation": "copy",
+                            "type": "printables",
+                            "storages": [source_storage, destination_storage],
                         },
                     )
 
-                elif action == "move_file":
-                    # delete source file
-                    storage_src.remove_file(source_in_storage)
+                if callable(progress_callback):
+                    progress_callback(*args, **kwargs)
 
-                    # trigger FILE_REMOVED, FILE_ADDED, FILE_MOVED
-                    eventManager.fire(
-                        Events.FILE_REMOVED,
-                        {
-                            "storage": source_storage,
-                            "path": source_in_storage,
-                            "name": source_name,
-                            "type": get_file_type(source_name),
-                            "operation": "move",
-                        },
-                    )
+            except Exception:
+                eventManager().fire(
+                    Events.UPDATED_FILES,
+                    {
+                        "type": "printables",
+                        "storages": [source_storage, destination_storage],
+                    },
+                )
 
-                    eventManager.fire(
-                        Events.FILE_ADDED,
-                        {
-                            "storage": destination_storage,
-                            "path": destination_in_storage,
-                            "name": destination_name,
-                            "type": get_file_type(destination_name),
-                            "operation": "move",
-                        },
-                    )
+                if callable(progress_callback):
+                    progress_callback(failed=True)
 
-                    eventManager.fire(
-                        Events.FILE_MOVED,
-                        {
-                            "source_storage": source_storage,
-                            "source_path": source_in_storage,
-                            "source_name": source_name,
-                            "source_type": get_file_type(source_name),
-                            "destination_storage": destination_storage,
-                            "destination_path": destination_in_storage,
-                            "destination_name": destination_name,
-                            "destination_type": get_file_type(destination_name),
-                            # backwards compatibility
-                            "storage": source_storage,
-                        },
-                    )
-
-                eventManager.fire(Events.UPDATED_FILES, {"type": "printables"})
-
+        try:
+            storage_dst.add_file(
+                destination_in_storage,
+                source_wrapper,
+                display=metadata.get("display"),
+                user=metadata.get("user"),
+                allow_overwrite=allow_overwrite,
+                progress_callback=callback,
+            )
+        except Exception as exc:
+            self._logger.exception(
+                f"Error while adding file to storage {destination_storage}"
+            )
             if callable(progress_callback):
-                progress_callback(*args, **kwargs)
-
-        storage_dst.add_file(
-            destination_in_storage,
-            source_wrapper,
-            display=metadata.get("display"),
-            user=metadata.get("user"),
-            progress_callback=callback,
-        )
+                progress_callback(failed=True)
+            raise StorageError(
+                "Unexpected error while adding file to storage {destination_storage}",
+                code=StorageError.UNKNOWN,
+                cause=exc,
+            ) from exc
 
     def get_size(self, location, path):
         try:
@@ -1357,6 +1439,9 @@ class FileManager:
 
     def capabilities(self, location) -> StorageCapabilities:
         return self._storage(location).capabilities
+
+    def get_usage(self, location) -> Optional[StorageUsage]:
+        return self._storage(location).get_usage()
 
     def _storage(self, location: str) -> StorageInterface:
         if location == FileDestinations.SDCARD:

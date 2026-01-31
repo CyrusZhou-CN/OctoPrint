@@ -40,7 +40,6 @@ from octoprint.printer.job import PrintJob, UploadJob
 from octoprint.schema.config.controls import CustomControl, CustomControlContainer
 from octoprint.settings import settings
 from octoprint.util import InvariantContainer
-from octoprint.util import comm as comm
 from octoprint.util import get_fully_qualified_classname as fqcn
 
 
@@ -367,7 +366,7 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
                 )
             except Exception:
                 self._logger.exception(
-                    "Error while retrieving additional data from plugin {}, blacklisting it for further loops".format(
+                    "Error while retrieving additional data from plugin {}, blocklisting it for further loops".format(
                         name
                     ),
                     extra={"plugin": name},
@@ -1799,8 +1798,6 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
                             date=None,
                         ),
                         estimatedPrintTime=None,
-                        averagePrintTime=None,
-                        lastPrintTime=None,
                         filament=None,
                         user=None,
                     )
@@ -1834,7 +1831,9 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
                         display=display_name,
                         origin=job.storage,
                         size=job.size,
-                        date=job.date,
+                        date=int(job.date.astimezone(None).timestamp())
+                        if job.date
+                        else None,
                     ),
                     estimatedPrintTime=estimatedPrintTime,
                     filament=filament,

@@ -564,6 +564,9 @@ class MachineCom:
         self._toolBeforeChange = None
         self._toolBeforeHeatup = None
 
+        self._relativeAxesRequested = False
+        self._relativeExtruderRequested = False
+
         self._known_invalid_tools = set()
         self._known_invalid_custom_temps = set()
         self._known_broken_temperature_hooks = set()
@@ -661,6 +664,7 @@ class MachineCom:
 
         self._firmware_detection = self._settings.get_boolean(["firmwareDetection"])
         self._firmware_info_received = False
+        self._firmware_info_sent = False
         self._firmware_capabilities_received = False
         self._firmware_info = {}
         self._firmware_capabilities = {}
@@ -1345,6 +1349,8 @@ class MachineCom:
                 "last_position": self.last_position,
                 "last_temperature": self.last_temperature.as_script_dict(),
                 "last_fanspeed": self.last_fanspeed,
+                "relative_axes_requested": self._relativeAxesRequested,
+                "relative_extruder_requested": self._relativeExtruderRequested,
             }
         )
 
@@ -2719,6 +2725,11 @@ class MachineCom:
                                 extra={"plugin": name},
                             )
 
+                    if not self._firmware_info_sent:
+                        # if firmware info has not been sent yet, generate full info from
+                        # received firmware data & capabilities and send it now
+                        self._send_firmware_info()
+
                     # log firmware capabilities
                     capability_list = "\n  ".join(
                         [
@@ -2730,6 +2741,14 @@ class MachineCom:
                         "Firmware sent the following capability report:\n  "
                         + capability_list
                     )
+
+                elif (
+                    self._firmware_info_received
+                    and not self._firmware_info_sent
+                    and not lower_line.startswith("cap:")
+                ):
+                    # we have received firmware information, but no capability report, trigger forwarding
+                    self._send_firmware_info()
 
                 ##~~ position report processing
                 if "X:" in line and "Y:" in line and "Z:" in line:
@@ -3004,22 +3023,6 @@ class MachineCom:
                         self._firmware_info_received = True
                         self._firmware_info = data
                         self._firmware_name = firmware_name
-
-                        # notify plugins
-                        for name, hook in self._firmware_info_hooks["info"].items():
-                            try:
-                                hook(self, firmware_name, copy.copy(data))
-                            except Exception:
-                                self._logger.exception(
-                                    "Error processing firmware info hook {}:".format(
-                                        name
-                                    ),
-                                    extra={"plugin": name},
-                                )
-
-                        self._callback.on_comm_firmware_info(
-                            firmware_name, copy.copy(data)
-                        )
 
                 ##~~ invalid extruder
                 elif "invalid extruder" in lower_line:
@@ -3353,6 +3356,33 @@ class MachineCom:
                 )
                 self.close(is_error=True)
         self._log("Connection closed, closing down monitor")
+
+    def _send_firmware_info(self):
+        if self._firmware_info_sent:
+            return
+
+        # create full info dict
+        info = copy.copy(self._firmware_info)
+        if self._firmware_capabilities_received and self._firmware_capabilities:
+            info.update(
+                {
+                    f"Cap:{k}": "1" if v else "0"
+                    for k, v in self._firmware_capabilities.items()
+                }
+            )
+
+        # notify plugins
+        for name, hook in self._firmware_info_hooks["info"].items():
+            try:
+                hook(self, self._firmware_name, copy.copy(info))
+            except Exception:
+                self._logger.exception(
+                    f"Error processing firmware info hook {name}:",
+                    extra={"plugin": name},
+                )
+
+        self._callback.on_comm_firmware_info(self._firmware_name, copy.copy(info))
+        self._firmware_info_sent = True
 
     def _handle_ok(self):
         if self._resend_ok_timer:
@@ -5586,6 +5616,26 @@ class MachineCom:
 
         self._timeout = self._get_new_communication_timeout() + _timeout
         self._dwelling_until = time.monotonic() + _timeout
+
+    def _gcode_G90_sent(
+        self, cmd, cmd_type=None, gcode=None, subcode=None, *args, **kwargs
+    ):
+        self._relativeAxesRequested = False
+
+    def _gcode_G91_sent(
+        self, cmd, cmd_type=None, gcode=None, subcode=None, *args, **kwargs
+    ):
+        self._relativeAxesRequested = True
+
+    def _gcode_M82_sent(
+        self, cmd, cmd_type=None, gcode=None, subcode=None, *args, **kwargs
+    ):
+        self._relativeExtruderRequested = False
+
+    def _gcode_M83_sent(
+        self, cmd, cmd_type=None, gcode=None, subcode=None, *args, **kwargs
+    ):
+        self._relativeExtruderRequested = True
 
     def _gcode_M106_sent(
         self, cmd, cmd_type=None, gcode=None, subcode=None, *args, **kwargs

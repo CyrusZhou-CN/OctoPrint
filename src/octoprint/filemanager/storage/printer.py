@@ -17,6 +17,7 @@ from . import (
     StorageFolder,
     StorageInterface,
     StorageThumbnail,
+    StorageUsage,
 )
 
 
@@ -109,7 +110,7 @@ class PrinterFileStorage(StorageInterface):
     def get_lastmodified(self, path=None, recursive=False) -> Optional[int]:
         files = self._get_printer_files(path=path)
 
-        dates = [f.date for f in files if f.date is not None]
+        dates = [f.date.timestamp() for f in files if f.date is not None]
         if len(dates):
             return max(dates)
 
@@ -154,6 +155,8 @@ class PrinterFileStorage(StorageInterface):
     ) -> dict[str, StorageEntry]:
         files = self._get_printer_files(path=path, filter=filter, refresh=force_refresh)
 
+        files = sorted(files, key=lambda x: x.path)
+
         prefix = f"{path}/" if path else ""
         if not recursive:
             if level > 0:
@@ -172,6 +175,9 @@ class PrinterFileStorage(StorageInterface):
 
         result = {}
         for f in files:
+            if f.path == prefix:
+                continue
+
             type_path = get_file_type(f.path)
             if not type_path:
                 if f.path.endswith("/"):
@@ -202,7 +208,7 @@ class PrinterFileStorage(StorageInterface):
                     thumbnails=f.thumbnails,
                 )
 
-            if f.size is not None:
+            if f.size is not None and file_type != "folder":
                 entry.size = f.size
             if f.date is not None:
                 entry.date = f.date
@@ -226,6 +232,23 @@ class PrinterFileStorage(StorageInterface):
 
         if filter is not None:
             result = {k: v for k, v in result.items() if filter(v)}
+
+        def _add_calculated_size(node: StorageFolder) -> int:
+            size = 0
+            for child in node.children.values():
+                size += (
+                    _add_calculated_size(child)
+                    if isinstance(child, StorageFolder)
+                    else child.size
+                    if child.size
+                    else 0
+                )
+            node.size = size
+            return size
+
+        for node in result.values():
+            if isinstance(node, StorageFolder):
+                _add_calculated_size(node)
 
         return result
 
@@ -270,10 +293,18 @@ class PrinterFileStorage(StorageInterface):
         except PrinterFilesError as exc:
             raise StorageError("Folder deletion failed") from exc
 
-    def copy_folder(self, source, destination) -> str:
+    def copy_folder(self, source, destination, allow_overwrite: bool = False) -> str:
         if not self.capabilities.copy_folder:
             raise StorageError(
                 "Printer does not support folder copies", code=StorageError.UNSUPPORTED
+            )
+
+        if not allow_overwrite and (
+            self.file_exists(destination) or self.folder_exists(destination)
+        ):
+            raise StorageError(
+                f"{destination} does already exist",
+                code=StorageError.ALREADY_EXISTS,
             )
 
         try:
@@ -283,10 +314,18 @@ class PrinterFileStorage(StorageInterface):
         except PrinterFilesError as exc:
             raise StorageError("Folder copy failed") from exc
 
-    def move_folder(self, source, destination):
+    def move_folder(self, source, destination, allow_overwrite: bool = False):
         if not self.capabilities.move_folder:
             raise StorageError(
                 "Printer does not support folder moves", code=StorageError.UNSUPPORTED
+            )
+
+        if not allow_overwrite and (
+            self.file_exists(destination) or self.folder_exists(destination)
+        ):
+            raise StorageError(
+                f"{destination} does already exist",
+                code=StorageError.ALREADY_EXISTS,
             )
 
         try:
@@ -329,7 +368,7 @@ class PrinterFileStorage(StorageInterface):
 
         try:
             remote = self._connection.upload_printer_file(
-                temp.name, path, upload_callback=callback
+                temp.name, path, progress_callback=callback
             )
             self._update_last_activity()
             return remote
@@ -360,10 +399,18 @@ class PrinterFileStorage(StorageInterface):
         except PrinterFilesError as exc:
             raise StorageError("File deletion failed") from exc
 
-    def copy_file(self, source, destination):
+    def copy_file(self, source, destination, allow_overwrite: bool = False):
         if not self.capabilities.copy_file:
             raise StorageError(
                 "Printer does not support file copies", code=StorageError.UNSUPPORTED
+            )
+
+        if not allow_overwrite and (
+            self.file_exists(destination) or self.folder_exists(destination)
+        ):
+            raise StorageError(
+                f"{destination} does already exist",
+                code=StorageError.ALREADY_EXISTS,
             )
 
         try:
@@ -373,10 +420,18 @@ class PrinterFileStorage(StorageInterface):
         except PrinterFilesError as exc:
             raise StorageError("File copy failed") from exc
 
-    def move_file(self, source, destination):
+    def move_file(self, source, destination, allow_overwrite: bool = False):
         if not self.capabilities.move_file:
             raise StorageError(
                 "Printer does not support file moves", code=StorageError.UNSUPPORTED
+            )
+
+        if not allow_overwrite and (
+            self.file_exists(destination) or self.folder_exists(destination)
+        ):
+            raise StorageError(
+                f"{destination} does already exist",
+                code=StorageError.ALREADY_EXISTS,
             )
 
         try:
@@ -390,12 +445,15 @@ class PrinterFileStorage(StorageInterface):
         metadata = self.get_metadata(path)
         return metadata and metadata.analysis
 
-    def get_metadata(self, path):
+    def get_metadata(self, path, default=None):
         if not self.capabilities.metadata:
             return None
 
         metadata = self._connection.get_printer_file_metadata(path)
-        return metadata.model_dump()
+        if metadata:
+            return metadata.model_dump()
+        else:
+            return default
 
     def has_thumbnail(self, path) -> bool:
         return self._connection.has_thumbnail(path)
@@ -469,10 +527,7 @@ class PrinterFileStorage(StorageInterface):
         return job
 
     def _strip_leading_slash(self, path: str) -> str:
-        if not path:
-            return path
-
-        while path[0] == "/":
+        while path and path[0] == "/":
             path = path[1:]
 
         return path
@@ -513,3 +568,11 @@ class PrinterFileStorage(StorageInterface):
             return pf
         else:
             return self.join_path(pp, pf)
+
+    def get_usage(self) -> Optional[StorageUsage]:
+        if not self._connection:
+            return None
+        usage = self._connection.get_usage_information()
+        if not usage:
+            return None
+        return StorageUsage(used=usage.used, total=usage.total)

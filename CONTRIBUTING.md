@@ -200,7 +200,7 @@ and branching strategy.
    system - maybe that's the actual PR you have been waiting for to contribute :)
 2. If you plan to make **any large or otherwise disruptive changes to the
    code or appearance, please get in touch on the
-   [forums](https://community.octoprint.org/c/development)** first so
+   [forums](https://community.octoprint.org/c/development)** *first* so
    that we can determine if it's a good time for your specific pull
    request. It might be that we're currently in the process of making
    heavy changes to the code locations you'd target as well, or your
@@ -210,7 +210,7 @@ and branching strategy.
 3. Create your pull request **from a custom branch** on your end (e.g.
    `wip/my-new-feature`)[1].
 4. Create your pull request **only against the `dev` branch**. In case of big changes,
-   [get in touch](https://community.octoprint.org/c/development) first.
+   [get in touch](https://community.octoprint.org/c/development) *first*.
 5. Create **one pull request per feature/bug fix**.
 6. Make sure there are **only relevant changes** included in your PR. No
    changes to unrelated files, no additional files that don't belong (e.g.
@@ -265,71 +265,7 @@ and branching strategy.
 12. Don't forget to **add yourself to the [AUTHORS](./AUTHORS.md)
     file** :)
 
-Template to use for Pull Request descriptions (should get pre-filled automatically):
-
-```
-<!--
-Thank you for your interest in contributing to OctoPrint, it's
-highly appreciated!
-
-Please make sure you have read the "guidelines for contributing" as
-linked just above this form, there's a section on Pull Requests in there
-as well which contains important information.
-
-As a summary, please make sure you have ticked all points on this
-checklist:
--->
-
-- [ ] You have read through `CONTRIBUTING.md`
-- [ ] Your changes are not possible to do through a plugin and relevant
-  to a large audience (ideally all users of OctoPrint)
-- [ ] If your changes are large or otherwise disruptive: You have
-  made sure your changes don't interfere with current development by
-  talking it through with the maintainers, e.g. through a
-  Brainstorming ticket
-- [ ] Your PR targets OctoPrint's `dev` branch
-- [ ] Your PR was opened from a custom branch on your repository
-  (no PRs from your version of `main`, `bugfix`, `next` or `dev`
-  please), e.g. `wip/my_new_feature` or `wip/my_bugfix`
-- [ ] Your PR only contains relevant changes: no unrelated files,
-  no dead code, ideally only one commit - rebase and squash your PR
-  if necessary!
-- [ ] If your changes include style sheets: You have modified the
-  `.less` source files, not the `.css` files (those are generated
-  with `lessc`)
-- [ ] You have tested your changes (please state how!) - ideally you
-  have added unit tests
-- [ ] You have run the existing unit tests against your changes and
-  nothing broke (`pytest`)
-- [ ] You have run the included `pre-commit` suite against your changes
-  and nothing broke (`pre-commit run --all-files`)
-- [ ] You have added yourself to the `AUTHORS.md` file :)
-
-<!--
-Describe your PR further using the template provided below. The more
-details the better!
--->
-
-#### What does this PR do and why is it necessary?
-
-#### How was it tested? How can it be tested by the reviewer?
-
-#### Was any kind of genAI (ChatGPT, Copilot etc) involved in creating this PR?
-
-#### Any background context you want to provide?
-
-#### What are the relevant tickets if any?
-
-#### Screenshots (if appropriate)
-
-#### Further notes
-
-<!--
-Be advised that your PR will be checked automatically by CI. Should any of the CI
-checks fail, you will be expected to fix them before your PR will be reviewed, so
-keep an eye on it!
--->
-```
+The template to use for Pull Request descriptions should get pre-filled automatically, but can also be found [here](.github/PULL_REQUEST_TEMPLATE.md).
 
 ## How is OctoPrint versioned?
 
@@ -353,11 +289,23 @@ If you find a problem, write the issue yourself using the provided issue form. I
 
 ### AI use for pull requests
 
-When contributing a pull request you always need to make sure that the proposal is good quality and a best effort that follows our guidelines. A basic rule of thumb is that if someone can spot that the contribution was made with the help of AI, you have more work to do.
+> [!IMPORTANT]
+> This project does **not** accept pull requests that are fully or predominantly AI-generated. AI tools may be utilized solely in an assistive capacity.
+>
+> Detailed information regarding permissible and restricted uses of AI can be found in the [AGENTS.md](AGENTS.md) file.
 
-We can accept code written with the help of AI into the project, but the code must still follow coding standards, be written clearly, be documented, feature test cases and adhere to all the normal requirements we have. You also must understand it yourself and be able to explain it to us - no "vibe coding" please.
+Code or documentation that is initially generated by AI and subsequently edited will still be considered AI-generated. AI assistance is permissible only when the majority of the pull request is authored by a human, with AI employed exclusively for corrections or to expand on verbose modifications that the contributor has already conceptualized (e.g., generating repeated lines with minor variations).
 
-Whatever kind of contribution you submit with your PR, be it code, documentation change, workflows, etc: If you prepared it with the help of an AI, you **must** reveal this fact in your PR!
+If AI is used to generate any portion of the pull request, contributors must adhere to the following requirements:
+
+1. Explicitly disclose the manner in which AI was employed.
+2. Perform a comprehensive manual review *prior* to submitting the pull request.
+3. Be prepared to explain every line of code they submitted when asked about it by a maintainer.
+4. Be prepared to share the used prompts.
+5. AI-generated documentation will **not** be accepted.
+6. Using AI to write pull request descriptions or to respond to human reviewers is *strictly* prohibited and will lead to a ban.
+
+For more info, please refer to the [AGENTS.md](AGENTS.md) file.
 
 ## History
 
@@ -394,6 +342,7 @@ Whatever kind of contribution you submit with your PR, be it code, documentation
   * 2021-04-27: Systeminfo Bundles! \o/
   * 2025-05-21: Guidelines regarding the use of AI
   * 2025-09-03: Changes according to the new branching strategy
+  * 2026-01-27: Stricter guidelines regarding the use of AI for Pull Requests, adapted from llama.cpp
 
 ## Footnotes
   * [1] - If you are wondering why, the problem is that anything that you add

@@ -43,7 +43,7 @@ class ConnectedSerialPrinter(ConnectedPrinter, PrinterFilesMixin):
     )
 
     storage_capabilities = StorageCapabilities(
-        write_file=True, remove_file=True, metadata=True
+        write_file=True, remove_file=True, metadata=True, concurrent_printing=False
     )
 
     # injected by plugin
@@ -93,13 +93,16 @@ class ConnectedSerialPrinter(ConnectedPrinter, PrinterFilesMixin):
 
         self._comm = None
 
-        self._upload_callback = None
+        self._progress_callback = None
         self._last_position = None
 
     @property
     def current_storage_capabilities(self):
         return self.storage_capabilities.model_copy(
-            update={"write_file": self.is_ready()}
+            update={
+                "write_file": self._plugin_settings.get_boolean(["enableUploadToSd"])
+                and self.is_ready()
+            }
         )
 
     @property
@@ -543,15 +546,15 @@ class ConnectedSerialPrinter(ConnectedPrinter, PrinterFilesMixin):
         self, source, target, progress_callback: callable = None, *args, **kwargs
     ) -> str:
         if progress_callback is not None:
-            self._upload_callback = progress_callback
+            self._progress_callback = progress_callback
 
         if not self._comm or self._comm.isBusy() or not self._comm.isSdReady():
             message = (
                 "No connection to printer, printer storage unavailable or printer busy"
             )
             self._logger.error(message)
-            if self._upload_callback:
-                self._upload_callback(failed=True)
+            if self._progress_callback:
+                self._progress_callback(failed=True)
             raise PrinterFilesUnavailableError(message)
 
         try:
@@ -563,8 +566,8 @@ class ConnectedSerialPrinter(ConnectedPrinter, PrinterFilesMixin):
             )
         except Exception as exc:
             self._logger.exception("Error while starting file transfer")
-            if self._upload_callback:
-                self._upload_callback(failed=True)
+            if self._progress_callback:
+                self._progress_callback(failed=True)
             raise PrinterFilesError(
                 "Error while starting file transfer to printer"
             ) from exc
@@ -675,8 +678,8 @@ class ConnectedSerialPrinter(ConnectedPrinter, PrinterFilesMixin):
 
     def on_comm_progress(self):
         self._listener.on_printer_job_progress()
-        if self._upload_callback:
-            self._upload_callback(progress=int(self.job_progress.progress * 100))
+        if self._progress_callback:
+            self._progress_callback(progress=int(self.job_progress.progress * 100))
 
     def on_comm_z_change(self, newZ):
         # intentionally disabled - event now gets triggered in comm, no more push upwards
@@ -729,14 +732,15 @@ class ConnectedSerialPrinter(ConnectedPrinter, PrinterFilesMixin):
         job = UploadJob(
             storage=FileDestinations.LOCAL,
             path=local_filename,
+            display=local_filename,
             size=filesize,
             owner=user,
             remote_path=remote_filename,
         )
         super().set_job(job)
         self._listener.on_printer_files_upload_start(job)
-        if self._upload_callback:
-            self._upload_callback(progress=0)
+        if self._progress_callback:
+            self._progress_callback(progress=0)
 
     def on_comm_file_transfer_done(
         self, local_filename, remote_filename, elapsed, failed=False
@@ -744,12 +748,12 @@ class ConnectedSerialPrinter(ConnectedPrinter, PrinterFilesMixin):
         self._listener.on_printer_files_upload_done(
             self.current_job, elapsed, failed=failed
         )
-        if self._upload_callback:
+        if self._progress_callback:
             if failed:
-                self._upload_callback(failed=True)
+                self._progress_callback(failed=True)
             else:
-                self._upload_callback(done=True)
-            self._upload_callback = None
+                self._progress_callback(done=True)
+            self._progress_callback = None
         super().set_job(None)
 
     def on_comm_file_transfer_failed(self, local_filename, remote_filename, elapsed):

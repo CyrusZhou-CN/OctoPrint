@@ -30,6 +30,12 @@ import octoprint.util
 import octoprint.util.net
 
 
+# Tornado 6.5.x needs _chars_are_bytes hack to work around regression, see tornadoweb/tornado#3502
+# TODO: This will possibly require changes on upgrade to Tornado 6.6!
+def header_line_to_dict(header: str) -> dict:
+    return tornado.httputil.HTTPHeaders.parse(header, _chars_are_bytes=False)
+
+
 def fix_json_encode():
     """
     This makes tornado.escape.json_encode use octoprint.util.JsonEncoding.encode as fallback in order to allow
@@ -430,10 +436,10 @@ class UploadStorageFallbackHandler(RequestlessExceptionLoggingMixin, CorsSupport
 
         # convert to dict
         try:
-            header = tornado.httputil.HTTPHeaders.parse(header.decode("utf-8"))
+            header_str = header.decode("utf-8")
         except UnicodeDecodeError:
             try:
-                header = tornado.httputil.HTTPHeaders.parse(header.decode("iso-8859-1"))
+                header_str = header.decode("iso-8859-1")
             except Exception:
                 # looks like we couldn't decode something here neither as UTF-8 nor ISO-8859-1
                 self._logger.warning(
@@ -442,6 +448,7 @@ class UploadStorageFallbackHandler(RequestlessExceptionLoggingMixin, CorsSupport
                 self.send_error(400)
                 return
 
+        header = header_line_to_dict(header_str)
         disp_header = header.get("Content-Disposition", "")
         disposition, disp_params = _parse_header(disp_header, strip_quotes=False)
 
@@ -1376,15 +1383,15 @@ class StorageFileDownloadHandler(
         ):
             raise tornado.web.HTTPError(404)
 
-        file_data = self._file_manager.get_file(storage, path)
-        if file_data is None:
+        storage_entry = self._file_manager.get_storage_entry(storage, path)
+        if storage_entry is None:
             raise tornado.web.HTTPError(
                 404
             )  # shouldn't happen, but better safe than sorry
 
-        filename = file_data.get("name", os.path.basename(path))
+        filename = storage_entry.name
 
-        size = file_data.get("size")
+        size = storage_entry.size
         if size is not None:
             self.set_header("Content-Length", size)
             self.set_header("X-Original-Content-Length", str(size))
@@ -1463,9 +1470,13 @@ class StorageThumbnailDownloadHandler(
         if include_body:
             handle = None
             try:
-                meta, handle = self._file_manager.read_thumbnail(
+                thumbnail = self._file_manager.read_thumbnail(
                     storage, path, sizehint=sizehint
                 )
+                if thumbnail is None:
+                    raise tornado.web.HTTPError(404)
+
+                meta, handle = thumbnail
 
                 self._set_headers_from_meta(meta)
 
@@ -1500,12 +1511,10 @@ class StorageThumbnailDownloadHandler(
         if meta.size >= 0:
             self.set_header("Content-Length", meta.size)
 
-        if meta.last_modified >= 0:
-            import datetime
+        if meta.last_modified:
             from email.utils import format_datetime
 
-            dt = datetime.datetime.fromtimestamp(meta.last_modified)
-            self.set_header("Last-Modified", format_datetime(dt))
+            self.set_header("Last-Modified", format_datetime(meta.last_modified))
 
 
 ##~~ URL Forward Handler for forwarding requests to a preconfigured static URL
@@ -1920,6 +1929,96 @@ class DynamicZipBundleHandler(StaticZipBundleHandler):
                 self._path_validator(f["path"])
 
         return self.stream_zip(files)
+
+
+class StorageBulkDownloadHandler(DynamicZipBundleHandler):
+    def initialize(
+        self,
+        access_validation=None,
+        as_attachment=True,
+        attachment_name=None,
+        compress=False,
+    ):
+        if as_attachment and not attachment_name:
+            raise ValueError("attachment name must be set if is_attachment is True")
+
+        from octoprint.server import fileManager
+
+        self._access_validator = access_validation
+        self._as_attachment = as_attachment
+        self._attachment_name = attachment_name
+        self._compress = compress
+
+        self._file_manager = fileManager
+
+    def get(self, storage: str):
+        if self._access_validator is not None:
+            self._access_validator(self.request)
+
+        files = list(
+            map(octoprint.util.to_unicode, self.request.query_arguments.get("files", []))
+        )
+        return self._get_files_zip(storage, files)
+
+    def post(self, storage: str):
+        if self._access_validator is not None:
+            self._access_validator(self.request)
+
+        import json
+
+        content_type = self.request.headers.get("Content-Type", "")
+        try:
+            if "application/json" in content_type:
+                data = json.loads(self.request.body)
+            else:
+                data = self.request.body_arguments
+        except Exception as exc:
+            raise tornado.web.HTTPError(400) from exc
+
+        return self._get_files_zip(
+            storage, list(map(octoprint.util.to_unicode, data.get("files", [])))
+        )
+
+    def _get_files_zip(self, storage: str, files: dict):
+        from octoprint.filemanager.storage import StorageError
+
+        files = self.normalize_files(files)
+        if not files:
+            raise tornado.web.HTTPError(400)
+
+        if not self._file_manager.capabilities(storage).read_file:
+            raise tornado.web.HTTPError(404)
+
+        def contents(storage: str, path: str):
+            try:
+                handle = self._file_manager.read_file(storage, path)
+
+                while True:
+                    chunk = handle.read()
+                    if len(chunk) == 0:
+                        break  # EOF
+                    yield chunk
+            finally:
+                if handle:
+                    handle.close()
+
+        to_pack = []
+        for f in files:
+            path = f.get("path")
+            if not path:
+                continue
+
+            try:
+                to_pack.append(
+                    {
+                        "name": path,
+                        "iter": contents(storage, path),
+                    }
+                )
+            except StorageError:
+                continue
+
+        return self.stream_zip(to_pack)
 
 
 class SystemInfoBundleHandler(CorsSupportMixin, tornado.web.RequestHandler):

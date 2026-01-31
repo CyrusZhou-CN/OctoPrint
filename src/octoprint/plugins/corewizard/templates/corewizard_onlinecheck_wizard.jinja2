@@ -66,11 +66,17 @@
     <a href="#"
        class="btn span6"
        data-bind="click: function() { if(!setup() || decision()){disableOnlineCheck()}}, enable: !setup() || decision(), css: {disabled: setup() && !decision()}">
+        <i class="fas fa-spinner fa-spin"
+           style="display: none"
+           data-bind="visible: active() && decision() !== true"></i>
         {{ _("Disable Connectivity Check") }}
     </a>
     <a href="#"
        class="btn btn-primary span6"
        data-bind="click: function() { if(!setup() || !decision()){enableOnlineCheck()}}, enable: !setup() || !decision(), css: {disabled: setup() && decision()}">
+        <i class="fas fa-spinner fa-spin"
+           style="display: none"
+           data-bind="visible: active() && decision() === true"></i>
         {{ _("Enable Connectivity Check") }}
     </a>
 </div>

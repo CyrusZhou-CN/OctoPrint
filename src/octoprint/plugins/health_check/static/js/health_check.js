@@ -25,6 +25,9 @@ $(function () {
                 case "issue": {
                     return "alert-error";
                 }
+                case "info": {
+                    return "alert-info";
+                }
                 case "ok":
                 default: {
                     return "alert-success";
@@ -39,10 +42,12 @@ $(function () {
             const results = _.pluck(checkResults, "result");
 
             if (_.some(_.map(results, (x) => x === "issue"))) {
-                return "#ff0000";
+                return "#990000";
+            } else if (_.some(_.map(results, (x) => x === "warning"))) {
+                return "#ee9900";
+            } else {
+                return "#000099";
             }
-
-            return "#ffff00";
         });
 
         self.compareCheckResult = (a, b) => {
@@ -54,17 +59,23 @@ $(function () {
             return 0;
         };
 
+        self.infoResults = ko.pureComputed(() => {
+            return self._filteredResults("info");
+        });
+
         self.warningResults = ko.pureComputed(() => {
-            return _.filter(self.checkResults(), (x) => x.result === "warning").sort(
-                self.compareCheckResult
-            );
+            return self._filteredResults("warning");
         });
 
         self.issueResults = ko.pureComputed(() => {
-            return _.filter(self.checkResults(), (x) => x.result === "issue").sort(
+            return self._filteredResults("issue");
+        });
+
+        self._filteredResults = (severity) => {
+            return _.filter(self.checkResults(), (x) => x.result === severity).sort(
                 self.compareCheckResult
             );
-        });
+        };
 
         self.showHealthCheckDialog = () => {
             if (
@@ -271,12 +282,12 @@ $(function () {
 
             let statement, title;
             if (result === "warning") {
-                title = "Storage starting to run out";
+                title = gettext("Storage starting to run out");
                 statement = gettext(
                     "One or more folders that OctoPrint uses are starting to run out of space."
                 );
             } else {
-                title = "Storage close to running out";
+                title = gettext("Storage close to running out");
                 statement = gettext(
                     "One or more folders that OctoPrint uses are about to run out of space."
                 );
@@ -320,7 +331,7 @@ $(function () {
         self._fromResponse_global_api_key = (result, context) => {
             if (result === "ok") return;
 
-            const title = "Deprecated global API key detected";
+            const title = gettext("Deprecated global API key detected");
             const html =
                 "<p>" +
                 gettext("Your OctoPrint instance has a global API key set.") +
@@ -332,6 +343,36 @@ $(function () {
                     {
                         url: "https://docs.octoprint.org/en/main/bundledplugins/appkeys.html"
                     }
+                ) +
+                "</p>";
+
+            return {
+                title: title,
+                html: html,
+                result: result
+            };
+        };
+
+        self._fromResponse_only_admins = (result, context) => {
+            if (result === "ok") return;
+
+            const title = gettext("Only Admin accounts registered");
+            const html =
+                "<p>" +
+                gettext(
+                    "Your OctoPrint instance has only Admin accounts registered & active."
+                ) +
+                "</p><p>" +
+                gettext(
+                    "For security reasons you might want to create an Operator account to use for your daily workflows like file uploads, printing and so on."
+                ) +
+                "</p><p>" +
+                gettext(
+                    "Also think about using a specific user account with minimal permissions for third party clients, e.g. your slicer. It has happened in the past that due to a slicer bug configured OctoPrint API keys were leaked into generated GCODE, and something like that can happen again."
+                ) +
+                "</p><p>" +
+                gettext(
+                    "While the likelihood of anyone being able to abuse your account or a leaked API key is pretty small as long as you don't make OctoPrint accessible on the public internet or another hostile network, it's always a good idea to follow best security practices and shrink the attack surface as much as possible, even in local setups."
                 ) +
                 "</p>";
 
@@ -374,6 +415,7 @@ $(function () {
         self.onUserPermissionsChanged =
             self.onUserLoggedIn =
             self.onUserLoggedOut =
+            self.onEventSettingsUpdated =
             self.triggerRequestData =
                 (user) => {
                     if (

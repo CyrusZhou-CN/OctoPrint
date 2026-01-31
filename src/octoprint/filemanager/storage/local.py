@@ -4,15 +4,17 @@ __copyright__ = "Copyright (C) 2014 The OctoPrint Project - Released under terms
 
 
 import copy
+import datetime
 import logging
 import os
 import shutil
 import time
 import typing
 from contextlib import contextmanager
-from os import scandir, walk
+from os import listdir, scandir, walk
 
 import gcode_thumbnail_tool as gtt
+import psutil
 import pylru
 
 import octoprint.filemanager
@@ -26,6 +28,7 @@ from octoprint.util import (
     yaml,
 )
 from octoprint.util.files import sanitize_filename
+from octoprint.util.tz import LOCAL_TZ
 
 from . import (
     AnalysisDimensions,
@@ -42,6 +45,7 @@ from . import (
     StorageFolder,
     StorageInterface,
     StorageThumbnail,
+    StorageUsage,
 )
 
 if typing.TYPE_CHECKING:
@@ -403,12 +407,16 @@ class LocalFileStorage(StorageInterface):
         if not os.path.exists(folder_path):
             return
 
-        empty = True
-        for entry in scandir(folder_path):
-            if entry.name == ".metadata.json" or entry.name == ".metadata.yaml":
-                continue
-            empty = False
-            break
+        empty = (
+            len(
+                [
+                    x
+                    for x in listdir(folder_path)
+                    if x not in (".metadata.json", ".metadata.yaml")
+                ]
+            )
+            == 0
+        )
 
         if not empty and not recursive:
             raise StorageError(
@@ -423,7 +431,9 @@ class LocalFileStorage(StorageInterface):
 
         self._remove_metadata_entry(path, name)
 
-    def _get_source_destination_data(self, source, destination, must_not_equal=False):
+    def _get_source_destination_data(
+        self, source, destination, must_not_equal=False, allow_overwrite: bool = False
+    ):
         """Prepares data dicts about source and destination for copy/move."""
         source_path, source_name = self.sanitize(source)
 
@@ -450,6 +460,7 @@ class LocalFileStorage(StorageInterface):
         if (
             os.path.exists(destination_fullpath)
             and source_fullpath != destination_fullpath
+            and not allow_overwrite
         ):
             raise StorageError(
                 f"{destination_name} does already exist in {destination_path}",
@@ -512,9 +523,9 @@ class LocalFileStorage(StorageInterface):
                 destination_data["path"], destination_data["name"], destination_meta
             )
 
-    def copy_folder(self, source, destination):
+    def copy_folder(self, source, destination, allow_overwrite: bool = False):
         source_data, destination_data = self._get_source_destination_data(
-            source, destination, must_not_equal=True
+            source, destination, must_not_equal=True, allow_overwrite=allow_overwrite
         )
 
         try:
@@ -536,9 +547,9 @@ class LocalFileStorage(StorageInterface):
 
         return self.path_in_storage(destination_data["fullpath"])
 
-    def move_folder(self, source, destination):
+    def move_folder(self, source, destination, allow_overwrite: bool = False):
         source_data, destination_data = self._get_source_destination_data(
-            source, destination
+            source, destination, allow_overwrite=allow_overwrite
         )
 
         # only a display rename? Update that and bail early
@@ -673,9 +684,9 @@ class LocalFileStorage(StorageInterface):
         self._remove_metadata_entry(path, name)
         self._remove_thumbnails(path, name)
 
-    def copy_file(self, source, destination):
+    def copy_file(self, source, destination, allow_overwrite: bool = False):
         source_data, destination_data = self._get_source_destination_data(
-            source, destination, must_not_equal=True
+            source, destination, must_not_equal=True, allow_overwrite=allow_overwrite
         )
 
         if not octoprint.filemanager.valid_file_type(destination_data["name"]):
@@ -716,9 +727,9 @@ class LocalFileStorage(StorageInterface):
 
         return self.path_in_storage(destination_data["fullpath"])
 
-    def move_file(self, source, destination, allow_overwrite=False):
+    def move_file(self, source, destination, allow_overwrite: bool = False):
         source_data, destination_data = self._get_source_destination_data(
-            source, destination
+            source, destination, allow_overwrite=allow_overwrite
         )
 
         if not octoprint.filemanager.valid_file_type(destination_data["name"]):
@@ -770,9 +781,9 @@ class LocalFileStorage(StorageInterface):
         metadata = self.get_metadata(path)
         return metadata and "analysis" in metadata
 
-    def get_metadata(self, path):
+    def get_metadata(self, path, default=None):
         path, name = self.sanitize(path)
-        return self._get_metadata_entry(path, name)
+        return self._get_metadata_entry(path, name, default=default)
 
     def add_history(self, path, data):
         path, name = self.sanitize(path)
@@ -1031,6 +1042,10 @@ class LocalFileStorage(StorageInterface):
     def path_on_disk(self, path):
         path, name = self.sanitize(path)
         return os.path.join(path, name)
+
+    def get_usage(self) -> typing.Optional[StorageUsage]:
+        usage = psutil.disk_usage(self.basefolder)
+        return StorageUsage(used=usage.used, total=usage.total)
 
     ##~~ internals
 
@@ -1385,7 +1400,9 @@ class LocalFileStorage(StorageInterface):
                                     continue
                                 history.append(
                                     HistoryEntry(
-                                        timestamp=h["timestamp"],
+                                        timestamp=datetime.datetime.fromtimestamp(
+                                            h["timestamp"], tz=LOCAL_TZ
+                                        ),
                                         success=h["success"],
                                         printerProfile=h["printerProfile"],
                                         printTime=h.get("printTime"),
@@ -1422,7 +1439,10 @@ class LocalFileStorage(StorageInterface):
 
                     if stat:
                         storage_entry.size = stat.st_size
-                        storage_entry.date = int(stat.st_mtime)
+                        storage_entry.date = datetime.datetime.fromtimestamp(
+                            stat.st_mtime,
+                            tz=LOCAL_TZ,
+                        )
 
                     thumbnails = self._get_thumbnails(os.path.dirname(path_on_disk), name)
                     if thumbnails:

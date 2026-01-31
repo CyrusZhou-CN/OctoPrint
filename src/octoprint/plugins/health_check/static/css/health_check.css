@@ -14,3 +14,7 @@
 .plugin_health_check_alert.alert-error a {
     color: #b94a48;
 }
+
+.plugin_health_check_alert.alert-info a {
+    color: #3a87ad;
+}

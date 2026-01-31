@@ -68,9 +68,10 @@ def test_get_files(path, filters, recursive, level, expected):
         gft.return_value = ["machinecode", "gcode"]
 
         printer_storage = PrinterFileStorage(connection)
-        files = printer_storage.list_files(
-            path=path, filter=filter, recursive=recursive, level=level
-        )
+        with pytest.deprecated_call():
+            files = printer_storage.list_files(
+                path=path, filter=filter, recursive=recursive, level=level
+            )
     actual = _extract_paths_from_files(files)
 
     assert actual == expected

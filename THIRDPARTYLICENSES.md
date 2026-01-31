@@ -97,3 +97,9 @@
   * [sphinxcontrib-httpdomain](https://bitbucket.org/birkenfeld/sphinx-contrib/src/default/httpdomain/): BSD
   * [sphinxcontrib-mermaid](https://github.com/mgaitan/sphinxcontrib-mermaid): BSD
   * [sphinx_rtd_theme](https://github.com/snide/sphinx_rtd_theme/): BSD
+
+## Other
+
+  * `./AGENTS.md` (heavily based on that of [llama.cpp](https://github.com/ggml-org/llama.cpp)): MIT
+
+See also additional `LICENSE` files in sub directories in this repo as well as in file headers.

@@ -115,22 +115,84 @@
         return this.base.delete(resourceForEntry(location, path), opts);
     };
 
-    OctoPrintFilesClient.prototype.copy = function (location, path, destination, opts) {
+    OctoPrintFilesClient.prototype.copy = function (
+        location,
+        path,
+        destination,
+        allowOverwrite,
+        opts
+    ) {
+        if (_.isPlainObject(allowOverwrite)) {
+            opts = allowOverwrite;
+            allowOverwrite = false;
+        }
         return this.issueEntryCommand(
             location,
             path,
             "copy",
-            {destination: destination},
+            {destination: destination, allow_overwrite: allowOverwrite},
             opts
         );
     };
 
-    OctoPrintFilesClient.prototype.move = function (location, path, destination, opts) {
+    OctoPrintFilesClient.prototype.copyAcrossStorage = function (
+        storage,
+        path,
+        destinationStorage,
+        destinationPath,
+        allowOverwrite,
+        opts
+    ) {
+        return this.issueEntryCommand(
+            storage,
+            path,
+            "copy",
+            {
+                storage: destinationStorage,
+                destination: destinationPath,
+                allow_overwrite: allowOverwrite
+            },
+            opts
+        );
+    };
+
+    OctoPrintFilesClient.prototype.move = function (
+        location,
+        path,
+        destination,
+        allowOverwrite,
+        opts
+    ) {
+        if (_.isPlainObject(allowOverwrite)) {
+            opts = allowOverwrite;
+            allowOverwrite = false;
+        }
         return this.issueEntryCommand(
             location,
             path,
             "move",
-            {destination: destination},
+            {destination: destination, allow_overwrite: allowOverwrite},
+            opts
+        );
+    };
+
+    OctoPrintFilesClient.prototype.moveAcrossStorage = function (
+        storage,
+        path,
+        destinationStorage,
+        destinationPath,
+        allowOverwrite,
+        opts
+    ) {
+        return this.issueEntryCommand(
+            storage,
+            path,
+            "move",
+            {
+                storage: destinationStorage,
+                destination: destinationPath,
+                allow_overwrite: allowOverwrite
+            },
             opts
         );
     };
@@ -168,6 +230,9 @@
 
     OctoPrintFilesClient.prototype.bulkDownloadUrlLocal = function (filenames) {
         return this.base.bulkDownloadUrl(bulkDownloadLocalUrl, filenames);
+    };
+    OctoPrintFilesClient.prototype.bulkDownloadUrl = function (storage, filenames) {
+        return this.base.bulkDownloadUrl(`downloads/files/${storage}`, filenames);
     };
 
     OctoPrintFilesClient.prototype.pathForEntry = function (entry) {

@@ -83,6 +83,11 @@ class Achievements(metaclass=AchievementsMetaClass):
         description="Create a backup.",
     )
 
+    THE_MORE_THE_MERRIER = Achievement(
+        name="The More The Merrier",
+        description="Create a second user account.",
+    )
+
     ## print duration
 
     HALF_MARATHON = Achievement(

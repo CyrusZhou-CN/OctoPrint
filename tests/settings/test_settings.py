@@ -355,33 +355,33 @@ class SettingsTest(unittest.TestCase):
     def test_set(self):
         with self.settings() as settings:
             settings.set(["server", "host"], "127.0.0.1")
-            self.assertEqual("127.0.0.1", settings._config["server"]["host"])
+            self.assertEqual("127.0.0.1", settings.config["server"]["host"])
 
     def test_set_int(self):
         with self.settings() as settings:
             settings.setInt(["server", "port"], 8181)
-            self.assertEqual(8181, settings._config["server"]["port"])
+            self.assertEqual(8181, settings.config["server"]["port"])
 
     def test_set_int_convert(self):
         with self.settings() as settings:
             settings.setInt(["server", "port"], "8181")
-            self.assertEqual(8181, settings._config["server"]["port"])
+            self.assertEqual(8181, settings.config["server"]["port"])
 
     def test_set_float(self):
         with self.settings() as settings:
             settings.setFloat(["serial", "timeout", "detection"], 1.2)
-            self.assertEqual(1.2, settings._config["serial"]["timeout"]["detection"])
+            self.assertEqual(1.2, settings.config["serial"]["timeout"]["detection"])
 
     def test_set_float_convert(self):
         with self.settings() as settings:
             settings.setFloat(["serial", "timeout", "detection"], "1.2")
-            self.assertEqual(1.2, settings._config["serial"]["timeout"]["detection"])
+            self.assertEqual(1.2, settings.config["serial"]["timeout"]["detection"])
 
     def test_set_boolean(self):
         with self.settings() as settings:
             settings.setBoolean(["devel", "virtualPrinter", "sendWait"], False)
             self.assertEqual(
-                False, settings._config["devel"]["virtualPrinter"]["sendWait"]
+                False, settings.config["devel"]["virtualPrinter"]["sendWait"]
             )
 
     @ddt.data("1", "yes", "true", "TrUe", "y", "Y", "YES")
@@ -392,7 +392,7 @@ class SettingsTest(unittest.TestCase):
             )
 
             self.assertEqual(
-                True, settings._config["devel"]["virtualPrinter"]["repetierStyleResends"]
+                True, settings.config["devel"]["virtualPrinter"]["repetierStyleResends"]
             )
 
     @ddt.data("0", "no", "false", ["some", "list"], {"a": "dictionary"}, lambda: None)
@@ -400,15 +400,15 @@ class SettingsTest(unittest.TestCase):
         with self.settings() as settings:
             settings.setBoolean(["api", "enabled"], value)
 
-            self.assertEqual(False, settings._config["api"]["enabled"])
+            self.assertEqual(False, settings.config["api"]["enabled"])
 
     def test_set_default(self):
         with self.settings() as settings:
-            self.assertEqual(8080, settings._config["server"]["port"])
+            self.assertEqual(8080, settings.config["server"]["port"])
 
             settings.set(["server", "port"], 5000)
 
-            self.assertNotIn("server", settings._config)
+            self.assertNotIn("server", settings.config)
             self.assertEqual(5000, settings.get(["server", "port"]))
 
     def test_set_default_subtree(self):
@@ -420,12 +420,12 @@ class SettingsTest(unittest.TestCase):
 
             settings.set(["server"], default)
 
-            self.assertNotIn("server", settings._config)
+            self.assertNotIn("server", settings.config)
             self.assertEqual(default, settings.get(["server"], merged=True))
 
     def test_set_none(self):
         with self.settings() as settings:
-            self.assertTrue("port" in settings._config["server"])
+            self.assertTrue("port" in settings.config["server"])
 
             settings.set(["server", "port"], None)
 
@@ -446,12 +446,12 @@ class SettingsTest(unittest.TestCase):
 
     def test_remove(self):
         with self.settings() as settings:
-            self.assertTrue("port" in settings._config["server"])
+            self.assertTrue("port" in settings.config["server"])
 
             settings.remove(["server", "port"])
 
             self.assertFalse(
-                "server" in settings._config and "port" in settings._config["server"]
+                "server" in settings.config and "port" in settings.config["server"]
             )
             self.assertEqual(5000, settings.get(["server", "port"]))
 
@@ -523,6 +523,21 @@ class SettingsTest(unittest.TestCase):
 
             self.assertEqual("SOME STRING", value)
 
+    def test_get_preprocessor_parent_path(self):
+        with self.settings() as settings:
+            config = {}
+            defaults = {"foo_preprocessor": {"bar": "fnord"}}
+            preprocessors = {"foo_preprocessor": {"bar": lambda x: x.upper()}}
+
+            value = settings.get(
+                ["foo_preprocessor"],
+                config=config,
+                defaults=defaults,
+                preprocessors=preprocessors,
+            )
+
+            self.assertEqual("FNORD", value["bar"])
+
     def test_set_preprocessor(self):
         with self.settings() as settings:
             config = {}
@@ -532,6 +547,22 @@ class SettingsTest(unittest.TestCase):
             settings.set(
                 ["foo_preprocessor", "bar"],
                 "value",
+                config=config,
+                defaults=defaults,
+                preprocessors=preprocessors,
+            )
+
+            self.assertEqual("VALUE", config["foo_preprocessor"]["bar"])
+
+    def test_set_preprocessor_parent_path(self):
+        with self.settings() as settings:
+            config = {}
+            defaults = {"foo_preprocessor": {"bar": "fnord"}}
+            preprocessors = {"foo_preprocessor": {"bar": lambda x: x.upper()}}
+
+            settings.set(
+                ["foo_preprocessor"],
+                {"bar": "value"},
                 config=config,
                 defaults=defaults,
                 preprocessors=preprocessors,

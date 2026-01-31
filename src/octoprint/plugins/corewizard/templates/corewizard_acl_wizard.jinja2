@@ -40,6 +40,11 @@
     <div class="controls">
         <a href="#"
            class="btn btn-primary"
-           data-bind="click: function() { if(!setup()){createAccount()}}, enable: !setup() && validData(), css: {disabled: !validData() || setup()}">{{ _("Create Account") }}</a>
+           data-bind="click: function() { if(!setup() && !active()){createAccount()}}, enable: !setup() && !active() && validData(), css: {disabled: !validData() || setup() || active()}">
+            <i class="fas fa-spinner fa-spin"
+               style="display: none"
+               data-bind="visible: active()"></i>
+            {{ _("Create Account") }}
+        </a>
     </div>
 </form>

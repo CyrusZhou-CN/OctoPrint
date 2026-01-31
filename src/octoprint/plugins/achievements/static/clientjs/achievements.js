@@ -30,6 +30,10 @@
         );
     };
 
+    OctoPrintAchievementsClient.prototype.resetYear = function (opts) {
+        return this.base.postJson(this.baseUrl + "/reset/year", opts);
+    };
+
     // register plugin component
     OctoPrintClient.registerPluginComponent("achievements", OctoPrintAchievementsClient);
 

@@ -626,8 +626,6 @@ def dict_sanitize(a, b):
         >>> expected = dict(foo="foo", fnord=dict(a=1, b=2))
         >>> dict_sanitize(a, b) == expected
         True
-        >>> dict_clean(a, b) == expected
-        True
 
     Arguments:
         a (dict): The dictionary to clean against ``b``.

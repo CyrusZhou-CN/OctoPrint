@@ -3,15 +3,13 @@
    data-bind="click: function() { showHealthCheckDialog(); }, hidden: checkResults().length === 0"
    title="{{ _('Health Checks') |edq }}"
    aria-label="{{ _('Health Checks') |edq }}">
-    <span class="fa-layers fa-fw" data-bind="visible: unackedCheckResults">
+    <span class="fa-layers fa-fw">
         <i class="fas fa-triangle-exclamation"></i>
         <i class="fas fa-circle"
            data-fa-transform="shrink-6 right-6 up-3"
-           data-bind="style: { color: bubbleColor }"></i>
+           data-bind="style: { color: bubbleColor }, visible: unackedCheckResults"></i>
         <span class="fa-layers-text fa-inverse"
               data-fa-transform="shrink-7 right-6 up-2"
-              data-bind="text: checkResults().length"></span>
+              data-bind="text: checkResults().length, visible: unackedCheckResults"></span>
     </span>
-    <i class="fas fa-triangle-exclamation"
-       data-bind="hidden: unackedCheckResults"></i>
 </a>
