@@ -256,7 +256,17 @@ def get_command(ctx, path, as_json=False, as_yaml=False, as_raw=False):
 @standard_options(hidden=True)
 @click.pass_context
 def effective_command(ctx, as_json=False, as_yaml=False, as_raw=False):
-    """Retrieves the full effective config."""
+    """
+    Retrieves the full effective core config.
+
+    WARNING: The output does not include plugin default settings! That would
+    require initializing the full plugin sub system with all necessary dependencies
+    to run a server (as third party plugins might depend on anything). If you need
+    the effective config of a running OctoPrint server, use the settings API instead,
+    e.g.
+
+      octoprint client -a <apikey> get /api/settings
+    """
     _init_pluginsettings(ctx)
     value = ctx.obj.settings.effective
 
