@@ -95,13 +95,6 @@
                             data-bind="click: $root.slice, css: { disabled: !$root.enableSlicing() }, visible: $root.slicingAvailable">
                         <i class="fa-solid fa-layer-group"></i>
                     </button>
-                    {% if enableSdSupport %}
-                        <button class="btn btn-small"
-                                title="{{ _('Upload to SD') |edq }}"
-                                data-bind="click: $root.uploadSD, css: { disabled: !$root.enableUploadSD() }">
-                            <i class="fa-solid fa-sd-card"></i>
-                        </button>
-                    {% endif %}
                     <button class="btn btn-small"
                             title="{{ _('Load') |edq }}"
                             data-bind="click: function() { $root.loadFile(false); }, css: { disabled: !$root.enableLoad(false) }">

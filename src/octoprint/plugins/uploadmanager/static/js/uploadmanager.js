@@ -522,14 +522,6 @@ $(function () {
             return self.currentStorage() === origin;
         };
 
-        self.enableUploadSD = () => {
-            return (
-                self.loginState.isUser() &&
-                self.selectedFiles().length === 1 &&
-                self.files.isSdReady() &&
-                self.checkSelectedOrigin("local")
-            );
-        };
         self.enableRemove = () => {
             if (!self.loginState.isUser() || self.selectedFiles().length === 0)
                 return false;
@@ -694,18 +686,6 @@ $(function () {
                 return downloadables[0].refs.download;
             }
         });
-
-        self.uploadSD = () => {
-            if (!self.enableUploadSD()) return;
-
-            const file = self.selectedFiles()[0];
-            if (file.origin !== "local") return;
-
-            OctoPrint.files.issueEntryCommand(file.origin, file.path, "copy_storage", {
-                storage: "printer",
-                destination: file.path
-            });
-        };
 
         self.slice = () => {
             if (!self.enableSlicing()) return;
