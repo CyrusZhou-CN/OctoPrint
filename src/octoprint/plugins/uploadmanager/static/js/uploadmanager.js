@@ -740,53 +740,91 @@ $(function () {
             });
         };
 
+        self.renameSanitizer = undefined;
         self.rename = () => {
             if (!self.enableRename()) return;
 
             const file = self.selectedFiles()[0];
-            const name = file.name;
-            const origin = file.origin;
-            const from = file.path;
+            const folder = self.currentPath();
 
-            showTextboxDialog({
-                title: _.sprintf(gettext("Rename %(name)s"), {name: name}),
-                message: gettext("Please specify the new name:"),
-                value: name,
-                validator: (value) => {
-                    // check that the name is valid
-                    log.info("checking validity of ", value);
-                    const path = self.currentPath()
-                        ? self.currentPath() + "/" + value
-                        : value;
-                    if (!_isPathUnique(path, [from])) {
-                        return gettext("This name is already in use!");
-                    }
-                    return true;
-                },
-                onproceed: (value) => {
-                    if (name === value) return;
-                    const folder = self.currentPath();
-                    const to = `${folder}/${value}`;
-                    log.info(`Renaming ${from} to ${to}`);
-                    OctoPrint.files
-                        .move(origin, from, to)
-                        .done(() => {
-                            self.deselectAll();
-                        })
-                        .fail((jqXHR) => {
-                            showMessageDialog({
-                                title: gettext("Operation failed"),
-                                message: _.sprintf(
-                                    gettext("Renaming %(filename)s failed: %(error)s"),
-                                    {
-                                        filename: _.escape(filename),
-                                        error: _.escape(_errorFromJqXHR(jqXHR))
-                                    }
-                                )
-                            });
-                        });
+            const titleElement = $("[data-id='title']", self.renameDialog);
+            const nameControlElement = $("[data-id='nameControl'", self.renameDialog);
+            const nameCurrentElement = $("[data-id='nameCurrent'", self.renameDialog);
+            const nameNewElement = $("[data-id='nameNew'", self.renameDialog);
+            const nameNewInternalElement = $(
+                "[data-id='nameNewInternal']",
+                self.renameDialog
+            );
+            const errorElement = $("[data-id='error']", self.renameDialog);
+            const proceedElement = $("[data-id='proceed']", self.renameDialog);
+
+            titleElement.text(
+                _.sprintf(gettext("Rename %(type)s"), {
+                    type: file.type === "folder" ? gettext("folder") : gettext("file")
+                })
+            );
+            nameCurrentElement.text(file.display);
+            nameNewInternalElement.text(file.name);
+
+            nameNewElement.val(file.display);
+
+            const updateInternalName = () => {
+                if (self.renameSanitizer) {
+                    window.clearTimeout(self.renameSanitizer);
+                    self.renameSanitizer = undefined;
                 }
+
+                self.renameSanitizer = window.setTimeout(() => {
+                    const name = nameNewElement.val();
+                    OctoPrint.files.exists(file.origin, folder, name).done((resp) => {
+                        nameNewInternalElement.text(resp.sanitized_name);
+                        if (resp.exists && resp.sanitized_name !== file.name) {
+                            nameControlElement.addClass("text-error");
+                            errorElement.show();
+                            proceedElement
+                                .attr("disabled", "disabled")
+                                .addClass("disabled");
+                        } else {
+                            nameControlElement.removeClass("text-error");
+                            errorElement.hide();
+                            proceedElement.removeAttr("disabled").removeClass("disabled");
+                        }
+                    });
+                }, 200);
+            };
+            nameNewElement.off("change.upmgr").on("change.upmgr", updateInternalName);
+            nameNewElement.off("keyup.upmgr").on("keyup.upmgr", updateInternalName);
+            nameNewElement.off("blur.upmgr").on("blur.upmgr", updateInternalName);
+
+            proceedElement.off("click.upmgr").on("click.upmgr", () => {
+                const newName = nameNewElement.val();
+                if (file.display === newName) return;
+
+                const from = `${folder}/${file.name}`;
+                const to = `${folder}/${newName}`;
+                log.info(`Renaming ${from} to ${to}`);
+
+                OctoPrint.files
+                    .move(file.origin, file.path, to)
+                    .done(() => {
+                        self.deselectAll();
+                        self.renameDialog.modal("hide");
+                    })
+                    .fail((jqXHR) => {
+                        showMessageDialog({
+                            title: gettext("Operation failed"),
+                            message: _.sprintf(
+                                gettext("Renaming %(filename)s failed: %(error)s"),
+                                {
+                                    filename: _.escape(file.name),
+                                    error: _.escape(_errorFromJqXHR(jqXHR))
+                                }
+                            )
+                        });
+                    });
             });
+
+            self.renameDialog.modal("show");
         };
 
         self.showCopyMoveDialog = (action) => {
@@ -1147,6 +1185,7 @@ $(function () {
 
         self.onStartup = () => {
             self.dialog = $("#plugin_uploadmanager_dialog");
+            self.renameDialog = $("#plugin_uploadmanager_rename");
             self.copyMoveDialog = $("#plugin_uploadmanager_copymove");
         };
 
