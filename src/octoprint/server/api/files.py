@@ -1422,18 +1422,24 @@ def gcodeFileCommand(storage, path):
                                 printer.set_job(None)
 
                             if dst_storage == storage:
+                                # we explicitly use new_path instead of sanitized_destination below, to make renaming work in same storage
+                                new_path = fileManager.join_path(
+                                    dst_storage,
+                                    dst_path,
+                                    dst_name,
+                                )
                                 if is_file:
                                     fileManager.move_file(
                                         storage,
                                         path,
-                                        sanitized_destination,
+                                        new_path,
                                         allow_overwrite=allow_overwrite,
                                     )
                                 else:
                                     fileManager.move_folder(
                                         storage,
                                         path,
-                                        sanitized_destination,
+                                        new_path,
                                         allow_overwrite=allow_overwrite,
                                     )
                             else:
