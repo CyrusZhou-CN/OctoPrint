@@ -37,7 +37,7 @@ class FeatureConfig(BaseModel):
     fileDeleteConfirmation: bool = True
     """Whether to show a confirmation when about to delete a file."""
 
-    autoUppercaseBlacklist: list[str] = ["M117", "M118", "M707", "M708"]
+    autoUppercaseBlocklist: list[str] = ["M117", "M118", "M707", "M708"]
     """Commands that should never be auto-uppercased when sent to the printer through the Terminal tab."""
 
     g90InfluencesExtruder: bool = False

@@ -1236,6 +1236,7 @@ class Settings:
             self._migrate_blocked_commands,
             self._migrate_gcodeviewer_enabled,
             self._migrate_trusted_proxies,
+            self._migrate_allowlists_and_blocklists,
         )
 
         for migrate in migrators:
@@ -1777,6 +1778,29 @@ class Settings:
 
         return modified
 
+    def _migrate_allowlists_and_blocklists(self, config):
+        modified = False
+
+        if "feature" in config and "autoUppercaseBlacklist" in config["feature"]:
+            config["feature"]["autoUppercaseBlocklist"] = config["feature"][
+                "autoUppercaseBlacklist"
+            ]
+            del config["feature"]["autoUppercaseBlacklist"]
+            modified = True
+
+        if "server" in config and "pluginBlacklist" in config["server"]:
+            config["server"]["pluginBlocklist"] = config["server"]["pluginBlacklist"]
+            del config["server"]["pluginBlacklist"]
+            modified = True
+
+        if modified:
+            backup_path = self.backup("allowlist_blocklist_migration")
+            self._logger.info(
+                f"Made a copy of the current config at {backup_path} to allow recovery of allowlist/blocklist configuration"
+            )
+
+        return modified
+
     def backup(self, suffix=None, path=None, ext=None, hidden=False):
         import shutil
 
@@ -2016,7 +2040,7 @@ class Settings:
                 return floatValue
         except ValueError:
             self._logger.warning(
-                "Could not convert %r to a valid integer when getting option %r"
+                "Could not convert %r to a valid float when getting option %r"
                 % (value, path)
             )
             return None
@@ -2272,7 +2296,7 @@ class Settings:
                 floatValue = maximum
         except ValueError:
             self._logger.warning(
-                "Could not convert %r to a valid integer when setting option %r"
+                "Could not convert %r to a valid float when setting option %r"
                 % (value, path)
             )
             return

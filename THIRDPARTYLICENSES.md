@@ -102,4 +102,4 @@
 
   * `./AGENTS.md` (heavily based on that of [llama.cpp](https://github.com/ggml-org/llama.cpp)): MIT
 
-See also additional `LICENSE` files in sub directories in this repo as well as in file headers.
+See also additional `LICENSE` files in sub directories in [the repository](https://github.com/OctoPrint/OctoPrint) as well as in file headers.

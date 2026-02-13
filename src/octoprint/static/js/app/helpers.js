@@ -1275,6 +1275,7 @@ function showProgressModal(options, promise) {
 
     var counter = 0;
     var value = 100;
+    var outcome = true;
     promise
         .progress(function () {
             var status = false;
@@ -1298,6 +1299,7 @@ function showProgressModal(options, promise) {
             if (!status) {
                 counter++;
                 value = Math.max(Math.min((counter * 100) / max, 100), 0);
+                outcome = outcome && success;
             }
 
             // if we got a value & max, remove stripes & active animation
@@ -1338,13 +1340,11 @@ function showProgressModal(options, promise) {
             }
         })
         .done(function () {
-            button.prop("disabled", false);
-            icon.removeClass("fa-spinner fa-spin").addClass("fa-check");
-            if (close) {
+            if (close && outcome) {
                 modal.modal("hide");
             }
         })
-        .fail(function () {
+        .always(function () {
             icon.removeClass("fa-spinner fa-spin").addClass("fa-x");
             button.prop("disabled", false);
         });

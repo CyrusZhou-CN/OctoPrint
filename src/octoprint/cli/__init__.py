@@ -274,8 +274,9 @@ legacy_options = bulk_options(
             "--iknowwhatimdoing", "allow_root", is_flag=True, callback=set_ctx_obj_option
         ),
         hidden_option(
-            "--ignore-blacklist",
-            "ignore_blacklist",
+            "--ignore-blocklist",
+            "--ignore-blacklist",  # legacy
+            "ignore_blocklist",
             is_flag=True,
             callback=set_ctx_obj_option,
         ),

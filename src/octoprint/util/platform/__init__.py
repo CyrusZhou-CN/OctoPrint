@@ -95,7 +95,7 @@ def get_os():
 
 def is_os_compatible(compatibility_entries, current_os=None):
     """
-    Tests if the ``current_os`` or ``sys.platform`` are blacklisted or whitelisted in ``compatibility_entries``
+    Tests if the ``current_os`` or ``sys.platform`` are blocklisted or allowlisted in ``compatibility_entries``
 
     Returns:
             (bool) True if the os is compatible, False otherwise
@@ -116,14 +116,14 @@ def is_os_compatible(compatibility_entries, current_os=None):
 
     negative_match = False
     if negative_entries:
-        # check if we are blacklisted
+        # check if we are blocklisted
         negative_match = current_os in negative_entries or any(
             sys.platform.startswith(x) for x in negative_entries
         )
 
     positive_match = True
     if positive_entries:
-        # check if we are whitelisted
+        # check if we are allowlisted
         positive_match = current_os in positive_entries or any(
             sys.platform.startswith(x) for x in positive_entries
         )

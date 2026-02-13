@@ -2341,7 +2341,7 @@ class PluginManagerPlugin(
             "bundled": plugin.bundled,
             "managable": plugin.managable,
             "enabled": plugin.enabled,
-            "blacklisted": plugin.blacklisted,
+            "blocklisted": plugin.blocklisted,
             "forced_disabled": plugin.forced_disabled,
             "incompatible": plugin.incompatible,
             "safe_mode_victim": getattr(plugin, "safe_mode_victim", False),

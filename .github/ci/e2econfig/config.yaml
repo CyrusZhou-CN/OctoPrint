@@ -14,7 +14,7 @@ server:
   firstRun: false
   onlineCheck:
     enabled: false
-  pluginBlacklist:
+  pluginBlocklist:
     enabled: false
   secretKey: rrdHjvmeGMPSdYWg2NGdiM7mpz9pjekk
   seenWizards:

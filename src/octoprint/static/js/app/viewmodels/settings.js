@@ -170,7 +170,7 @@ $(function () {
         self.feature_uploadOverwriteConfirmation = ko.observable(undefined);
         self.feature_fileDeleteConfirmation = ko.observable(undefined);
         self.feature_g90InfluencesExtruder = ko.observable(undefined);
-        self.feature_autoUppercaseBlacklist = ko.observable(undefined);
+        self.feature_autoUppercaseBlocklist = ko.observable(undefined);
         self.feature_enableDragDropUpload = ko.observable(undefined);
 
         self.gcodeAnalysis_runAt = ko.observable(undefined);
@@ -215,9 +215,9 @@ $(function () {
         self.server_onlineCheck_port = ko.observable();
         self.server_onlineCheck_name = ko.observable();
 
-        self.server_pluginBlacklist_enabled = ko.observable();
-        self.server_pluginBlacklist_url = ko.observable();
-        self.server_pluginBlacklist_ttl = ko.observable();
+        self.server_pluginBlocklist_enabled = ko.observable();
+        self.server_pluginBlocklist_url = ko.observable();
+        self.server_pluginBlocklist_ttl = ko.observable();
 
         self.server_allowFraming = ko.observable();
 
@@ -844,9 +844,9 @@ $(function () {
             // some special read functions for various observables
             var specialMappings = {
                 feature: {
-                    autoUppercaseBlacklist: function () {
+                    autoUppercaseBlocklist: function () {
                         return splitTextToArray(
-                            self.feature_autoUppercaseBlacklist(),
+                            self.feature_autoUppercaseBlocklist(),
                             ",",
                             true
                         );
@@ -1007,8 +1007,8 @@ $(function () {
                     }
                 },
                 feature: {
-                    autoUppercaseBlacklist: function (value) {
-                        self.feature_autoUppercaseBlacklist(value.join(", "));
+                    autoUppercaseBlocklist: function (value) {
+                        self.feature_autoUppercaseBlocklist(value.join(", "));
                     }
                 },
                 terminalFilters: function (value) {

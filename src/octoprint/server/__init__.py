@@ -801,7 +801,7 @@ class Server:
     def _setup_plugin_permissions(self):
         from octoprint.access.permissions import PluginOctoPrintPermission
 
-        key_whitelist = re.compile(r"[A-Za-z0-9_]*")
+        key_allowlist = re.compile(r"[A-Za-z0-9_]*")
 
         def permission_key(plugin, definition):
             return "PLUGIN_{}_{}".format(plugin.upper(), definition["key"].upper())
@@ -880,7 +880,7 @@ class Server:
                     if "key" not in p or "name" not in p:
                         continue
 
-                    if not key_whitelist.match(p["key"]):
+                    if not key_allowlist.match(p["key"]):
                         self._logger.warning(
                             "Got permission with invalid key from plugin {}: {}".format(
                                 name, p["key"]

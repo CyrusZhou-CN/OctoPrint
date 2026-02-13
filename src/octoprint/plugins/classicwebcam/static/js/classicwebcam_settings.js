@@ -176,7 +176,7 @@ $(function () {
                 response: "bytes",
                 timeout: self.snapshotTimeout(),
                 validSsl: self.snapshotSslValidation(),
-                content_type_whitelist: ["image/*"],
+                content_type_allowlist: ["image/*"],
                 content_type_guess: true
             };
 

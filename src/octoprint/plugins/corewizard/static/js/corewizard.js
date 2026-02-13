@@ -216,7 +216,7 @@ $(function () {
         };
     }
 
-    function CoreWizardPluginBlacklistViewModel(parameters) {
+    function CoreWizardPluginBlocklistViewModel(parameters) {
         var self = this;
 
         self.settingsViewModel = parameters[0];
@@ -227,14 +227,14 @@ $(function () {
         self.required = false;
         self.active = ko.observable(false);
 
-        self.enablePluginBlacklist = function () {
-            self.settingsViewModel.server_pluginBlacklist_enabled(true);
+        self.enablePluginBlocklist = function () {
+            self.settingsViewModel.server_pluginBlocklist_enabled(true);
             self.decision(true);
             self._sendData();
         };
 
-        self.disablePluginBlacklist = function () {
-            self.settingsViewModel.server_pluginBlacklist_enabled(false);
+        self.disablePluginBlocklist = function () {
+            self.settingsViewModel.server_pluginBlocklist_enabled(false);
             self.decision(false);
             self._sendData();
         };
@@ -244,7 +244,7 @@ $(function () {
 
             if (
                 !current ||
-                !_.startsWith(current, "wizard_plugin_corewizard_pluginblacklist_") ||
+                !_.startsWith(current, "wizard_plugin_corewizard_pluginblocklist_") ||
                 self.setup()
             ) {
                 return true;
@@ -270,8 +270,8 @@ $(function () {
                 response &&
                 response.corewizard &&
                 response.corewizard.details &&
-                response.corewizard.details.pluginblacklist &&
-                response.corewizard.details.pluginblacklist.required;
+                response.corewizard.details.pluginblocklist &&
+                response.corewizard.details.pluginblocklist.required;
         };
 
         self._showDecisionNeededDialog = function () {
@@ -286,8 +286,8 @@ $(function () {
         self._sendData = function () {
             const data = {
                 server: {
-                    pluginBlacklist: {
-                        enabled: self.settingsViewModel.server_pluginBlacklist_enabled()
+                    pluginBlocklist: {
+                        enabled: self.settingsViewModel.server_pluginBlocklist_enabled()
                     }
                 }
             };
@@ -363,9 +363,9 @@ $(function () {
             elements: ["#wizard_plugin_corewizard_onlinecheck"]
         },
         {
-            construct: CoreWizardPluginBlacklistViewModel,
+            construct: CoreWizardPluginBlocklistViewModel,
             dependencies: ["settingsViewModel"],
-            elements: ["#wizard_plugin_corewizard_pluginblacklist"]
+            elements: ["#wizard_plugin_corewizard_pluginblocklist"]
         },
         {
             construct: CoreWizardPrinterProfileViewModel,

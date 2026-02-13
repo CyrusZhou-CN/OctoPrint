@@ -113,14 +113,14 @@
     </div>
     <div class="control-group"
          title="{{ _('Commands to not completely auto uppercase in the terminal tab') |edq }}">
-        <label class="control-label" for="settings-featureAutoUppercaseBlacklist">
+        <label class="control-label" for="settings-featureAutoUppercaseBlocklist">
             {{ _("Terminal Auto Uppercase Blocklist") }}
         </label>
         <div class="controls">
             <input type="text"
                    class="input-block-level"
-                   id="settings-featureAutoUppercaseBlacklist"
-                   data-bind="value: feature_autoUppercaseBlacklist">
+                   id="settings-featureAutoUppercaseBlocklist"
+                   data-bind="value: feature_autoUppercaseBlocklist">
             <span class="help-block">{{ _("Use this to specify the commands that should not have their parameters automatically uppercased in the terminal tab. Just the G or M code, comma separated.") }}</span>
         </div>
     </div>

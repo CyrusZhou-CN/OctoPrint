@@ -37,7 +37,7 @@ from os import scandir
 
 from packaging.specifiers import SpecifierSet
 
-from octoprint.util import sv, time_this, to_unicode
+from octoprint.util import deprecated, sv, time_this, to_unicode
 from octoprint.util.version import get_python_version_string, is_python_compatible
 
 SUFFIXES = importlib.machinery.SOURCE_SUFFIXES + importlib.machinery.BYTECODE_SUFFIXES
@@ -334,7 +334,7 @@ class PluginInfo:
     Arguments:
         key (str): Identifier of the plugin
         location (str): Installation folder of the plugin
-        instance (module): Plugin module instance - this may be ``None`` if the plugin has been blacklisted!
+        instance (module): Plugin module instance - this may be ``None`` if the plugin has been blocklisted!
         name (str): Human readable name of the plugin
         version (str): Version of the plugin
         description (str): Description of the plugin
@@ -369,11 +369,11 @@ class PluginInfo:
         self.enabled = True
         """Whether the plugin is enabled."""
 
-        self.blacklisted = False
-        """Whether the plugin is blacklisted."""
+        self.blocklisted = False
+        """Whether the plugin is blocklisted."""
 
         self.forced_disabled = False
-        """Whether the plugin has been force disabled by the system, e.g. due to safe mode blacklisting."""
+        """Whether the plugin has been force disabled by the system, e.g. due to safe mode blocklisting."""
 
         self.incompatible = False
         """Whether this plugin has been detected as incompatible."""
@@ -423,7 +423,7 @@ class PluginInfo:
             result = (
                 self.looks_like_plugin
                 and not self.forced_disabled
-                and not self.blacklisted
+                and not self.blocklisted
                 and not self.incompatible
                 and not self.invalid_syntax
                 and result
@@ -464,7 +464,7 @@ class PluginInfo:
 
         ``enabled_str``
             a 4-tuple, the first entry being the string to insert when the plugin is enabled, the second
-            entry the string to insert when it is not, the third entry the string when it is blacklisted
+            entry the string to insert when it is not, the third entry the string when it is blocklisted
             and the fourth when it is incompatible.
         ``bundled_str``
             a 2-tuple, the first entry being the string to insert when the plugin is bundled, the second
@@ -487,7 +487,7 @@ class PluginInfo:
         if show_enabled:
             if self.incompatible:
                 ret = to_unicode(enabled_strs[3])
-            elif self.blacklisted:
+            elif self.blocklisted:
                 ret = to_unicode(enabled_strs[2])
             elif not self.enabled:
                 ret = to_unicode(enabled_strs[1])
@@ -825,6 +825,11 @@ class PluginInfo:
             self.invalid_syntax = True
             return {}
 
+    @deprecated("blacklisted is deprecated in favor of blocklisted")
+    @property
+    def blacklisted(self):
+        return self.blocklisted
+
 
 class PluginManager:
     """
@@ -846,7 +851,7 @@ class PluginManager:
         logging_prefix=None,
         plugin_disabled_list=None,
         plugin_sorting_order=None,
-        plugin_blacklist=None,
+        plugin_blocklist=None,
         plugin_restart_needing_hooks=None,
         plugin_obsolete_hooks=None,
         plugin_considered_bundled=None,
@@ -868,8 +873,8 @@ class PluginManager:
             plugin_disabled_list = []
         if plugin_sorting_order is None:
             plugin_sorting_order = {}
-        if plugin_blacklist is None:
-            plugin_blacklist = []
+        if plugin_blocklist is None:
+            plugin_blocklist = []
         if compatibility_ignored_list is None:
             compatibility_ignored_list = []
         if plugin_considered_bundled is None:
@@ -877,26 +882,26 @@ class PluginManager:
         if plugin_flags is None:
             plugin_flags = {}
 
-        processed_blacklist = []
-        for entry in plugin_blacklist:
+        processed_blocklist = []
+        for entry in plugin_blocklist:
             if isinstance(entry, (tuple, list)):
                 key, version = entry
                 try:
-                    processed_blacklist.append((key, SpecifierSet(version)))
+                    processed_blocklist.append((key, SpecifierSet(version)))
                 except Exception:
                     self.logger.warning(
                         "Invalid version requirement {} for blocklist "
                         "entry {}, ignoring".format(version, key)
                     )
             else:
-                processed_blacklist.append(entry)
+                processed_blocklist.append(entry)
 
         self.plugin_folders = plugin_folders
         self.plugin_bases = plugin_bases
         self.plugin_entry_points = plugin_entry_points
         self.plugin_disabled_list = plugin_disabled_list
         self.plugin_sorting_order = plugin_sorting_order
-        self.plugin_blacklist = processed_blacklist
+        self.plugin_blocklist = processed_blocklist
         self.plugin_restart_needing_hooks = plugin_restart_needing_hooks
         self.plugin_obsolete_hooks = plugin_obsolete_hooks
         self.plugin_validators = plugin_validators
@@ -1259,12 +1264,12 @@ class PluginManager:
             self.logger.info(f"Plugin {plugin} is disabled.")
             plugin.forced_disabled = True
 
-        if self._is_plugin_blacklisted(key) or (
+        if self._is_plugin_blocklisted(key) or (
             plugin.version is not None
-            and self._is_plugin_version_blacklisted(key, plugin.version)
+            and self._is_plugin_version_blocklisted(key, plugin.version)
         ):
             self.logger.warning(f"Plugin {plugin} is blocklisted.")
-            plugin.blacklisted = True
+            plugin.blocklisted = True
 
         python_version = get_python_version_string()
         if self._is_plugin_incompatible(key, plugin):
@@ -1351,8 +1356,8 @@ class PluginManager:
     def _is_plugin_disabled(self, key):
         return key in self.plugin_disabled_list or key.endswith("disabled")
 
-    def _is_plugin_blacklisted(self, key):
-        return key in self.plugin_blacklist
+    def _is_plugin_blocklisted(self, key):
+        return key in self.plugin_blocklist
 
     def _is_plugin_incompatible(self, key, plugin):
         return (
@@ -1361,14 +1366,14 @@ class PluginManager:
             and key not in self.compatibility_ignored_list
         )
 
-    def _is_plugin_version_blacklisted(self, key, version):
+    def _is_plugin_version_blocklisted(self, key, version):
         def matches_plugin(entry):
             if isinstance(entry, (tuple, list)) and len(entry) == 2:
                 entry_key, entry_version = entry
                 return entry_key == key and version in entry_version
             return False
 
-        return any(map(matches_plugin, self.plugin_blacklist))
+        return any(map(matches_plugin, self.plugin_blocklist))
 
     def reload_plugins(
         self, startup=False, initialize_implementations=True, force_reload=None
@@ -1422,7 +1427,7 @@ class PluginManager:
             try:
                 if (
                     plugin.looks_like_plugin
-                    and not plugin.blacklisted
+                    and not plugin.blocklisted
                     and not plugin.forced_disabled
                     and not plugin.incompatible
                 ):
@@ -1452,7 +1457,7 @@ class PluginManager:
                     and not plugin.forced_disabled
                     and not plugin.incompatible
                 ):
-                    if plugin.blacklisted:
+                    if plugin.blocklisted:
                         self.logger.warning(
                             f"Plugin {plugin} is blocklisted. Not enabling it."
                         )

@@ -70,7 +70,7 @@ def init_platform(
     uncaught_handler=None,
     disable_color=True,
     safe_mode=False,
-    ignore_blacklist=False,
+    ignore_blocklist=False,
     after_preinit_logging=None,
     after_settings_init=None,
     after_logging=None,
@@ -171,7 +171,7 @@ def init_platform(
         plugin_manager = init_pluginsystem(
             settings,
             safe_mode=safe_mode,
-            ignore_blacklist=ignore_blacklist,
+            ignore_blocklist=ignore_blocklist,
             connectivity_checker=connectivity_checker,
         )
     except Exception as ex:
@@ -673,7 +673,7 @@ def set_logging_config(config, debug, verbosity, uncaught_logger, uncaught_handl
 
 
 def init_pluginsystem(
-    settings, safe_mode=False, ignore_blacklist=True, connectivity_checker=None
+    settings, safe_mode=False, ignore_blocklist=True, connectivity_checker=None
 ):
     """Initializes the plugin manager based on the settings."""
 
@@ -699,11 +699,11 @@ def init_pluginsystem(
     plugin_sorting_order = settings.get(["plugins", "_sortingOrder"], merged=True)
     plugin_flags = settings.get(["plugins", "_flags"], merged=True)
 
-    plugin_blacklist = []
-    if not ignore_blacklist and settings.getBoolean(
-        ["server", "pluginBlacklist", "enabled"]
+    plugin_blocklist = []
+    if not ignore_blocklist and settings.getBoolean(
+        ["server", "pluginBlocklist", "enabled"]
     ):
-        plugin_blacklist = get_plugin_blacklist(
+        plugin_blocklist = get_plugin_blocklist(
             settings, connectivity_checker=connectivity_checker
         )
 
@@ -730,7 +730,7 @@ def init_pluginsystem(
         plugin_entry_points=plugin_entry_points,
         plugin_disabled_list=plugin_disabled_list,
         plugin_sorting_order=plugin_sorting_order,
-        plugin_blacklist=plugin_blacklist,
+        plugin_blocklist=plugin_blocklist,
         plugin_validators=plugin_validators,
         compatibility_ignored_list=compatibility_ignored_list,
         plugin_flags=plugin_flags,
@@ -807,7 +807,7 @@ def init_pluginsystem(
     return pm
 
 
-def get_plugin_blacklist(settings, connectivity_checker=None):
+def get_plugin_blocklist(settings, connectivity_checker=None):
     import os
     import time
 
@@ -821,7 +821,7 @@ def get_plugin_blacklist(settings, connectivity_checker=None):
         logger.info("We don't appear to be online, not fetching plugin blocklist")
         return []
 
-    def format_blacklist(entries):
+    def format_blocklist(entries):
         format_entry = lambda x: (
             f"{x[0]} ({x[1]})"
             if isinstance(x, (list, tuple)) and len(x) == 2
@@ -829,7 +829,7 @@ def get_plugin_blacklist(settings, connectivity_checker=None):
         )
         return ", ".join(map(format_entry, entries))
 
-    def process_blacklist(entries):
+    def process_blocklist(entries):
         result = []
 
         if not isinstance(entries, list):
@@ -871,7 +871,7 @@ def get_plugin_blacklist(settings, connectivity_checker=None):
 
         return result
 
-    def fetch_blacklist_from_cache(path, ttl):
+    def fetch_blocklist_from_cache(path, ttl):
         if not os.path.isfile(path):
             return None
 
@@ -885,11 +885,11 @@ def get_plugin_blacklist(settings, connectivity_checker=None):
         if isinstance(result, list):
             return result
 
-    def fetch_blacklist_from_url(url, timeout=3.05, cache=None):
+    def fetch_blocklist_from_url(url, timeout=3.05, cache=None):
         result = []
         try:
             r = requests.get(url, timeout=timeout)
-            result = process_blacklist(r.json())
+            result = process_blocklist(r.json())
 
             if cache is not None:
                 try:
@@ -911,30 +911,30 @@ def get_plugin_blacklist(settings, connectivity_checker=None):
 
     try:
         # first attempt to fetch from cache
-        cache_path = os.path.join(settings.getBaseFolder("data"), "plugin_blacklist.yaml")
-        ttl = settings.getInt(["server", "pluginBlacklist", "ttl"])
-        blacklist = fetch_blacklist_from_cache(cache_path, ttl)
+        cache_path = os.path.join(settings.getBaseFolder("data"), "plugin_blocklist.yaml")
+        ttl = settings.getInt(["server", "pluginBlocklist", "ttl"])
+        blocklist = fetch_blocklist_from_cache(cache_path, ttl)
 
-        if blacklist is None:
+        if blocklist is None:
             # no result from the cache, let's fetch it fresh
-            url = settings.get(["server", "pluginBlacklist", "url"])
-            timeout = settings.getFloat(["server", "pluginBlacklist", "timeout"])
-            blacklist = fetch_blacklist_from_url(url, timeout=timeout, cache=cache_path)
+            url = settings.get(["server", "pluginBlocklist", "url"])
+            timeout = settings.getFloat(["server", "pluginBlocklist", "timeout"])
+            blocklist = fetch_blocklist_from_url(url, timeout=timeout, cache=cache_path)
 
-        if blacklist is None:
-            # still now result, so no blacklist
-            blacklist = []
+        if blocklist is None:
+            # still now result, so no blocklist
+            blocklist = []
 
-        if blacklist:
+        if blocklist:
             logger.info(
                 "Blocklist processing done, adding %s blocklisted plugin versions: %s",
-                len(blacklist),
-                format_blacklist(blacklist),
+                len(blocklist),
+                format_blocklist(blocklist),
             )
         else:
             logger.info("Blocklist processing done")
 
-        return blacklist
+        return blocklist
     except Exception:
         logger.exception(
             "Something went wrong while processing the plugin blocklist. Proceeding without it."

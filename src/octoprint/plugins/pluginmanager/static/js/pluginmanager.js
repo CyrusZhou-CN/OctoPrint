@@ -332,7 +332,7 @@ $(function () {
         self.enableToggle = function (data, ignoreToggling) {
             var command = self._getToggleCommand(data);
             var not_safemode_victim = !data.safe_mode_victim;
-            var not_blacklisted = !data.blacklisted;
+            var not_blocklisted = !data.blocklisted;
             var not_incompatible = !data.incompatible;
 
             ignoreToggling = !!ignoreToggling;
@@ -341,7 +341,7 @@ $(function () {
                 self.enableManagement() &&
                 (ignoreToggling || !self.toggling()) &&
                 (command === "disable" ||
-                    (not_safemode_victim && not_blacklisted && not_incompatible)) &&
+                    (not_safemode_victim && not_blocklisted && not_incompatible)) &&
                 data.key !== "pluginmanager"
             );
         };
@@ -2046,7 +2046,7 @@ $(function () {
         self.toggleButtonTitle = function (data) {
             var command = self._getToggleCommand(data);
             if (command === "enable") {
-                if (data.blacklisted) {
+                if (data.blocklisted) {
                     return gettext("Blocklisted");
                 } else if (data.safe_mode_victim) {
                     return gettext("Disabled due to active safe mode");

@@ -142,11 +142,11 @@ class OnlineCheckConfig(BaseModel):
 
 
 @with_attrs_docs
-class PluginBlacklistConfig(BaseModel):
+class PluginBlocklistConfig(BaseModel):
     enabled: Optional[bool] = None
     """Whether use of the blocklist is enabled. If unset, the user will be asked to make a decision as part of the setup wizard."""
 
-    url: str = "https://plugins.octoprint.org/blacklist.json"
+    url: str = "https://plugins.octoprint.org/blocklist.json"
     """The URL from which to fetch the blocklist."""
 
     ttl: int = CONST_15MIN
@@ -287,7 +287,7 @@ class ServerConfig(BaseModel):
     onlineCheck: OnlineCheckConfig = OnlineCheckConfig()
     """Configuration of the regular online connectivity check."""
 
-    pluginBlacklist: PluginBlacklistConfig = PluginBlacklistConfig()
+    pluginBlocklist: PluginBlocklistConfig = PluginBlocklistConfig()
     """Configuration of the plugin blocklist."""
 
     pythonEolCheck: PythonEolCheckConfig = PythonEolCheckConfig()

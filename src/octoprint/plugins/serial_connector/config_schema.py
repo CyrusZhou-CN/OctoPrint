@@ -151,10 +151,10 @@ class SerialConfig(BaseModel):
     additionalBaudrates: list[int] = []
     """Use this to define additional baud rates to offer for connecting to serial ports. Must be a list of valid integers."""
 
-    blacklistedPorts: list[str] = []
+    blocklistedPorts: list[str] = []
     """Use this to define patterns of ports to ignore"""
 
-    blacklistedBaudrates: list[int] = []
+    blocklistedBaudrates: list[int] = []
     """Use this to define baudrates to ignore"""
 
     longRunningCommands: list[str] = [

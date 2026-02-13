@@ -259,7 +259,12 @@ class PrinterFileStorage(StorageInterface):
             )
 
         files = self._get_printer_files()
-        if any(x.path.startswith(path) or x.path.startswith("/" + path) for x in files):
+        path_prefix = path + "/"
+        slashed_path_prefix = "/" + path_prefix
+        if any(
+            x.path.startswith(path_prefix) or x.path.startswith(slashed_path_prefix)
+            for x in files
+        ):
             if not ignore_existing:
                 raise StorageError(
                     f"{path} does already exist on the printer",
@@ -285,7 +290,7 @@ class PrinterFileStorage(StorageInterface):
 
         for f in files:
             if f.path.startswith(path + "/") and not recursive:
-                raise StorageError("{path} is not empty", code=StorageError.NOT_EMPTY)
+                raise StorageError(f"{path} is not empty", code=StorageError.NOT_EMPTY)
 
         try:
             self._connection.delete_printer_folder(path, recursive=recursive)

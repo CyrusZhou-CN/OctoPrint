@@ -9,10 +9,10 @@ ARG DEBIAN_VERSION
 ARG BUILD_TYPE="generic"
 RUN [ "$BUILD_TYPE" != "raspi" ] || \
   ( \
-    ( [ "$(dpkg --print-architecture)" != "armhf" ] || echo "deb http://raspbian.raspberrypi.org/raspbian/ $DEBIAN_VERSION main contrib non-free rpi" > /etc/apt/sources.list ) && \
+    ( [ "$(dpkg --print-architecture)" != "armhf" ] || echo "deb http://raspbian.raspberrypi.org/raspbian/ $DEBIAN_VERSION main contrib non-free rpi" > /etc/apt/sources.list.d/raspbian.list ) && \
     echo "deb http://archive.raspberrypi.org/debian/ $DEBIAN_VERSION main" > /etc/apt/sources.list.d/raspi.list && \
-    curl -sL --compressed "http://raspbian.raspberrypi.org/raspbian.public.key" | gpg --dearmor > /etc/apt/trusted.gpg.d/raspbian.gpg && \
-    curl -sL --compressed "https://archive.raspberrypi.org/debian/raspberrypi.gpg.key" | gpg --dearmor > /etc/apt/trusted.gpg.d/raspberrypi.gpg && \
+    # FIXME: switch key file to pi-gen version once https://github.com/RPi-Distro/pi-gen/pull/863 has been merged
+    curl -sL --compressed "https://octoprint.org/files/raspberrypi-keys-sha256.gpg" | gpg --dearmor > /etc/apt/trusted.gpg.d/raspberrypi.gpg && \
     apt-get -y update \
   )
 

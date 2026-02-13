@@ -690,8 +690,18 @@ def _test_url(data):
     }
 
     check_status = [status_ranges["normal"]]
-    content_type_whitelist = None
-    content_type_blacklist = None
+    content_type_allowlist = None
+    content_type_blocklist = None
+
+    if "content_type_whitelist" in data:
+        if "content_type_allowlist" not in data:
+            data["content_type_allowlist"] = data["content_type_whitelist"]
+        del data["content_type_whitelist"]
+
+    if "content_type_blacklist" in data:
+        if "content_type_blocklist" not in data:
+            data["content_type_blocklist"] = data["content_type_blacklist"]
+        del data["content_type_blacklist"]
 
     params = {
         "method": data.get("method", "HEAD"),
@@ -758,17 +768,17 @@ def _test_url(data):
                     if code is not None:
                         check_status.append([code])
 
-    if "content_type_whitelist" in data:
-        if not isinstance(data["content_type_whitelist"], (list, tuple)):
-            abort(400, description="content_type_whitelist must be a list of mime types")
-        content_type_whitelist = list(
-            map(util.parse_mime_type, data["content_type_whitelist"])
+    if "content_type_allowlist" in data:
+        if not isinstance(data["content_type_allowlist"], (list, tuple)):
+            abort(400, description="content_type_allowlist must be a list of mime types")
+        content_type_allowlist = list(
+            map(util.parse_mime_type, data["content_type_allowlist"])
         )
-    if "content_type_blacklist" in data:
-        if not isinstance(data["content_type_whitelist"], (list, tuple)):
-            abort(400, description="content_type_blacklist must be a list of mime types")
-        content_type_blacklist = list(
-            map(util.parse_mime_type, data["content_type_blacklist"])
+    if "content_type_blocklist" in data:
+        if not isinstance(data["content_type_blocklist"], (list, tuple)):
+            abort(400, description="content_type_blocklist must be a list of mime types")
+        content_type_blocklist = list(
+            map(util.parse_mime_type, data["content_type_blocklist"])
         )
 
     response_result = None
@@ -796,16 +806,16 @@ def _test_url(data):
 
             parsed_content_type = util.parse_mime_type(content_type)
 
-            in_whitelist = content_type_whitelist is None or any(
+            in_allowlist = content_type_allowlist is None or any(
                 util.mime_type_matches(parsed_content_type, x)
-                for x in content_type_whitelist
+                for x in content_type_allowlist
             )
-            in_blacklist = content_type_blacklist is not None and any(
+            in_blocklist = content_type_blocklist is not None and any(
                 util.mime_type_matches(parsed_content_type, x)
-                for x in content_type_blacklist
+                for x in content_type_blocklist
             )
 
-            if not in_whitelist or in_blacklist:
+            if not in_allowlist or in_blocklist:
                 # we don't support this content type
                 response.close()
                 outcome = False

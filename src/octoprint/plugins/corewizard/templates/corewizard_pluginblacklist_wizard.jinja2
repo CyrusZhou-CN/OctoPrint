@@ -9,8 +9,8 @@
 </p>
 
 <p>
-    {% trans url="https://plugins.octoprint.org/blacklist/" %}
-    By default, OctoPrint will use the blocklist hosted at <code>plugins.octoprint.org/blacklist.json</code> which you
+    {% trans url="https://plugins.octoprint.org/blocklist/" %}
+    By default, OctoPrint will use the blocklist hosted at <code>plugins.octoprint.org/blocklist.json</code> which you
     can also take a look at in a more human readable format <a href="{{ url }}" target="_blank">here</a>.
 {% endtrans %}
 </p>
@@ -25,7 +25,7 @@
 <div class="row-fluid">
     <a href="#"
        class="btn btn-danger span6"
-       data-bind="click: function() { if((!setup() || decision()) && !active()){disablePluginBlacklist()}}, enable: (!setup() || decision()) && !active(), css: {disabled: (setup() && !decision()) || active()}">
+       data-bind="click: function() { if((!setup() || decision()) && !active()){disablePluginBlocklist()}}, enable: (!setup() || decision()) && !active(), css: {disabled: (setup() && !decision()) || active()}">
         <i class="fas fa-spinner fa-spin"
            style="display: none"
            data-bind="visible: active() && decision() !== true"></i>
@@ -33,7 +33,7 @@
     </a>
     <a href="#"
        class="btn btn-primary span6"
-       data-bind="click: function() { if((!setup() || !decision()) && !active()){enablePluginBlacklist()}}, enable: (!setup() || !decision()) && !active(), css: {disabled: (setup() && decision()) || active()}">
+       data-bind="click: function() { if((!setup() || !decision()) && !active()){enablePluginBlocklist()}}, enable: (!setup() || !decision()) && !active(), css: {disabled: (setup() && decision()) || active()}">
         <i class="fas fa-spinner fa-spin"
            style="display: none"
            data-bind="visible: active() && decision() === true"></i>
@@ -41,7 +41,7 @@
     </a>
 </div>
 
-<div class="pluginblacklist_decision"
+<div class="pluginblocklist_decision"
      style="display: none"
      data-bind="visible: setup()">
     <div class="text-center"

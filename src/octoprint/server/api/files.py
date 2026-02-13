@@ -1382,14 +1382,14 @@ def gcodeFileCommand(storage, path):
                                 fileManager.copy_file(
                                     storage,
                                     path,
-                                    destination,
+                                    sanitized_destination,
                                     allow_overwrite=allow_overwrite,
                                 )
                             else:
                                 fileManager.copy_folder(
                                     storage,
                                     path,
-                                    destination,
+                                    sanitized_destination,
                                     allow_overwrite=allow_overwrite,
                                 )
 
@@ -1422,18 +1422,24 @@ def gcodeFileCommand(storage, path):
                                 printer.set_job(None)
 
                             if dst_storage == storage:
+                                # we explicitly use new_path instead of sanitized_destination below, to make renaming work in same storage
+                                new_path = fileManager.join_path(
+                                    dst_storage,
+                                    dst_path,
+                                    dst_name,
+                                )
                                 if is_file:
                                     fileManager.move_file(
                                         storage,
                                         path,
-                                        destination,
+                                        new_path,
                                         allow_overwrite=allow_overwrite,
                                     )
                                 else:
                                     fileManager.move_folder(
                                         storage,
                                         path,
-                                        destination,
+                                        new_path,
                                         allow_overwrite=allow_overwrite,
                                     )
                             else:
@@ -1567,7 +1573,7 @@ def _abortWithException(error):
         elif error.code == StorageError.INVALID_DESTINATION:
             abort(400, description="Destination is invalid")
         elif error.code == StorageError.DOES_NOT_EXIST:
-            abort(404, description="Does not exit")
+            abort(404, description="Does not exist")
         elif error.code == StorageError.ALREADY_EXISTS:
             abort(409, description="File or folder already exists")
         elif error.code == StorageError.SOURCE_EQUALS_DESTINATION:

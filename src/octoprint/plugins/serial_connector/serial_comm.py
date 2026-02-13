@@ -241,10 +241,10 @@ def serialList():
                 )
             )
 
-    # blacklisted ports
-    blacklistedPorts = settings().get(["plugins", "serial_connector", "blacklistedPorts"])
-    if blacklistedPorts:
-        for pattern in blacklistedPorts:
+    # blocklisted ports
+    blocklistedPorts = settings().get(["plugins", "serial_connector", "blocklistedPorts"])
+    if blocklistedPorts:
+        for pattern in blocklistedPorts:
             candidates = list(
                 filter(lambda x: not fnmatch.fnmatch(x, pattern), candidates)
             )
@@ -275,12 +275,12 @@ def baudrateList(candidates=None):
                 f"{additional} is not a valid additional baudrate, ignoring it"
             )
 
-    # blacklisted baudrates
-    blacklistedBaudrates = settings().get(
-        ["plugins", "serial_connector", "blacklistedBaudrates"]
+    # blocklisted baudrates
+    blocklistedBaudrates = settings().get(
+        ["plugins", "serial_connector", "blocklistedBaudrates"]
     )
-    if blacklistedBaudrates:
-        for baudrate in blacklistedBaudrates:
+    if blocklistedBaudrates:
+        for baudrate in blocklistedBaudrates:
             candidates.remove(baudrate)
 
     # last used baudrate = first to try, move to start
@@ -1571,7 +1571,7 @@ class MachineCom:
                 filename,
                 existing_filenames=existing,
                 extension="gco",
-                whitelisted_extensions=["gco", "g"],
+                allowlisted_extensions=["gco", "g"],
             )
         else:
             # either LFN_WRITE is supported, or this is not a gcode file
@@ -5524,7 +5524,7 @@ class MachineCom:
         if match:
             interval = int(match.group("value"))
             self._pos_autoreporting = self._firmware_capabilities.get(
-                self.CAPABILITY_AUTOREPORT_SD_STATUS, False
+                self.CAPABILITY_AUTOREPORT_POS, False
             ) and (interval > 0)
 
     def _gcode_M33_sending(

@@ -78,7 +78,7 @@ def sanitize_filename(name, really_universal=False, safe_chars="-_.()[] "):
 
 
 def get_dos_filename(
-    input, existing_filenames=None, extension=None, whitelisted_extensions=None, **kwargs
+    input, existing_filenames=None, extension=None, allowlisted_extensions=None, **kwargs
 ):
     """
     Converts the provided input filename to a 8.3 DOS compatible filename. If ``existing_filenames`` is provided, the
@@ -92,7 +92,7 @@ def get_dos_filename(
             Optional.
         extension (string): The .3 file extension to use for the generated filename. If not provided, the extension of
             the provided ``filename`` will simply be truncated to 3 characters.
-        whitelisted_extensions (list): A list of extensions on ``input`` that will be left as-is instead of
+        allowlisted_extensions (list): A list of extensions on ``input`` that will be left as-is instead of
             exchanging for ``extension``.
         kwargs (dict): Additional keyword arguments to provide to :func:`find_collision_free_name`.
 
@@ -120,7 +120,7 @@ def get_dos_filename(
         'test1234.gco'
         >>> get_dos_filename("auto0.g", extension="gco")
         'auto0.gco'
-        >>> get_dos_filename("auto0.g", extension="gco", whitelisted_extensions=["g"])
+        >>> get_dos_filename("auto0.g", extension="gco", allowlisted_extensions=["g"])
         'auto0.g'
         >>> get_dos_filename(None)
         >>> get_dos_filename("foo")
@@ -142,14 +142,17 @@ def get_dos_filename(
     if extension is not None:
         extension = extension.lower()
 
-    if whitelisted_extensions is None:
-        whitelisted_extensions = []
+    if allowlisted_extensions is None:
+        allowlisted_extensions = kwargs.pop("whitelisted_extensions", None)
+
+    if allowlisted_extensions is None:
+        allowlisted_extensions = []
 
     filename, ext = os.path.splitext(input)
 
     ext = ext.lower()
     ext = ext[1:] if ext.startswith(".") else ext
-    if ext in whitelisted_extensions or extension is None:
+    if ext in allowlisted_extensions or extension is None:
         extension = ext
 
     return find_collision_free_name(filename, extension, existing_filenames, **kwargs)

@@ -144,9 +144,9 @@ $(function () {
             self.updateFilterRegex();
         });
 
-        self.blacklist = [];
-        self.settings.feature_autoUppercaseBlacklist.subscribe(function (newValue) {
-            self.blacklist = splitTextToArray(newValue, ",", true);
+        self.blocklist = [];
+        self.settings.feature_autoUppercaseBlocklist.subscribe(function (newValue) {
+            self.blocklist = splitTextToArray(newValue, ",", true);
         });
 
         self._reenableFancyTimer = undefined;
@@ -429,13 +429,13 @@ $(function () {
                 var mainCode = commandMatch[2].toUpperCase(); // main code only without sub code
 
                 if (
-                    self.blacklist.indexOf(mainCode) < 0 &&
-                    self.blacklist.indexOf(fullCode) < 0
+                    self.blocklist.indexOf(mainCode) < 0 &&
+                    self.blocklist.indexOf(fullCode) < 0
                 ) {
-                    // full or main code not on blacklist -> upper case the whole command
+                    // full or main code not on blocklist -> upper case the whole command
                     commandToSend = commandToSend.toUpperCase();
                 } else {
-                    // full or main code on blacklist -> only upper case that and leave parameters as is
+                    // full or main code on blocklist -> only upper case that and leave parameters as is
                     commandToSend =
                         fullCode + (commandMatch[4] !== undefined ? commandMatch[4] : "");
                 }

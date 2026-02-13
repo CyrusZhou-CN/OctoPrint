@@ -24,7 +24,7 @@ class SerialConnectorPlugin(
         return SerialConfig().model_dump()
 
     def get_settings_version(self):
-        return 1
+        return 2
 
     def on_settings_migrate(self, target, current):
         if current is None:
@@ -66,6 +66,25 @@ class SerialConnectorPlugin(
                     ["plugins", "serial_connector"], config, force=True
                 )
                 self._settings.global_remove(["serial"])
+
+        if current is None or current < 2:
+            config = self._settings.global_get(["plugins", "serial_connector"])
+            modified = False
+
+            if config:
+                if "blacklistedPorts" in config:
+                    config["blocklistedPorts"] = config["blacklistedPorts"]
+                    del config["blacklistedPorts"]
+                    modified = True
+                if "blacklistedBaudrates" in config:
+                    config["blocklistedBaudrates"] = config["blacklistedBaudrates"]
+                    del config["blacklistedBaudrates"]
+                    modified = True
+
+                if modified:
+                    self._settings.global_set(
+                        ["plugins", "serial_connector"], config, force=True
+                    )
 
     ##~~ TemplatePlugin mixin
 

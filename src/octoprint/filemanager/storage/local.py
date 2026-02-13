@@ -1662,9 +1662,6 @@ class LocalFileStorage(StorageInterface):
         dst_name: str,
         delete_source: bool = False,
     ) -> None:
-        src_path = self.sanitize_path(src_path)
-        dst_path = self.sanitize_path(dst_path)
-
         src_thumbnail_path = os.path.join(src_path, self.THUMBNAIL_DIR)
         if not os.path.exists(src_thumbnail_path):
             # nothing to do

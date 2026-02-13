@@ -106,9 +106,9 @@ $(function () {
 
         // determine browser - loosely based on is.js
 
-        var navigator = window.navigator;
-        var userAgent = ((navigator && navigator.userAgent) || "").toLowerCase();
-        var vendor = ((navigator && navigator.vendor) || "").toLowerCase();
+        const navigator = window.navigator;
+        const userAgent = ((navigator && navigator.userAgent) || "").toLowerCase();
+        const vendor = ((navigator && navigator.vendor) || "").toLowerCase();
 
         exports.browser.opera = userAgent.match(/opera|opr/) !== null;
         exports.browser.chrome =
@@ -132,6 +132,27 @@ $(function () {
         exports.browser.browser_version = uap.browser.version;
         exports.browser.os_name = uap.os.name;
         exports.browser.os_version = uap.os.version;
+
+        // Special parser for embedded PrusaSlicer browser view which uses its own custom UA, incompatible to UAParser
+        // See #5235
+        if (
+            uap.browser.browser_name === undefined &&
+            userAgent.startsWith("prusaslicer")
+        ) {
+            exports.browser.browser_name = "PrusaSlicer";
+
+            const match = userAgent.match(/^prusaslicer\/(.+?)\s+\((.+?)\)$/);
+            if (match && match.length) {
+                const versionMatch = match[1];
+                exports.browser.browser_version = versionMatch;
+
+                const osMatch = match[2];
+                if (exports.browser.os_name === undefined && osMatch === "windows") {
+                    exports.browser.os_name = "Windows";
+                }
+                exports.browser.os_version = "?";
+            }
+        }
 
         exports.browser.is_mac =
             uap.os.name && ["macos", "mac os"].includes(uap.os.name.toLowerCase()); // apparently uap.os.name can be undefined, see #5235

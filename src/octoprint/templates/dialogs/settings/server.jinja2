@@ -21,8 +21,12 @@
 
 <h3>{{ _("Plugin blocklist processing") }}</h3>
 
-{% include "snippets/settings/server/serverPluginBlacklistDescription.jinja2" %}
-{% include "snippets/settings/server/serverPluginBlacklist.jinja2" %}
+{% include "snippets/settings/server/serverPluginBlocklistDescription.jinja2" %}
+{% include "snippets/settings/server/serverPluginBlocklist.jinja2" %}
+
+<h3>{{ _("Security related settings") }}</h3>
+
+{% include "snippets/settings/server/serverReauthenticationTimeout.jinja2" %}
 
 <h3>{{ _("Debug options") }}</h3>
 

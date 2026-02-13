@@ -28,7 +28,7 @@ def run_server(
     logging_config,
     verbosity,
     safe_mode,
-    ignore_blacklist,
+    ignore_blocklist,
     octoprint_daemon=None,
     overlays=None,
     disable_color=False,
@@ -107,7 +107,7 @@ def run_server(
             verbosity=verbosity,
             uncaught_logger=__name__,
             safe_mode=safe_mode,
-            ignore_blacklist=ignore_blacklist,
+            ignore_blocklist=ignore_blocklist,
             after_safe_mode=log_startup,
             after_environment_detector=log_register_rollover,
             disable_color=disable_color,
@@ -215,8 +215,9 @@ server_options = bulk_options(
             help="Enable debug mode.",
         ),
         click.option(
-            "--ignore-blacklist",
-            "ignore_blacklist",
+            "--ignore-blocklist",
+            "--ignore-blacklist",  # legacy
+            "ignore_blocklist",
             is_flag=True,
             callback=set_ctx_obj_option,
             help="Disable processing of the plugin blocklist.",
@@ -305,7 +306,7 @@ def serve_command(ctx, **kwargs):
     configfile = get_value("configfile")
     verbosity = get_value("verbosity")
     safe_mode = "flag" if get_value("safe_mode") else None
-    ignore_blacklist = get_value("ignore_blacklist")
+    ignore_blocklist = get_value("ignore_blocklist")
     overlays = get_value("overlays")
     no_color = get_value("no_color")
 
@@ -323,7 +324,7 @@ def serve_command(ctx, **kwargs):
         logging,
         verbosity,
         safe_mode,
-        ignore_blacklist,
+        ignore_blocklist,
         overlays=overlays,
         disable_color=no_color,
     )
@@ -366,7 +367,7 @@ if sys.platform != "win32" and sys.platform != "darwin":
         overlays = get_value("overlays")
         verbosity = get_value("verbosity")
         safe_mode = "flag" if get_value("safe_mode") else None
-        ignore_blacklist = get_value("ignore_blacklist")
+        ignore_blocklist = get_value("ignore_blocklist")
 
         if v4 and not host:
             host = "0.0.0.0"
@@ -392,7 +393,7 @@ if sys.platform != "win32" and sys.platform != "darwin":
                 logging_config,
                 verbosity,
                 safe_mode,
-                ignore_blacklist,
+                ignore_blocklist,
             ):
                 Daemon.__init__(self, pidfile)
 
@@ -407,7 +408,7 @@ if sys.platform != "win32" and sys.platform != "darwin":
                 self._logging_config = logging_config
                 self._verbosity = verbosity
                 self._safe_mode = safe_mode
-                self._ignore_blacklist = ignore_blacklist
+                self._ignore_blocklist = ignore_blocklist
 
             def run(self):
                 run_server(
@@ -421,7 +422,7 @@ if sys.platform != "win32" and sys.platform != "darwin":
                     self._logging_config,
                     self._verbosity,
                     self._safe_mode,
-                    self._ignore_blacklist,
+                    self._ignore_blocklist,
                     octoprint_daemon=self,
                     overlays=self._overlays,
                 )
@@ -439,7 +440,7 @@ if sys.platform != "win32" and sys.platform != "darwin":
             logging,
             verbosity,
             safe_mode,
-            ignore_blacklist,
+            ignore_blocklist,
         )
 
         if command == "start":

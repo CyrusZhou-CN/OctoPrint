@@ -161,7 +161,7 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
         self._additional_data_hooks = plugin_manager().get_hooks(
             "octoprint.printer.additional_state_data"
         )
-        self._blacklisted_data_hooks = []
+        self._blocklisted_data_hooks = []
 
         self._additional_control_hooks = plugin_manager().get_hooks(
             "octoprint.printer.additional_custom_controls"
@@ -352,7 +352,7 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
         plugin_data = {}
 
         for name, hook in self._additional_data_hooks.items():
-            if name in self._blacklisted_data_hooks:
+            if name in self._blocklisted_data_hooks:
                 continue
             try:
                 additional = hook(initial=initial)
@@ -371,7 +371,7 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
                     ),
                     extra={"plugin": name},
                 )
-                self._blacklisted_data_hooks.append(name)
+                self._blocklisted_data_hooks.append(name)
 
         return plugin_data
 

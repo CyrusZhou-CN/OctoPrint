@@ -95,13 +95,6 @@
                             data-bind="click: $root.slice, css: { disabled: !$root.enableSlicing() }, visible: $root.slicingAvailable">
                         <i class="fa-solid fa-layer-group"></i>
                     </button>
-                    {% if enableSdSupport %}
-                        <button class="btn btn-small"
-                                title="{{ _('Upload to SD') |edq }}"
-                                data-bind="click: $root.uploadSD, css: { disabled: !$root.enableUploadSD() }">
-                            <i class="fa-solid fa-sd-card"></i>
-                        </button>
-                    {% endif %}
                     <button class="btn btn-small"
                             title="{{ _('Load') |edq }}"
                             data-bind="click: function() { $root.loadFile(false); }, css: { disabled: !$root.enableLoad(false) }">
@@ -271,6 +264,38 @@
         <a href="javascript:void(0)"
            class="btn btn-primary"
            data-dismiss="modal">{{ _("Close") }}</a>
+    </div>
+</div>
+
+<div id="plugin_uploadmanager_rename" class="modal hide fade-in">
+    <div class="modal-header">
+        <a href="javascript:void(0)"
+           class="close"
+           data-dismiss="modal"
+           aria-hidden="true">&times;</a>
+        <h3 data-id="title"></h3>
+    </div>
+    <div class="modal-body">
+        <form class="form-vertical" action="javascript:void(0)">
+            <div class="control-group" data-id="nameControl">
+                <label class="control-label">
+                    {{ _("New name ") }} ({{ _("Currently:") }} <span data-id="nameCurrent"></span>)
+                </label>
+                <div class="controls">
+                    <input type="text" class="input-block-level" data-id="nameNew" />
+                    <small class="help-block">{{ _("Internal name:") }} <span data-id="nameNewInternal"></span></small>
+                </div>
+
+                <p class="text-error" data-id="error" style="display: none">{{ _("Destination already exists!") }}</p>
+            </div>
+        </form>
+    </div>
+    <div class="modal-footer">
+        <a href="javascript:void(0)"
+           class="btn"
+           data-dismiss="modal"
+           aria-hidden="true">{{ _("Cancel") }}</a>
+        <a href="javascript:void(0)" class="btn btn-primary" data-id="proceed">{{ _("Continue") }}</a>
     </div>
 </div>
 

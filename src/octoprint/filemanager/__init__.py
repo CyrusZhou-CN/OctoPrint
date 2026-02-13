@@ -336,7 +336,7 @@ class FileManager:
 
         for entry, path, _ in backlog_generator:
             file_type = get_file_type(path)[-1]
-            file_name = storage_manager.split_path(path)
+            _, file_name = storage_manager.split_path(path)
 
             # we'll use the default printer profile for the backlog since we don't know better
             queue_entry = QueueEntry(
@@ -899,6 +899,7 @@ class FileManager:
                 f"File copy on {storage} is not supported", code=StorageError.UNSUPPORTED
             )
 
+        path_in_storage = None
         try:
             path_in_storage = self._storage(storage).copy_file(
                 source, destination, allow_overwrite=allow_overwrite
@@ -906,7 +907,7 @@ class FileManager:
         except Exception:
             raise
         finally:
-            if not self.has_analysis(storage, path_in_storage):
+            if path_in_storage and not self.has_analysis(storage, path_in_storage):
                 queue_entry = self._analysis_queue_entry(storage, path_in_storage)
                 if queue_entry:
                     self._analysis_queue.enqueue(queue_entry)
@@ -932,6 +933,7 @@ class FileManager:
 
         queue_entry = self._analysis_queue_entry(storage, source_in_storage)
         self._analysis_queue.dequeue(queue_entry)
+        path = None
         try:
             path = self._storage(storage).move_file(
                 source_in_storage, destination_in_storage, allow_overwrite=allow_overwrite
@@ -939,7 +941,7 @@ class FileManager:
         except Exception:
             raise
         finally:
-            if not self.has_analysis(storage, path):
+            if path and not self.has_analysis(storage, path):
                 queue_entry = self._analysis_queue_entry(storage, path)
                 if queue_entry:
                     self._analysis_queue.enqueue(queue_entry)
@@ -1269,7 +1271,7 @@ class FileManager:
             if callable(progress_callback):
                 progress_callback(failed=True)
             raise StorageError(
-                "Unexpected error while adding file to storage {destination_storage}",
+                f"Unexpected error while adding file to storage {destination_storage}",
                 code=StorageError.UNKNOWN,
                 cause=exc,
             ) from exc

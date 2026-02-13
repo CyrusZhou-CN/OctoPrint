@@ -59,6 +59,8 @@ REAUTHED_SETTINGS = {
     "system": {"actions": True},
 }
 
+SETTINGS_API_VERSION = 1
+
 
 def _lastmodified():
     return settings().last_modified
@@ -108,6 +110,9 @@ def _etag(lm=None):
 
     # or if the user reauthenticates
     hash_update(repr(credentials_checked_recently()))
+
+    # also if the settings api version changes
+    hash_update(str(SETTINGS_API_VERSION))
 
     return hash.hexdigest()
 
@@ -184,7 +189,7 @@ def getSettings():
             ),
             "fileDeleteConfirmation": s.getBoolean(["feature", "fileDeleteConfirmation"]),
             "g90InfluencesExtruder": s.getBoolean(["feature", "g90InfluencesExtruder"]),
-            "autoUppercaseBlacklist": s.get(["feature", "autoUppercaseBlacklist"]),
+            "autoUppercaseBlocklist": s.get(["feature", "autoUppercaseBlocklist"]),
             "enableDragDropUpload": s.getBoolean(["feature", "enableDragDropUpload"]),
         },
         "gcodeAnalysis": {
@@ -245,10 +250,10 @@ def getSettings():
                 "port": s.getInt(["server", "onlineCheck", "port"]),
                 "name": s.get(["server", "onlineCheck", "name"]),
             },
-            "pluginBlacklist": {
-                "enabled": s.getBoolean(["server", "pluginBlacklist", "enabled"]),
-                "url": s.get(["server", "pluginBlacklist", "url"]),
-                "ttl": int(s.getInt(["server", "pluginBlacklist", "ttl"]) / 60),
+            "pluginBlocklist": {
+                "enabled": s.getBoolean(["server", "pluginBlocklist", "enabled"]),
+                "url": s.get(["server", "pluginBlocklist", "url"]),
+                "ttl": int(s.getInt(["server", "pluginBlocklist", "ttl"]) / 60),
             },
             "allowFraming": s.getBoolean(["server", "allowFraming"]),
         },
@@ -339,6 +344,9 @@ def getSettings():
             "autologinLocal": s.getBoolean(["accessControl", "autologinLocal"]),
             "autologinHeadsupAcknowledged": s.getBoolean(
                 ["accessControl", "autologinHeadsupAcknowledged"]
+            ),
+            "defaultReauthenticationTimeout": s.getInt(
+                ["accessControl", "defaultReauthenticationTimeout"]
             ),
         }
 
@@ -532,6 +540,12 @@ def _saveSettings(data):
             s.setBoolean(
                 ["accessControl", "autologinHeadsupAcknowledged"],
                 data["accessControl"]["autologinHeadsupAcknowledged"],
+            )
+        if "defaultReauthenticationTimeout" in data["accessControl"]:
+            s.setInt(
+                ["accessControl", "defaultReauthenticationTimeout"],
+                data["accessControl"]["defaultReauthenticationTimeout"],
+                min=0,
             )
 
     if "appearance" in data:
@@ -736,13 +750,23 @@ def _saveSettings(data):
                 ["feature", "g90InfluencesExtruder"],
                 data["feature"]["g90InfluencesExtruder"],
             )
-        if "autoUppercaseBlacklist" in data["feature"] and isinstance(
+
+        if api_version_matches(">=1.12.0"):
+            if "autoUppercaseBlocklist" in data["feature"] and isinstance(
+                data["feature"]["autoUppercaseBlocklist"], (list, tuple)
+            ):
+                s.set(
+                    ["feature", "autoUppercaseBlocklist"],
+                    data["feature"]["autoUppercaseBlocklist"],
+                )
+        elif "autoUppercaseBlacklist" in data["feature"] and isinstance(
             data["feature"]["autoUppercaseBlacklist"], (list, tuple)
         ):
             s.set(
-                ["feature", "autoUppercaseBlacklist"],
+                ["feature", "autoUppercaseBlocklist"],
                 data["feature"]["autoUppercaseBlacklist"],
             )
+
         if "enableDragDropUpload" in data["feature"]:
             s.setBoolean(
                 ["feature", "enableDragDropUpload"],
@@ -825,9 +849,7 @@ def _saveSettings(data):
 
         sanitized = [sanitize_control(item) for item in data["controls"]]
         if any(x is None for x in sanitized):
-            logging.getLogger(
-                "There were invalid custom controls provided, not saving..."
-            )
+            logger.error("There were invalid custom controls provided, not saving...")
         else:
             s.set(["controls"], data["controls"])
 
@@ -886,23 +908,31 @@ def _saveSettings(data):
                     ["server", "onlineCheck", "name"],
                     data["server"]["onlineCheck"]["name"],
                 )
-        if "pluginBlacklist" in data["server"]:
-            if "enabled" in data["server"]["pluginBlacklist"]:
+
+        def processPluginBlocklistSettings(key):
+            if "enabled" in data["server"][key]:
                 s.setBoolean(
-                    ["server", "pluginBlacklist", "enabled"],
-                    data["server"]["pluginBlacklist"]["enabled"],
+                    ["server", "pluginBlocklist", "enabled"],
+                    data["server"][key]["enabled"],
                 )
-            if "url" in data["server"]["pluginBlacklist"]:
+            if "url" in data["server"][key]:
                 s.set(
-                    ["server", "pluginBlacklist", "url"],
-                    data["server"]["pluginBlacklist"]["url"],
+                    ["server", "pluginBlocklist", "url"],
+                    data["server"][key]["url"],
                 )
-            if "ttl" in data["server"]["pluginBlacklist"]:
+            if "ttl" in data["server"][key]:
                 try:
-                    ttl = int(data["server"]["pluginBlacklist"]["ttl"])
-                    s.setInt(["server", "pluginBlacklist", "ttl"], ttl * 60)
+                    ttl = int(data["server"][key]["ttl"])
+                    s.setInt(["server", "pluginBlocklist", "ttl"], ttl * 60)
                 except ValueError:
                     pass
+
+        if api_version_matches(">=1.12.0"):
+            if "pluginBlocklist" in data["server"]:
+                processPluginBlocklistSettings("pluginBlocklist")
+        elif "pluginBlacklist" in data["server"]:  # legacy
+            processPluginBlocklistSettings("pluginBlacklist")
+
         if "allowFraming" in data["server"]:
             s.setBoolean(["server", "allowFraming"], data["server"]["allowFraming"])
 
@@ -1033,9 +1063,9 @@ def _get_serial_settings():
         "additionalBaudrates": s.get(
             ["plugins", "serial_connector", "additionalBaudrates"]
         ),
-        "blacklistedPorts": s.get(["plugins", "serial_connector", "blacklistedPorts"]),
+        "blacklistedPorts": s.get(["plugins", "serial_connector", "blocklistedPorts"]),
         "blacklistedBaudrates": s.get(
-            ["plugins", "serial_connector", "blacklistedBaudrates"]
+            ["plugins", "serial_connector", "blocklistedBaudrates"]
         ),
         "longRunningCommands": s.get(
             ["plugins", "serial_connector", "longRunningCommands"]
@@ -1277,13 +1307,13 @@ def _set_serial_settings(data: dict[str, Any]):
         )
     if "blacklistedPorts" in data and isinstance(data["blacklistedPorts"], (list, tuple)):
         s.set(
-            ["plugins", "serial_connector", "blacklistedPorts"], data["blacklistedPorts"]
+            ["plugins", "serial_connector", "blocklistedPorts"], data["blacklistedPorts"]
         )
     if "blacklistedBaudrates" in data and isinstance(
         data["blacklistedBaudrates"], (list, tuple)
     ):
         s.set(
-            ["plugins", "serial_connector", "blacklistedBaudrates"],
+            ["plugins", "serial_connector", "blocklistedBaudrates"],
             data["blacklistedBaudrates"],
         )
     if "longRunningCommands" in data and isinstance(
@@ -1324,7 +1354,7 @@ def _set_serial_settings(data: dict[str, Any]):
             value = "ignore"
         else:
             value = "cancel"
-        s.set(["plugins", "serial_connecetor", "errorHandling"], value)
+        s.set(["plugins", "serial_connector", "errorHandling"], value)
     if "triggerOkForM29" in data:
         s.setBoolean(
             ["plugins", "serial_connector", "triggerOkForM29"], data["triggerOkForM29"]

@@ -128,17 +128,17 @@ $(function () {
                     );
                 }
             }),
-            blacklistedPorts: ko.pureComputed({
-                read: () => get_config_item("blacklistedPorts", []).join("\n"),
+            blocklistedPorts: ko.pureComputed({
+                read: () => get_config_item("blocklistedPorts", []).join("\n"),
                 write: (value) => {
-                    set_config_item("blacklistedPorts", commentableLinesToArray(value));
+                    set_config_item("blocklistedPorts", commentableLinesToArray(value));
                 }
             }),
-            blacklistedBaudrates: ko.pureComputed({
-                read: () => get_config_item("blacklistedBaudrates", []).join(", "),
+            blocklistedBaudrates: ko.pureComputed({
+                read: () => get_config_item("blocklistedBaudrates", []).join(", "),
                 write: (value) => {
                     set_config_item(
-                        "blacklistedBaudrates",
+                        "blocklistedBaudrates",
                         _.map(splitTextToArray(value, ",", true), (item) =>
                             parseInt(item)
                         )
