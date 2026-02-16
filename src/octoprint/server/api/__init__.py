@@ -35,6 +35,7 @@ from octoprint.server.util import (
     noCachingExceptGetResponseHandler,
 )
 from octoprint.server.util.flask import (
+    api_versioned,
     ensure_credentials_checked_recently,
     get_json_command_from_request,
     limit,
@@ -64,7 +65,7 @@ from . import system as api_system  # noqa: F401,E402
 from . import timelapse as api_timelapse  # noqa: F401,E402
 from . import users as api_users  # noqa: F401,E402
 
-VERSION = "0.1"
+API_VERSION_PRE_1_12 = "0.1"
 
 api.after_request(noCachingExceptGetResponseHandler)
 
@@ -282,11 +283,21 @@ def wizardFinish():
 
 
 @api.route("/version", methods=["GET"])
+@api_versioned
 @Permissions.STATUS.require(403)
 def apiVersion():
     return jsonify(
         server=octoprint.server.VERSION,
-        api=VERSION,  # TODO: Remove in 2.0, we'll go with the server version instead
+        api=API_VERSION_PRE_1_12,
+        text=f"OctoPrint {octoprint.server.DISPLAY_VERSION}",
+    )
+
+
+@apiVersion.version(">=1.12.0")
+@Permissions.STATUS.require(403)
+def apiVersion_post_1_12():
+    return jsonify(
+        server=octoprint.server.VERSION,
         text=f"OctoPrint {octoprint.server.DISPLAY_VERSION}",
     )
 
