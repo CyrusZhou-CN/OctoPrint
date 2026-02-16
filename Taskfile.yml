@@ -139,3 +139,8 @@ tasks:
     desc: Build the docs
     cmds:
       - python -m sphinx.cmd.build -b html -v ./docs ./docs/_build
+
+  docs-clean:
+    desc: Clean docs output
+    cmds:
+      - rm -r ./docs/_build
