@@ -8,7 +8,11 @@ from octoprint.access.permissions import Permissions
 from octoprint.schema.api import job as apischema
 from octoprint.server import NO_CONTENT, current_user, printer
 from octoprint.server.api import api
-from octoprint.server.util.flask import get_json_command_from_request, no_firstrun_access
+from octoprint.server.util.flask import (
+    api_versioned,
+    get_json_command_from_request,
+    no_firstrun_access,
+)
 
 
 @api.route("/job", methods=["POST"])
@@ -70,16 +74,24 @@ def controlJob():
 
 
 @api.route("/job", methods=["GET"])
+@api_versioned
 @Permissions.STATUS.require(403)
 def jobState():
+    response = _get_api_job_response().model_dump(by_alias=True)
+    response["job"]["lastPrintTime"] = None  # backwards compatibility
+    return jsonify(**response)
+
+
+@jobState.version(">=1.12.0")
+@Permissions.STATUS.require(403)
+def jobState_post_1_12():
+    return jsonify(**_get_api_job_response().model_dump(by_alias=True, exclude_none=True))
+
+
+def _get_api_job_response():
     current_data = printer.get_current_data()
 
-    file_data = current_data["job"].get("job", {})
-
-    timestamp = None
-    date = file_data.get("date")
-    if date:
-        timestamp = date.astimezone(None).timestamp()
+    file_data = current_data["job"].get("file", {})
 
     file = apischema.ApiJobFile(
         name=file_data.get("name"),
@@ -87,7 +99,7 @@ def jobState():
         display=file_data.get("display"),
         origin=file_data.get("origin"),
         size=file_data.get("size"),
-        date=timestamp,
+        date=file_data.get("date"),
     )
 
     job_data = current_data["job"]
@@ -101,9 +113,9 @@ def jobState():
     progress = apischema.ApiProgressInfo(**current_data["progress"])
 
     response = apischema.ApiJobResponse(
-        job, progress, state=current_data["state"]["text"]
+        job=job, progress=progress, state=current_data["state"]["text"]
     )
     if current_data["state"]["error"]:
         response.error = current_data["state"]["error"]
 
-    return jsonify(**response.model_dump(by_alias=True, exclude_none=True))
+    return response
