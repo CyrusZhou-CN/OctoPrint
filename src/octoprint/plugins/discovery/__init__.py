@@ -534,7 +534,6 @@ class DiscoveryPlugin(
         :return: a dictionary containing the defined key-value-pairs, ready to be turned into a TXT record
         """
         import octoprint.server
-        import octoprint.server.api
 
         entries = self._create_http_txt_record_dict()
         entries.update(
@@ -542,7 +541,6 @@ class DiscoveryPlugin(
             # network is configured differently, we can consider this either a mistake, or an
             # explicit decision.
             version=octoprint.server.VERSION,
-            api=octoprint.server.api.VERSION,
             uuid=self.get_uuid(),
         )
 
