@@ -197,10 +197,13 @@ class PydanticModelInspector:
         result = []
 
         for name, field in model.__pydantic_fields__.items():
-            if hasattr(field, "alias"):
-                alias = field.alias
-                if alias:
-                    name = alias
+            alias = getattr(field, "alias", None)
+            if alias:
+                name = alias
+
+            serialization_alias = getattr(field, "serialization_alias", None)
+            if serialization_alias:
+                name = serialization_alias
 
             description = field.description
             if not description:
