@@ -6,9 +6,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: OctoPrint 1.11.6.dev13+g6173e56a9.dirty\n"
+"Project-Id-Version: OctoPrint 1.11.7.dev15+g161ad2cbc\n"
 "Report-Msgid-Bugs-To: i18n@octoprint.org\n"
-"POT-Creation-Date: 2026-01-27 10:43+0100\n"
+"POT-Creation-Date: 2026-02-17 16:43+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -688,7 +688,7 @@ msgid ""
 " <code>%(remote_address)s</code>."
 msgstr ""
 
-#: src/octoprint/plugins/appkeys/__init__.py:696
+#: src/octoprint/plugins/appkeys/__init__.py:703
 msgid ""
 "Without this plugin third party clients will no longer be able to obtain "
 "an API key without you manually copy-pasting it."
@@ -5545,94 +5545,94 @@ msgstr ""
 msgid "Progress"
 msgstr ""
 
-#: src/octoprint/static/js/app/main.js:206
+#: src/octoprint/static/js/app/main.js:229
 msgid "Reloading..."
 msgstr ""
 
-#: src/octoprint/static/js/app/main.js:285
+#: src/octoprint/static/js/app/main.js:308
 msgid "Offline"
 msgstr ""
 
-#: src/octoprint/static/js/app/main.js:286
+#: src/octoprint/static/js/app/main.js:309
 msgid "Offline after error"
 msgstr ""
 
-#: src/octoprint/static/js/app/main.js:287
+#: src/octoprint/static/js/app/main.js:310
 #: src/octoprint/static/js/app/viewmodels/system.js:152
 msgid "Error"
 msgstr ""
 
-#: src/octoprint/static/js/app/main.js:288
+#: src/octoprint/static/js/app/main.js:311
 msgid "Opening serial connection"
 msgstr ""
 
-#: src/octoprint/static/js/app/main.js:289
+#: src/octoprint/static/js/app/main.js:312
 msgid "Detecting serial connection"
 msgstr ""
 
-#: src/octoprint/static/js/app/main.js:290
+#: src/octoprint/static/js/app/main.js:313
 msgid "Connecting"
 msgstr ""
 
-#: src/octoprint/static/js/app/main.js:291
+#: src/octoprint/static/js/app/main.js:314
 msgid "Operational"
 msgstr ""
 
-#: src/octoprint/static/js/app/main.js:292
+#: src/octoprint/static/js/app/main.js:315
 msgid "Starting"
 msgstr ""
 
-#: src/octoprint/static/js/app/main.js:293
+#: src/octoprint/static/js/app/main.js:316
 msgid "Starting print from SD"
 msgstr ""
 
-#: src/octoprint/static/js/app/main.js:294
+#: src/octoprint/static/js/app/main.js:317
 msgid "Starting to send file to SD"
 msgstr ""
 
-#: src/octoprint/static/js/app/main.js:295
+#: src/octoprint/static/js/app/main.js:318
 msgid "Printing from SD"
 msgstr ""
 
-#: src/octoprint/static/js/app/main.js:296
+#: src/octoprint/static/js/app/main.js:319
 msgid "Sending file to SD"
 msgstr ""
 
-#: src/octoprint/static/js/app/main.js:297
+#: src/octoprint/static/js/app/main.js:320
 msgid "Printing"
 msgstr ""
 
-#: src/octoprint/static/js/app/main.js:298
+#: src/octoprint/static/js/app/main.js:321
 msgid "Paused"
 msgstr ""
 
-#: src/octoprint/static/js/app/main.js:299
+#: src/octoprint/static/js/app/main.js:322
 msgid "Closed"
 msgstr ""
 
-#: src/octoprint/static/js/app/main.js:300
+#: src/octoprint/static/js/app/main.js:323
 msgid "Transferring file to SD"
 msgstr ""
 
-#: src/octoprint/static/js/app/main.js:301
+#: src/octoprint/static/js/app/main.js:324
 #: src/octoprint/templates/dialogs/settings/serialconnection.jinja2:576
 msgid "Pausing"
 msgstr ""
 
-#: src/octoprint/static/js/app/main.js:302
+#: src/octoprint/static/js/app/main.js:325
 msgid "Resuming"
 msgstr ""
 
-#: src/octoprint/static/js/app/main.js:303
+#: src/octoprint/static/js/app/main.js:326
 #: src/octoprint/templates/dialogs/settings/serialconnection.jinja2:585
 msgid "Cancelling"
 msgstr ""
 
-#: src/octoprint/static/js/app/main.js:304
+#: src/octoprint/static/js/app/main.js:327
 msgid "Finishing"
 msgstr ""
 
-#: src/octoprint/static/js/app/main.js:1109
+#: src/octoprint/static/js/app/main.js:1132
 msgid "Loading OctoPrint's UI, please wait..."
 msgstr ""
 
@@ -9879,11 +9879,11 @@ msgstr ""
 msgid "Frames"
 msgstr ""
 
-#: src/octoprint/templates/tabs/timelapse.jinja2:239
+#: src/octoprint/templates/tabs/timelapse.jinja2:243
 msgid "Delete unrendered timelapse"
 msgstr ""
 
-#: src/octoprint/templates/tabs/timelapse.jinja2:239
+#: src/octoprint/templates/tabs/timelapse.jinja2:246
 msgid "Render timelapse"
 msgstr ""
 

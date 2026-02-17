@@ -3,9 +3,9 @@
 # This file is distributed under the same license as the OctoPrint project.
 msgid ""
 msgstr ""
-"Project-Id-Version: OctoPrint 1.11.6\n"
+"Project-Id-Version: OctoPrint 1.11.7\n"
 "Report-Msgid-Bugs-To: i18n@octoprint.org\n"
-"POT-Creation-Date: 2026-01-27 10:43+0100\n"
+"POT-Creation-Date: 2026-02-17 16:43+0100\n"
 "PO-Revision-Date: 2025-12-01 12:05+0100\n"
 "Last-Translator: Gina Häußge <gina@octoprint.org>\n"
 "Language: de\n"
@@ -229,8 +229,8 @@ msgstr ""
 #: src/octoprint/plugins/achievements/static/js/achievements.js:234
 msgid "This will reset this year's stats. This action cannot be undone!"
 msgstr ""
-"Das wird die Statistiken dieses Jahres zurücksetzen. Diese Aktion kann nicht "
-"rückgängig gemacht werden!"
+"Das wird die Statistiken dieses Jahres zurücksetzen. Diese Aktion kann "
+"nicht rückgängig gemacht werden!"
 
 #: src/octoprint/plugins/achievements/static/js/achievements.js:304
 #, python-format
@@ -775,7 +775,7 @@ msgstr ""
 "identifiziert, möchte Zugriff auf OctoPrint über die API haben. Die "
 "Anfrage hierzu kommt von <code>%(remote_address)s</code>."
 
-#: src/octoprint/plugins/appkeys/__init__.py:696
+#: src/octoprint/plugins/appkeys/__init__.py:703
 msgid ""
 "Without this plugin third party clients will no longer be able to obtain "
 "an API key without you manually copy-pasting it."
@@ -6448,94 +6448,94 @@ msgstr "Bitte gib einen neuen Wert ein:"
 msgid "Progress"
 msgstr "Fortschritt"
 
-#: src/octoprint/static/js/app/main.js:206
+#: src/octoprint/static/js/app/main.js:229
 msgid "Reloading..."
 msgstr "Lade neu..."
 
-#: src/octoprint/static/js/app/main.js:285
+#: src/octoprint/static/js/app/main.js:308
 msgid "Offline"
 msgstr "Offline"
 
-#: src/octoprint/static/js/app/main.js:286
+#: src/octoprint/static/js/app/main.js:309
 msgid "Offline after error"
 msgstr "Offline nach Fehler"
 
-#: src/octoprint/static/js/app/main.js:287
+#: src/octoprint/static/js/app/main.js:310
 #: src/octoprint/static/js/app/viewmodels/system.js:152
 msgid "Error"
 msgstr "Fehler"
 
-#: src/octoprint/static/js/app/main.js:288
+#: src/octoprint/static/js/app/main.js:311
 msgid "Opening serial connection"
 msgstr "Öffne serielle Verbindung"
 
-#: src/octoprint/static/js/app/main.js:289
+#: src/octoprint/static/js/app/main.js:312
 msgid "Detecting serial connection"
 msgstr "Detektiere serielle Verbindung"
 
-#: src/octoprint/static/js/app/main.js:290
+#: src/octoprint/static/js/app/main.js:313
 msgid "Connecting"
 msgstr "Verbinde"
 
-#: src/octoprint/static/js/app/main.js:291
+#: src/octoprint/static/js/app/main.js:314
 msgid "Operational"
 msgstr "Bereit"
 
-#: src/octoprint/static/js/app/main.js:292
+#: src/octoprint/static/js/app/main.js:315
 msgid "Starting"
 msgstr "Starte"
 
-#: src/octoprint/static/js/app/main.js:293
+#: src/octoprint/static/js/app/main.js:316
 msgid "Starting print from SD"
 msgstr "Starte Druck von SD"
 
-#: src/octoprint/static/js/app/main.js:294
+#: src/octoprint/static/js/app/main.js:317
 msgid "Starting to send file to SD"
 msgstr "Starte Dateitransfer zu SD"
 
-#: src/octoprint/static/js/app/main.js:295
+#: src/octoprint/static/js/app/main.js:318
 msgid "Printing from SD"
 msgstr "Drucke von SD"
 
-#: src/octoprint/static/js/app/main.js:296
+#: src/octoprint/static/js/app/main.js:319
 msgid "Sending file to SD"
 msgstr "Sende Datei zu SD"
 
-#: src/octoprint/static/js/app/main.js:297
+#: src/octoprint/static/js/app/main.js:320
 msgid "Printing"
 msgstr "Drucke"
 
-#: src/octoprint/static/js/app/main.js:298
+#: src/octoprint/static/js/app/main.js:321
 msgid "Paused"
 msgstr "Pausiert"
 
-#: src/octoprint/static/js/app/main.js:299
+#: src/octoprint/static/js/app/main.js:322
 msgid "Closed"
 msgstr "Geschlossen"
 
-#: src/octoprint/static/js/app/main.js:300
+#: src/octoprint/static/js/app/main.js:323
 msgid "Transferring file to SD"
 msgstr "Sende Datei zu SD"
 
-#: src/octoprint/static/js/app/main.js:301
+#: src/octoprint/static/js/app/main.js:324
 #: src/octoprint/templates/dialogs/settings/serialconnection.jinja2:576
 msgid "Pausing"
 msgstr "Pausiere"
 
-#: src/octoprint/static/js/app/main.js:302
+#: src/octoprint/static/js/app/main.js:325
 msgid "Resuming"
 msgstr "Setze fort"
 
-#: src/octoprint/static/js/app/main.js:303
+#: src/octoprint/static/js/app/main.js:326
 #: src/octoprint/templates/dialogs/settings/serialconnection.jinja2:585
 msgid "Cancelling"
 msgstr "Breche ab"
 
-#: src/octoprint/static/js/app/main.js:304
+#: src/octoprint/static/js/app/main.js:327
 msgid "Finishing"
 msgstr "Beende"
 
-#: src/octoprint/static/js/app/main.js:1109
+#: src/octoprint/static/js/app/main.js:1132
 msgid "Loading OctoPrint's UI, please wait..."
 msgstr "Lade OctoPrints Userinterface, bitte warten..."
 
@@ -11485,11 +11485,11 @@ msgstr "Ungerenderte Zeitrafferaufnahmen"
 msgid "Frames"
 msgstr "Frames"
 
-#: src/octoprint/templates/tabs/timelapse.jinja2:239
+#: src/octoprint/templates/tabs/timelapse.jinja2:243
 msgid "Delete unrendered timelapse"
 msgstr "Ungerenderte Zeitrafferaufnahme löschen"
 
-#: src/octoprint/templates/tabs/timelapse.jinja2:239
+#: src/octoprint/templates/tabs/timelapse.jinja2:246
 msgid "Render timelapse"
 msgstr "Zeitrafferaufnahme rendern"
 
