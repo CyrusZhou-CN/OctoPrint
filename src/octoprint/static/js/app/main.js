@@ -152,8 +152,9 @@ $(function () {
             }
         }
 
-        exports.browser.is_mac =
-            uap.os.name && ["macos", "mac os"].includes(uap.os.name.toLowerCase()); // uap.os.name can be undefined, see #5235
+        exports.browser.is_mac = !!(
+            uap.os.name && ["macos", "mac os"].includes(uap.os.name.toLowerCase())
+        ); // uap.os.name can be undefined, see #5235
 
         if (exports.browser.safari) {
             $("html").addClass("safari");
