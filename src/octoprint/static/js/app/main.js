@@ -148,7 +148,7 @@ $(function () {
 
                 const osMatch = match[2];
                 if (exports.browser.os_name == "unknown" && osMatch) {
-                    exports.browser.os_name = osMatch.capitalize();
+                    exports.browser.os_name = _.capitalize(osMatch);
                 }
             }
         }
