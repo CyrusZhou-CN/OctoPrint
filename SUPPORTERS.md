@@ -42,7 +42,6 @@ thanks to everyone who contributed!
   * Kurt Wubbels
   * Kyle Warner
   * Lachlan Bell
-  * LulzBot
   * Makespace Madrid
   * Marco van Dijk
   * Mark Greenwald
@@ -69,4 +68,4 @@ thanks to everyone who contributed!
   * Timothy Efinger
   * Ulrich Kempken
 
-and 2312 more wonderful people pledging on the [Patreon campaign](https://patreon.com/foosel), on [GitHub Sponsors](https://github.com/users/foosel/sponsorship), via [Ko-fi](https://ko-fi.com/octoprint) or [Donorbox](https://donorbox.org/support-octoprint?recurring=true)!
+and 2277 more wonderful people pledging on the [Patreon campaign](https://patreon.com/foosel), on [GitHub Sponsors](https://github.com/users/foosel/sponsorship), via [Ko-fi](https://ko-fi.com/octoprint) or [Donorbox](https://donorbox.org/support-octoprint?recurring=true)!
