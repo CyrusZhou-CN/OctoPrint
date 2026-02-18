@@ -44,10 +44,10 @@ $(function () {
                 mobile: false,
                 desktop: false,
 
-                browser_name: "?",
-                browser_version: "?",
-                os_name: "?",
-                os_version: "?",
+                browser_name: "unknown",
+                browser_version: "unknown",
+                os_name: "unknown",
+                os_version: "unknown",
 
                 is_mac: false // special delivery because Macs like to be difficult
             },
@@ -126,10 +126,12 @@ $(function () {
         exports.browser.desktop = !exports.browser.mobile;
 
         const uap = UAParser();
-        exports.browser.browser_name = uap.browser.name ? uap.browser.name : "?";
-        exports.browser.browser_version = uap.browser.version ? uap.browser.version : "?";
-        exports.browser.os_name = uap.os.name ? uap.os.name : "?";
-        exports.browser.os_version = uap.os.version ? uap.os.version : "?";
+        exports.browser.browser_name = uap.browser.name ? uap.browser.name : "unknown";
+        exports.browser.browser_version = uap.browser.version
+            ? uap.browser.version
+            : "unknown";
+        exports.browser.os_name = uap.os.name ? uap.os.name : "unknown";
+        exports.browser.os_version = uap.os.version ? uap.os.version : "unknown";
 
         // Special parser for embedded PrusaSlicer browser view which uses its own custom UA, incompatible to UAParser
         // See #5235
@@ -145,10 +147,9 @@ $(function () {
                 exports.browser.browser_version = versionMatch;
 
                 const osMatch = match[2];
-                if (exports.browser.os_name == "?" && osMatch === "windows") {
-                    exports.browser.os_name = "Windows";
+                if (exports.browser.os_name == "unknown" && osMatch) {
+                    exports.browser.os_name = osMatch.capitalize();
                 }
-                exports.browser.os_version = "?";
             }
         }
 
