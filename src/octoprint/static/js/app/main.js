@@ -135,10 +135,7 @@ $(function () {
 
         // Special parser for embedded PrusaSlicer browser view which uses its own custom UA, incompatible to UAParser
         // See #5235
-        if (
-            uap.browser.browser_name === undefined &&
-            userAgent.startsWith("prusaslicer")
-        ) {
+        if (uap.browser.name === undefined && userAgent.startsWith("prusaslicer")) {
             exports.browser.browser_name = "PrusaSlicer";
 
             const match = userAgent.match(/^prusaslicer\/(.+?)\s+\((.+?)\)$/);
