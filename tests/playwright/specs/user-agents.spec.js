@@ -72,7 +72,7 @@ const checkStringValue = (expected, actual) => {
         if (expected) {
             expect(actual).toBeTruthy();
         } else {
-            expect(actual).toBe("?");
+            expect(actual).toBe("unknown");
         }
     } else {
         expect(actual).toBe(expected);
