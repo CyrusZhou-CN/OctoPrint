@@ -186,7 +186,7 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
                 file=self._dict(name=None, path=None, size=None, origin=None, date=None),
                 estimatedPrintTime=None,
                 lastPrintTime=None,
-                filament=self._dict(length=None, volume=None),
+                filament=self._dict(),
                 user=None,
             ),
             progress=self._dict(
