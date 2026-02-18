@@ -9,11 +9,13 @@ from typing import IO, TYPE_CHECKING, Any, Optional
 from octoprint.filemanager.util import AbstractFileWrapper
 from octoprint.schema import BaseModel
 from octoprint.util import deprecated
+from octoprint.vendor.with_attrs_docs import with_attrs_docs
 
 if TYPE_CHECKING:
     from octoprint.printer.job import PrintJob  # noqa: F401
 
 
+@with_attrs_docs
 class StorageCapabilities(BaseModel):
     write_file: bool = False
     """Storage supports writing files"""

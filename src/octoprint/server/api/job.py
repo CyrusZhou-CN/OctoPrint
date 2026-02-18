@@ -77,9 +77,24 @@ def controlJob():
 @api_versioned
 @Permissions.STATUS.require(403)
 def jobState():
-    response = _get_api_job_response().model_dump(by_alias=True)
-    response["job"]["lastPrintTime"] = None  # backwards compatibility
-    return jsonify(**response)
+    response = _get_api_job_response()
+
+    job_info = response.job
+    job_info_pre_1_12 = apischema.ApiJobInfo_pre_1_12(
+        file=job_info.file,
+        estimatedPrintTime=job_info.estimatedPrintTime,
+        lastPrintTime=None,
+        filament=job_info.filament,
+        user=job_info.user,
+    )
+
+    response_pre_1_12 = apischema.ApiJobResponse_pre_1_12(
+        job=job_info_pre_1_12,
+        progress=response.progress,
+        state=response.state,
+    )
+
+    return jsonify(**response_pre_1_12.model_dump(by_alias=True))
 
 
 @jobState.version(">=1.12.0")
@@ -88,7 +103,7 @@ def jobState_post_1_12():
     return jsonify(**_get_api_job_response().model_dump(by_alias=True, exclude_none=True))
 
 
-def _get_api_job_response():
+def _get_api_job_response() -> apischema.ApiJobResponse:
     current_data = printer.get_current_data()
 
     file_data = current_data["job"].get("file", {})
