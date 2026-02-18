@@ -878,36 +878,48 @@ def uploadGcodeFile(target):
                 payload["userdata"] = userdata
             eventManager.fire(Events.UPLOAD, payload)
 
-            entry = {
-                "name": futureFilename,
-                "path": added_file,
-                "origin": target,
-                "refs": {
+            entry = apischema.ApiAddedEntry(
+                name=futureFilename,
+                display=futureFilename,
+                path=added_file,
+                origin=target,
+                refs={
                     "resource": url_for(
                         ".readGcodeFile",
                         target=target,
                         filename=added_file,
                         _external=True,
-                    ),
+                    )
                 },
-            }
+            )
+
             if fileManager.capabilities(target).read_file:
                 quoted_name = urlquote(added_file)
-                entry["refs"]["download"] = (
+                entry.refs["download"] = (
                     url_for("index", _external=True)
                     + f"downloads/files/{target}/{quoted_name}"
                 )
 
-            r = make_response(
-                jsonify(
+            if api_version_matches(">=1.12.0"):
+                resp = apischema.UploadResponse(
+                    file=entry,
+                    done=upload_done,
+                    effectiveSelect=to_select,
+                    effectivePrint=to_print,
+                )
+            else:
+                resp = apischema.UploadResponse_pre_1_12(
                     files={target: entry},
                     done=upload_done,
                     effectiveSelect=to_select,
                     effectivePrint=to_print,
-                ),
+                )
+
+            r = make_response(
+                jsonify(**resp.model_dump(by_alias=True)),
                 201,
             )
-            r.headers["Location"] = entry["refs"]["resource"]
+            r.headers["Location"] = entry.refs["resource"]
             return r
 
         elif "foldername" in request.values:
@@ -944,11 +956,12 @@ def uploadGcodeFile(target):
             except (OSError, StorageError) as e:
                 _abortWithException(e)
 
-            folder = {
-                "name": futureName,
-                "path": added_folder,
-                "origin": target,
-                "refs": {
+            folder = apischema.ApiAddedEntry(
+                name=futureName,
+                display=futureName,
+                path=added_folder,
+                origin=target,
+                refs={
                     "resource": url_for(
                         ".readGcodeFile",
                         target=target,
@@ -956,10 +969,15 @@ def uploadGcodeFile(target):
                         _external=True,
                     )
                 },
-            }
+            )
 
-            r = make_response(jsonify(folder=folder, done=True), 201)
-            r.headers["Location"] = folder["refs"]["resource"]
+            if api_version_matches(">=1.12.0"):
+                resp = apischema.UploadResponse(folder=folder, done=True)
+            else:
+                resp = apischema.UploadResponse_pre_1_12(folder=folder, done=True)
+
+            r = make_response(jsonify(**resp.model_dump(by_alias=True)), 201)
+            r.headers["Location"] = folder.refs["resource"]
             return r
 
         else:

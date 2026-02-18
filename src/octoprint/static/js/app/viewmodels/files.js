@@ -2161,16 +2161,11 @@ $(function () {
         };
 
         self._handleUploadDone = function (e, data) {
-            var focus = undefined;
-            if (data.result.files.hasOwnProperty("printer")) {
-                focus = {location: "printer", path: data.result.files.printer.path};
-            } else if (data.result.files.hasOwnProperty("local")) {
-                focus = {location: "local", path: data.result.files.local.path};
-            }
-
-            if (focus) {
-                self._filesToFocus.push(focus);
-            }
+            const focus = {
+                location: data.result.file.origin,
+                path: data.result.file.path
+            };
+            self._filesToFocus.push(focus);
 
             if (focus && _.endsWith(focus.path.toLowerCase(), ".stl")) {
                 self.slicing.show(focus.location, focus.path);
