@@ -634,7 +634,10 @@ $(function () {
                 }
             }
 
-            self._filesToFocus = self._filesToFocus.length ? self._filesToFocus : focus;
+            self._filesToFocus =
+                self._filesToFocus && self._filesToFocus.length
+                    ? self._filesToFocus
+                    : focus;
             self._switchToPath = self._switchToPath || switchToPath;
 
             if (self._otherRequestInProgress !== undefined) {
@@ -2167,6 +2170,9 @@ $(function () {
                 location: data.result.file.origin,
                 path: data.result.file.path
             };
+            if (!self._filesToFocus) {
+                self._filesToFocus = [];
+            }
             self._filesToFocus.push(focus);
 
             if (focus && _.endsWith(focus.path.toLowerCase(), ".stl")) {
@@ -2180,7 +2186,7 @@ $(function () {
                 self._setProgressBar(0, "", false);
             };
 
-            if (self._filesToFocus.length > 0) {
+            if (self._filesToFocus && self._filesToFocus.length > 0) {
                 // Only refresh the list if there were files uploaded successfully
                 self._setProgressBar(100, gettext("Refreshing list ..."), true);
                 self.requestData({focus: self._filesToFocus}).always(function () {
