@@ -6,7 +6,6 @@ $(function () {
         self.access = parameters[1];
         self.settings = parameters[2];
 
-        self.renderProgressBar = undefined;
         self.timelapsePopup = undefined;
 
         self.defaultFps = 25;
@@ -887,8 +886,6 @@ $(function () {
             self.onUserLoggedOut =
                 function () {
                     self.requestData();
-
-                    self.renderProgressBar = $("#render_progress");
                 };
     }
 

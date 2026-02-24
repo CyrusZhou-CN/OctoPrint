@@ -1835,6 +1835,7 @@ def collect_core_assets(preferred_stylesheet="css"):
         "js/app/bindings/gettext.js",
         "js/app/bindings/invisible.js",
         "js/app/bindings/popover.js",
+        "js/app/bindings/progressbar.js",
         "js/app/bindings/qrcode.js",
         "js/app/bindings/slimscrolledforeach.js",
         "js/app/bindings/toggle.js",

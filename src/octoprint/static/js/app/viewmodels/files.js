@@ -29,7 +29,6 @@ $(function () {
         });
 
         self.uploadButton = undefined;
-        self.uploadProgressBar = undefined;
 
         self.dropOverlay = undefined;
         self.dropZone = undefined;
@@ -316,6 +315,7 @@ $(function () {
 
         self.uploadProgressText = ko.observable();
         self.uploadProgressPercentage = ko.observable();
+        self.uploadProgressActive = ko.observable();
 
         // list style incl. persistence
         var listStyleStorageKey = "gcodeFiles.currentListStyle";
@@ -1794,9 +1794,6 @@ $(function () {
 
             self.uploadButton = $("#gcode_upload");
 
-            self.uploadProgress = $("#gcode_upload_progress");
-            self.uploadProgressBar = $(".bar", self.uploadProgress);
-
             self.dropOverlay = $("#drop_overlay");
             self.dropZone = $("#drop");
             self.dropZoneBackground = $("#drop_background");
@@ -1822,8 +1819,8 @@ $(function () {
         };
 
         self.onEventSlicingStarted = function (payload) {
-            self.uploadProgress.addClass("progress-striped").addClass("active");
-            self.uploadProgressBar.css("width", "100%");
+            self.uploadProgressActive(true);
+            self.uploadProgressPercentage(100);
             if (payload.progressAvailable) {
                 self.uploadProgressPercentage(0);
                 self.uploadProgressText(
@@ -1844,15 +1841,13 @@ $(function () {
         };
 
         self.onEventSlicingCancelled = function (payload) {
-            self.uploadProgress.removeClass("progress-striped").removeClass("active");
-            self.uploadProgressBar.css("width", "0%");
+            self.uploadProgressActive(false);
             self.uploadProgressText("");
             self.uploadProgressPercentage(0);
         };
 
         self.onEventSlicingDone = function (payload) {
-            self.uploadProgress.removeClass("progress-striped").removeClass("active");
-            self.uploadProgressBar.css("width", "0%");
+            self.uploadProgressActive(false);
             self.uploadProgressText("");
             self.uploadProgressPercentage(0);
 
@@ -1873,8 +1868,7 @@ $(function () {
         };
 
         self.onEventSlicingFailed = function (payload) {
-            self.uploadProgress.removeClass("progress-striped").removeClass("active");
-            self.uploadProgressBar.css("width", "0%");
+            self.uploadProgressActive(false);
             self.uploadProgressText("");
             self.uploadProgressPercentage(0);
 
@@ -1903,15 +1897,13 @@ $(function () {
         };
 
         self.onEventTransferStarted = function (payload) {
-            self.uploadProgress.addClass("progress-striped").addClass("active");
-            self.uploadProgressBar.css("width", "100%");
+            self.uploadProgressActive(true);
             self.uploadProgressPercentage(100);
             self.uploadProgressText(gettext("Streaming ..."));
         };
 
         self.onEventTransferDone = function (payload) {
-            self.uploadProgress.removeClass("progress-striped").removeClass("active");
-            self.uploadProgressBar.css("width", "0");
+            self.uploadProgressActive(false);
             self.uploadProgressText("");
             self.uploadProgressPercentage(0);
 
@@ -1934,8 +1926,7 @@ $(function () {
         };
 
         self.onEventTransferFailed = function (payload) {
-            self.uploadProgress.removeClass("progress-striped").removeClass("active");
-            self.uploadProgressBar.css("width", "0");
+            self.uploadProgressActive(false);
             self.uploadProgressText("");
             self.uploadProgressPercentage(0);
 
@@ -1996,15 +1987,9 @@ $(function () {
         };
 
         self._setProgressBar = function (percentage, text, active) {
-            self.uploadProgressBar.css("width", percentage + "%");
             self.uploadProgressText(text);
             self.uploadProgressPercentage(percentage);
-
-            if (active) {
-                self.uploadProgress.addClass("progress-striped active");
-            } else {
-                self.uploadProgress.removeClass("progress-striped active");
-            }
+            self.uploadProgressActive(active);
         };
 
         self._uploadExistsQueue = []; // Files will be in this queue if their test fails and something needs to be done

@@ -1219,45 +1219,46 @@ function showTextboxDialog(msg, onacknowledge, options) {
  * @returns {*|jQuery} the modal object
  */
 function showProgressModal(options, promise) {
-    var title = options.title || gettext("Progress");
-    var message = options.message || "";
-    var buttonText = options.button || gettext("Close");
-    var max = options.max || undefined;
-    var close = options.close || false;
-    var output = options.output || false;
+    const title = options.title || gettext("Progress");
+    const message = options.message || "";
+    const buttonText = options.button || gettext("Close");
+    const max = options.max || undefined;
+    const close = options.close || false;
+    const output = options.output || false;
 
-    var dialogClass = options.dialogClass || "";
-    var barClassSuccess = options.barClassSuccess || "";
-    var barClassFailure = options.barClassFailure || "bar-danger";
-    var outputClassSuccess = options.outputClassSuccess || "";
-    var outputClassFailure = options.outputClassFailure || "text-error";
+    const dialogClass = options.dialogClass || "";
+    const barClassSuccess = options.barClassSuccess || "";
+    const barClassFailure = options.barClassFailure || "bar-danger";
+    const outputClassSuccess = options.outputClassSuccess || "";
+    const outputClassFailure = options.outputClassFailure || "text-error";
 
-    var modalHeader = $("<h3> " + title + "</h3>");
-    var icon = $('<i class="fa fa-spinner fa-spin"></i>');
+    const modalHeader = $("<h3> " + title + "</h3>");
+    const icon = $('<i class="fa fa-spinner fa-spin"></i>');
     modalHeader.prepend(icon);
 
     var paragraph = $("<p>" + message + "</p>");
 
-    var progress = $('<div class="progress progress-text-centered"></div>');
-    var progressBar = $('<div class="bar"></div>').addClass(barClassSuccess);
-    var progressText = $('<span class="progress-text-back"></span>');
+    const progress = $('<div class="progress progress-text-centered"></div>');
+    const progressBar = $('<div class="bar"></div>').addClass(barClassSuccess);
+    const progressTextBack = $('<span class="progress-text-back"></span>');
+    const progressTextFront = $('<span class="progress-text-front"></span>');
 
     // initially set progress bar to 100% & active to show that something is happening in the background
     progress.addClass("progress-striped active");
     progressBar.width("100%");
 
-    progress.append(progressBar).append(progressText);
+    progress.append(progressBar).append(progressTextBack).append(progressTextFront);
 
-    var button = $('<button class="btn">' + buttonText + "</button>")
+    const button = $('<button class="btn">' + buttonText + "</button>")
         .prop("disabled", true)
         .attr("data-dismiss", "modal");
 
-    var modalBody = $("<div></div>")
+    const modalBody = $("<div></div>")
         .addClass("modal-body")
         .append(paragraph)
         .append(progress);
 
-    var pre;
+    let pre;
     if (output) {
         pre = $(
             "<pre class='pre-scrollable pre-output' style='height: 70px; font-size: 0.8em'></pre>"
@@ -1265,7 +1266,7 @@ function showProgressModal(options, promise) {
         modalBody.append(pre);
     }
 
-    var modal = $("<div></div>")
+    const modal = $("<div></div>")
         .addClass("modal hide fade-in")
         .addClass(dialogClass)
         .append($("<div></div>").addClass("modal-header").append(modalHeader))
@@ -1273,13 +1274,13 @@ function showProgressModal(options, promise) {
         .append($("<div></div>").addClass("modal-footer").append(button));
     modal.modal({keyboard: false, backdrop: "static", show: true});
 
-    var counter = 0;
-    var value = 100;
-    var outcome = true;
+    let counter = 0;
+    let value = 100;
+    let outcome = true;
     promise
         .progress(function () {
-            var status = false;
-            var short, long, success;
+            let status = false;
+            let short, long, success;
             if (arguments.length === 1) {
                 status = success = true;
                 short = long = arguments[0];
@@ -1313,17 +1314,11 @@ function showProgressModal(options, promise) {
             }
 
             // update progress bar
-            progressBar.width(String(value) + "%");
-            progressText.text(short);
-            if (value < 50 && progressText.hasClass("progress-text-front")) {
-                progressText
-                    .removeClass("progress-text-front")
-                    .addClass("progress-text-back");
-            } else if (value >= 50 && progressText.hasClass("progress-text-back")) {
-                progressText
-                    .removeClass("progress-text-back")
-                    .addClass("progress-text-front");
-            }
+            progressBar.css("width", `${value}%`); // set bar width to value %
+            progressTextBack.text(short).css("clip-path", `inset(0 0 0 ${value}%)`); // clip back on the left by value %
+            progressTextFront
+                .text(short)
+                .css("clip-path", `inset(0 calc(100% - ${value}%) 0 0)`); // clip front on the right by 100 - value %
 
             // if not successful, apply failure class
             if (!status && !success && !progressBar.hasClass(barClassFailure)) {
