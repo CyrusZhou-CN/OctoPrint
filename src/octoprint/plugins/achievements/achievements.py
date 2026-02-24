@@ -256,19 +256,20 @@ class Achievements(metaclass=AchievementsMetaClass):
     ## mishaps
 
     ALL_BEGINNINGS_ARE_HARD = Achievement(
-        name="All Beginnings Are Hard", description="Cancel your first print."
+        name="All Beginnings Are Hard",
+        description="Have your first cancelled or failed print.",
     )
 
     ONE_OF_THOSE_DAYS = Achievement(
         name="Must Be One Of Those Days",
-        description="Cancel ten consecutive prints on the same day.",
+        description="Have ten consecutive cancelled or failed prints on the same day.",
         hidden=True,
         timebased=True,
     )
 
     SO_CLOSE = Achievement(
         name="So Close",
-        description="Cancel a print job at 95% progress or more.",
+        description="Cancel or have a print job fail at 95% progress or more.",
         hidden=True,
     )
 
