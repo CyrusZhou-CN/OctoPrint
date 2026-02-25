@@ -211,7 +211,23 @@ indent-width = 4
 target-version = "py39"
 
 [tool.ruff.lint]
-select = ["B", "C", "E", "F", "I", "W", "B9"]
+select = [
+    # pycodestyle
+    "E",
+    "W",
+    # flake-bugbear
+    "B",
+    # pyflakes
+    "F",
+    # isort
+    "I",
+    # pyupgrade
+    "UP",
+]
+extend-select = [
+    # flake8-tidy-imports banned api
+    "TID251",
+]
 ignore = [
     "E203",
     "E231",
@@ -222,7 +238,8 @@ ignore = [
     "E731",
     "E741",
     "W605",
-    "C901",
+    "UP031",
+    "UP032",
 ]
 fixable = ["I", "C4", "E"]
 
@@ -235,6 +252,11 @@ known-first-party = [
     "octoprint_setuptools",
     "octoprint_client",
 ]
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"cgi".msg = "The cgi module is deprecated, see https://peps.python.org/pep-0594/#cgi."
+"pkg_resources".msg = "pkg_resources has been deprecated for a long time and removed from setuptools 82.0.0"
+"octoprint_setuptools".msg = "octoprint_setuptools has been deprecated in favour of switching plugins over to pyproject.toml, see https://github.com/OctoPrint/octoprint-plugin-tool"
 
 [tool.ruff.format]
 quote-style = "double"

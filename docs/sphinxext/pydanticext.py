@@ -7,7 +7,7 @@ import inspect
 import re
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Optional, Type
+from typing import Any, Optional
 
 import yaml
 from docutils import nodes
@@ -20,7 +20,7 @@ from sphinx.util.docutils import SphinxDirective
 _logger = logging.getLogger(__name__)
 
 
-def _load_clz(identifier: str) -> Optional[Type]:
+def _load_clz(identifier: str) -> Optional[type]:
     import importlib
 
     module_name, class_name = identifier.rsplit(".", 1)
@@ -99,14 +99,14 @@ class PydanticModelInspector:
 
         return subs.get(name, name)
 
-    def _convert_enum(self, enum_: Type) -> Type:
+    def _convert_enum(self, enum_: type) -> type:
         enum_ = self._strip_container_types(enum_)
         bases = [base for base in enum_.__bases__ if not issubclass(base, Enum)]
         if bases:
             return bases[0]
         return enum_
 
-    def _strip_container_types(self, type_: Type) -> Type:
+    def _strip_container_types(self, type_: type) -> type:
         while any(str(type_).startswith(f"typing.{x}") for x in self.CONTAINER_TYPES):
             args = type_.__args__
             if args:
@@ -116,7 +116,7 @@ class PydanticModelInspector:
 
         return type_
 
-    def _type_name(self, type_: Type, subs: dict[str, str] = None) -> str:
+    def _type_name(self, type_: type, subs: dict[str, str] = None) -> str:
         if inspect.isclass(type_) and hasattr(type_, "__name__"):
             name = type_.__name__
         else:
@@ -132,7 +132,7 @@ class PydanticModelInspector:
 
         return "".join(token[1] for token in processed)
 
-    def _type_doc(self, type_: Type, subs: dict[str, str] = None) -> str:
+    def _type_doc(self, type_: type, subs: dict[str, str] = None) -> str:
         type_ = self._strip_container_types(type_)
 
         if inspect.isclass(type_) and issubclass(type_, Enum):
@@ -143,7 +143,7 @@ class PydanticModelInspector:
         return name
 
     def _field_doc(
-        self, name: str, field: FieldInfo, t: Type, subs: dict[str, str] = None
+        self, name: str, field: FieldInfo, t: type, subs: dict[str, str] = None
     ) -> PydanticFieldDoc:
         type_ = self._type_doc(t, subs=subs)
 
