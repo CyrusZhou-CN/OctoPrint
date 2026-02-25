@@ -14,8 +14,9 @@ or **[creating pull requests](#pull-requests)**.
     * [Where can I find my browser's error console?](#where-can-i-find-my-browsers-error-console)
   * [Setting up a development environment](#setting-up-a-development-environment)
   * [Pull requests](#pull-requests)
+  * [How is OctoPrint versioned](#how-is-octoprint-versioned)
   * [What do the branches mean?](#what-do-the-branches-mean)
-  * [How OctoPrint is versioned](#how-octoprint-is-versioned)
+  * [How should I format my commit messages?](#how-should-i-format-my-commit-messages)
   * [On AI use when contributing to OctoPrint](#on-ai-use-when-contributing-to-octoprint)
   * [History](#history)
   * [Footnotes](#footnotes)
@@ -126,8 +127,8 @@ following section *completely* and also follow the instructions in the
    for information on how to do this.
 
 3. The problem still exists? Then please **look through the
-   [existing tickets](https://github.com/foosel/OctoPrint/issues?state=open)
-   (use the [search](https://github.com/foosel/OctoPrint/search?q=&ref=cmdform&type=Issues))**
+   [existing tickets](https://github.com/OctoPrint/OctoPrint/issues?state=open)
+   (use the [search](https://github.com/OctoPrint/OctoPrint/search?q=&ref=cmdform&type=Issues))**
    to check if there already exists a report of the issue you are encountering.
    Sorting through duplicates of the same issue sometimes causes more work than
    fixing it. Take the time to filter through possible duplicates and be really
@@ -180,10 +181,10 @@ See [How to open the Javascript Console in different browsers](https://webmaster
 
 ## Setting up a development environment
 
-See [the corresponding chapter in the documentation](https://docs.octoprint.org/en/main/development/environment.html).
+See [the corresponding chapter in the documentation](https://docs.octoprint.org/en/dev/development/environment.html).
 This also includes information on how to run the test suite and how to build
 the documentation, the bundled virtual printer plugin and OctoPrint's versioning
-and branching strategy.
+and branching strategy, plus the commit message formatting guidelines.
 
 ## Pull requests
 
@@ -232,7 +233,7 @@ and branching strategy.
    by running
 
    ```
-   pytest
+   go-task test-unit
    ```
 
    in the OctoPrint checkout folder. An [automatic build workflow](https://github.com/OctoPrint/OctoPrint/actions?query=workflow%3ABuild)
@@ -243,18 +244,18 @@ and branching strategy.
    by running
 
    ```
-   pre-commit run --hook-stage manual --all-files
+   go-task pre-commit
    ```
 
    in the OctoPrint checkout folder. If you install the pre-commit hooks via
-   `pre-commit install` (which you really should!) this will even be taken care of for you prior to committing.
+   `pre-commit install` (**which you really should!**) this will even be taken care of for you prior to committing.
 
    An [automatic build workflow](https://github.com/OctoPrint/OctoPrint/actions?query=workflow%3ABuild)
    is in place that will run these checks - if they fail your PR will be marked accordingly.
 10. **Test your changes thoroughly**. That also means testing with usage
     scenarios you don't normally use. If you only test with your printer, test with the
     virtual printer and vice versa. State in your pull request how you tested
-    your changes. Ideally **add unit tests** - OctoPrint severely lacks in that
+    your changes. Ideally **add unit tests** -- OctoPrint severely lacks in that
     department, but we are trying to change that, so any new code already covered
     with a test suite helps a lot!
 11. In your pull request's description, **state what your pull request does**,
@@ -269,11 +270,15 @@ The template to use for Pull Request descriptions should get pre-filled automati
 
 ## How is OctoPrint versioned?
 
-See [the corresponding chapter in the documentation](https://docs.octoprint.org/en/main/development/versioning.html).
+See [the corresponding chapter in the documentation](https://docs.octoprint.org/en/dev/development/versioning.html).
 
 ## What do the branches mean?
 
-See [the corresponding chapter in the documentation](https://docs.octoprint.org/en/main/development/branches.html).
+See [the corresponding chapter in the documentation](https://docs.octoprint.org/en/dev/development/branches.html).
+
+## How should I format my commit messages?
+
+See [the corresponding chapter in the documentation](https://docs.octoprint.org/en/dev/development/commits.html)
 
 ## On AI use when contributing to OctoPrint
 
@@ -343,6 +348,7 @@ For more info, please refer to the [AGENTS.md](AGENTS.md) file.
   * 2025-05-21: Guidelines regarding the use of AI
   * 2025-09-03: Changes according to the new branching strategy
   * 2026-01-27: Stricter guidelines regarding the use of AI for Pull Requests, adapted from llama.cpp
+  * 2026-02-25: New section about commit message formatting
 
 ## Footnotes
   * [1] - If you are wondering why, the problem is that anything that you add
