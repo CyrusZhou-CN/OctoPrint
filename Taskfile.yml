@@ -59,6 +59,13 @@ tasks:
         cd tests/playwright
         npx playwright test --ui
 
+  test-e2e-install:
+    desc: Install e2e test framework & dependencies
+    cmds:
+      - |
+        cd tests/playwright
+        npx playwright install
+
   ### Build related
 
   build:
@@ -80,6 +87,11 @@ tasks:
     desc: Updates all assets
     cmds:
       - octoprint dev css:build --all
+
+  watch-assets:
+    desc: Monitors all assets and builds them as needed
+    cmds:
+      - octoprint dev css:watch --all
 
   ### Translation related
 
