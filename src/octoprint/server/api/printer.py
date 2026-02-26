@@ -8,7 +8,7 @@ from flask import Response, abort, jsonify, request
 
 from octoprint.access.permissions import Permissions
 from octoprint.printer import UnknownScript
-from octoprint.server import NO_CONTENT, printer, printerProfileManager
+from octoprint.server import NO_CONTENT, fileManager, printer, printerProfileManager
 from octoprint.server.api import api
 from octoprint.server.util.flask import (
     api_version_matches,
@@ -33,7 +33,7 @@ def printerState():
         if len(excludeStr.strip()) > 0:
             excludes = list(
                 filter(
-                    lambda x: x in ["temperature", "sd", "state"],
+                    lambda x: x in ["temperature", "storage", "sd", "state"],
                     (x.strip() for x in excludeStr.split(",")),
                 )
             )
@@ -54,9 +54,14 @@ def printerState():
 
         result.update({"temperature": _get_temperature_data(processor)})
 
-    # add sd information
-    if "sd" not in excludes and settings().getBoolean(["feature", "sdSupport"]):
-        result.update({"sd": {"ready": printer.is_sd_ready()}})
+    # add storage information
+    if api_version_matches(">=1.12.0"):
+        storage_key = "storage"
+    else:
+        storage_key = "sd"
+
+    if storage_key not in excludes and settings().getBoolean(["feature", "sdSupport"]):
+        result.update({storage_key: {"ready": printer.is_storage_mounted()}})
 
     # add state information
     if "state" not in excludes:
@@ -351,15 +356,16 @@ def printerPrintheadCommand():
     return NO_CONTENT
 
 
-##~~ SD Card
+##~~ Printer side storage
 
 
-@api.route("/printer/sd", methods=["POST"])
+@api.route("/printer/storage", methods=["POST"])
+@api.route("/printer/sd", methods=["POST"])  # backwards compatibility
 @no_firstrun_access
 @Permissions.CONTROL.require(403)
-def printerSdCommand():
+def printerStorageCommand():
     if not settings().getBoolean(["feature", "sdSupport"]):
-        abort(404, description="SD support is disabled")
+        abort(404, description="Printer storage support is disabled")
 
     if not printer.is_operational() or printer.is_printing() or printer.is_paused():
         abort(409, description="Printer is not operational or currently busy")
@@ -369,26 +375,27 @@ def printerSdCommand():
     if response is not None:
         return response
 
-    tags = {"source:api", "api:printer.sd"}
+    tags = {"source:api", "api:printer.sd", "api:printer.storage"}
 
     if command == "init":
-        printer.init_sd_card(tags=tags)
+        printer.mount_storage(tags=tags)
     elif command == "refresh":
-        printer.refresh_sd_files(tags=tags)
+        fileManager.list_storage_entries(["printer"], force_refresh=True)
     elif command == "release":
-        printer.release_sd_card(tags=tags)
+        printer.unmount_storage(tags=tags)
 
     return NO_CONTENT
 
 
-@api.route("/printer/sd", methods=["GET"])
+@api.route("/printer/storage", methods=["GET"])
+@api.route("/printer/sd", methods=["GET"])  # backwards compatibility
 @no_firstrun_access
 @Permissions.STATUS.require(403)
-def printerSdState():
+def printerStorageState():
     if not settings().getBoolean(["feature", "sdSupport"]):
-        abort(404, description="SD support is disabled")
+        abort(404, description="Printer storage support is disabled")
 
-    return jsonify(ready=printer.is_sd_ready())
+    return jsonify(ready=printer.is_storage_mounted())
 
 
 ##~~ Commands

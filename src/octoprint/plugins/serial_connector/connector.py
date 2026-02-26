@@ -556,11 +556,12 @@ class ConnectedSerialPrinter(ConnectedPrinter, PrinterFilesMixin):
             raise PrinterFilesUnavailableError(message)
 
         try:
+            tags = kwargs.get("tags", set()) | {"trigger:printer.add_sd_file"}
             return self._comm.startFileTransfer(
                 source,
                 target,
                 special=not valid_file_type(target, "gcode"),
-                tags=kwargs.get("tags", set()),
+                tags=tags,
             )
         except Exception as exc:
             self._logger.exception("Error while starting file transfer")

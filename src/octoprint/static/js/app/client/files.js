@@ -75,9 +75,23 @@
         recursively,
         opts
     ) {
+        let force;
+        if (typeof opts === "boolean") {
+            force = opts;
+            opts = {};
+        } else {
+            force = false;
+        }
+
         recursively = recursively || false;
+        force = force || false;
+
         return this.base
-            .getWithQuery(resourceForLocation(location), {recursive: recursively}, opts)
+            .getWithQuery(
+                resourceForLocation(location),
+                {recursive: recursively, force: force},
+                opts
+            )
             .done(preProcessList);
     };
 

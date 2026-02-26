@@ -1030,9 +1030,31 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
         for line in lines:
             self._add_log(line)
 
-    # ~~ sd file handling
+    # ~~ printer storage
 
-    def is_sd_ready(self, *args, **kwargs):
+    def mount_storage(self, *args, **kwargs):
+        if (
+            not self._connection
+            or not isinstance(self._connection, PrinterFilesMixin)
+            or self.is_storage_mounted()
+        ):
+            return
+
+        tags = kwargs.get("tags", set()) | {"trigger:printer.mount_storage"}
+
+        self._connection.mount_printer_files(tags=tags)
+
+    def unmount_storage(self, *args, **kwargs):
+        if not self.is_storage_mounted():
+            return
+
+        tags = kwargs.get("tags", set()) | {"trigger:printer.unmount_storage"}
+
+        cast(PrinterFilesMixin, self._connection).unmount_printer_files(tags=tags)
+
+    # ~~ deprecated printer storage stuff, now to be done through dedicated PrinterStorage
+
+    def is_storage_mounted(self, *args, **kwargs):
         if (
             not settings().getBoolean(["feature", "sdSupport"])
             or self._connection is None
@@ -1042,8 +1064,13 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
 
         return self._connection.printer_files_mounted
 
+    @util.deprecated(
+        message="get_sd_files has been deprecated and will be removed in a future version. Please use the PrinterStorage instead.",
+        includedoc="Functionality moved to :class:`~octoprint.filemanager.storage.printer.PrinterStorage`",
+        since="1.12.0",
+    )
     def get_sd_files(self, *args, **kwargs):
-        if not self.is_sd_ready():
+        if not self.is_storage_mounted():
             return []
 
         refresh = kwargs.get("refresh", False)
@@ -1055,10 +1082,15 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
             )
         ]
 
+    @util.deprecated(
+        message="add_sd_file has been deprecated and will be removed in a future version. Please use the PrinterStorage instead.",
+        includedoc="Functionality moved to :class:`~octoprint.filemanager.storage.printer.PrinterStorage`",
+        since="1.12.0",
+    )
     def add_sd_file(
         self, filename, path, on_success=None, on_failure=None, *args, **kwargs
     ):
-        if not self.is_sd_ready() or not self._connection.is_ready():
+        if not self.is_storage_mounted() or not self._connection.is_ready():
             self._logger.error("No connection to printer or printer is busy")
             return
 
@@ -1123,50 +1155,34 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
 
         else:
             # no plugin feels responsible, use the default implementation
-            tags = kwargs.get("tags", set()) | {"trigger:printer.add_sd_file"}
             local = self._file_manager.path_on_disk(FileDestinations.LOCAL, filename)
-            remote = connection.upload_printer_file(local, path, tags=tags)
+            remote = connection.upload_printer_file(local, path)
             return remote
 
+    @util.deprecated(
+        message="delete_sd_file has been deprecated and will be removed in a future version. Please use the PrinterStorage instead.",
+        includedoc="Functionality moved to :class:`~octoprint.filemanager.storage.printer.PrinterStorage`",
+        since="1.12.0",
+    )
     def delete_sd_file(self, filename, *args, **kwargs):
-        if not self.is_sd_ready():
+        if not self.is_storage_mounted():
             return
 
-        tags = kwargs.get("tags", set()) | {"trigger:printer.delete_sd_file"}
+        cast(PrinterFilesMixin, self._connection).delete_printer_file("/" + filename)
 
-        cast(PrinterFilesMixin, self._connection).delete_printer_file(
-            "/" + filename, tags=tags
-        )
-
-    def init_sd_card(self, *args, **kwargs):
-        if (
-            not self._connection
-            or not isinstance(self._connection, PrinterFilesMixin)
-            or self.is_sd_ready()
-        ):
-            return
-
-        tags = kwargs.get("tags", set()) | {"trigger:printer.init_sd_card"}
-
-        self._connection.mount_printer_files(tags=tags)
-
-    def release_sd_card(self, *args, **kwargs):
-        if not self.is_sd_ready():
-            return
-
-        tags = kwargs.get("tags", set()) | {"trigger:printer.release_sd_card"}
-
-        cast(PrinterFilesMixin, self._connection).unmount_printer_files(tags=tags)
-
+    @util.deprecated(
+        message="refresh_sd_files has been deprecated and will be removed in a future version. Please use the PrinterStorage instead.",
+        includedoc="Functionality moved to :class:`~octoprint.filemanager.storage.printer.PrinterStorage`",
+        since="1.12.0",
+    )
     def refresh_sd_files(self, blocking=False, *args, **kwargs):
-        if not self.is_sd_ready():
+        if not self.is_storage_mounted():
             return
 
-        tags = kwargs.get("tags", set()) | {"trigger:printer.refresh_sd_files"}
         timeout = kwargs.get("timeout", 10)
 
         cast(PrinterFilesMixin, self._connection).refresh_printer_files(
-            blocking=blocking, timeout=timeout, tags=tags
+            blocking=blocking, timeout=timeout
         )
 
     # ~~ ConnectedPrinterListenerMixin
@@ -1893,7 +1909,7 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
             error=self.is_error(),
             paused=self.is_paused(),
             ready=self.is_ready(),
-            sdReady=self.is_sd_ready(),
+            sdReady=self.is_storage_mounted(),
         )
 
     def _payload_for_print_job_event(

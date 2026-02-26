@@ -1020,19 +1020,37 @@ $(function () {
             });
         };
 
+        self.initPrinterStorage = function () {
+            if (!self.loginState.hasPermission(self.access.permissions.CONTROL)) return;
+            OctoPrint.printer.initStorage();
+        };
         self.initSdCard = function () {
-            if (!self.loginState.hasPermission(self.access.permissions.CONTROL)) return;
-            OctoPrint.printer.initSd();
+            log.warn(
+                "initSdCard has been deprecated as of OctoPrint 1.12.0, use initPrinterStorage instead"
+            );
+            self.initPrinterStorage();
         };
 
+        self.releasePrinterStorage = function () {
+            if (!self.loginState.hasPermission(self.access.permissions.CONTROL)) return;
+            OctoPrint.printer.releaseStorage();
+        };
         self.releaseSdCard = function () {
-            if (!self.loginState.hasPermission(self.access.permissions.CONTROL)) return;
-            OctoPrint.printer.releaseSd();
+            log.warn(
+                "releaseSdCard has been deprecated as of OctoPrint 1.12.0, use releasePrinterStorage instead"
+            );
+            self.releasePrinterStorage();
         };
 
-        self.refreshSdFiles = function () {
+        self.refreshPrinterStorage = function () {
             if (!self.loginState.hasPermission(self.access.permissions.CONTROL)) return;
-            OctoPrint.printer.refreshSd();
+            OctoPrint.files.listForLocation("printer", true, true);
+        };
+        self.refreshSdFiles = function () {
+            log.warn(
+                "refreshSdFiles has been deprecated as of OctoPrint 1.12.0, use the printer storage directly instead"
+            );
+            self.refreshPrinterStorage();
         };
 
         self.moveFileOrFolder = function (source, destination, storage) {

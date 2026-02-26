@@ -10,7 +10,7 @@
     var toolUrl = url + "/tool";
     var bedUrl = url + "/bed";
     var chamberUrl = url + "/chamber";
-    var sdUrl = url + "/sd";
+    var storageUrl = url + "/storage";
     var errorUrl = url + "/error";
 
     var OctoPrintPrinterClient = function (base) {
@@ -45,8 +45,18 @@
         return this.base.issueCommand(chamberUrl, command, payload, opts);
     };
 
+    OctoPrintPrinterClient.prototype.issueStorageCommand = function (
+        command,
+        payload,
+        opts
+    ) {
+        return this.base.issueCommand(storageUrl, command, payload, opts);
+    };
     OctoPrintPrinterClient.prototype.issueSdCommand = function (command, payload, opts) {
-        return this.base.issueCommand(sdUrl, command, payload, opts);
+        log.warn(
+            "OctoPrintClient.printer.issueSdCommand has been deprecated as of OctoPrint 1.12.0, use OctoPrintClient.printer.issueStorageCommand instead"
+        );
+        return this.base.issueStorageCommand(command, payload, opts);
     };
 
     OctoPrintPrinterClient.prototype.getFullState = function (flags, opts) {
@@ -67,7 +77,10 @@
             }
 
             if (exclude) {
-                getUrl += "exclude=" + exclude.join(",") + "&";
+                getUrl +=
+                    "exclude=" +
+                    exclude.map((val) => (val === "sd" ? "storage" : val)).join(",") +
+                    "&";
             }
         }
 
@@ -125,8 +138,14 @@
         return this.base.get(getUrl, opts);
     };
 
+    OctoPrintPrinterClient.prototype.getStorageState = function (opts) {
+        return this.base.get(storageUrl, opts);
+    };
     OctoPrintPrinterClient.prototype.getSdState = function (opts) {
-        return this.base.get(sdUrl, opts);
+        log.warn(
+            "OctoPrintClient.printer.getSdState has been deprecated as of OctoPrint 1.12.0, use OctoPrintClient.printer.getStorageState instead"
+        );
+        return OctoPrintClient.prototype.getStorageState(opts);
     };
 
     OctoPrintPrinterClient.prototype.getErrorInfo = function (opts) {
@@ -269,16 +288,31 @@
         return this.issueChamberCommand("offset", payload, opts);
     };
 
+    OctoPrintPrinterClient.prototype.initStorage = function (opts) {
+        return this.issueStorageCommand("init", {}, opts);
+    };
     OctoPrintPrinterClient.prototype.initSd = function (opts) {
-        return this.issueSdCommand("init", {}, opts);
+        log.warn(
+            "OctoPrintClient.printer.getSdState has been deprecated as of OctoPrint 1.12.0, use OctoPrintClient.printer.getStorageState instead"
+        );
+        return this.base.initStorage(opts);
+    };
+
+    OctoPrintPrinterClient.prototype.releaseStorage = function (opts) {
+        return this.issueStorageCommand("release", {}, opts);
+    };
+    OctoPrintPrinterClient.prototype.releaseSd = function (opts) {
+        log.warn(
+            "OctoPrintClient.printer.releaseSd has been deprecated as of OctoPrint 1.12.0, use OctoPrintClient.printer.releaseStorage instead"
+        );
+        return this.base.releaseStorage(opts);
     };
 
     OctoPrintPrinterClient.prototype.refreshSd = function (opts) {
-        return this.issueSdCommand("refresh", {}, opts);
-    };
-
-    OctoPrintPrinterClient.prototype.releaseSd = function (opts) {
-        return this.issueSdCommand("release", {}, opts);
+        log.warn(
+            "OctoPrintClient.printer.refreshSd has been deprecated as of OctoPrint 1.12.0, use OctoPrintClient.files.listForLocation instead"
+        );
+        return this.issueStorageCommand("refresh", {}, opts);
     };
 
     OctoPrintClient.registerComponent("printer", OctoPrintPrinterClient);
