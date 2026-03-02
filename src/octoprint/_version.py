@@ -42,32 +42,29 @@ import sys
 
 # Adjust this on every release (candidate) ----------------------------------------------
 
-BRANCH_VERSIONS = """
-# Configuration for the branch versions, manually mapping tags based on branches
-#
-# Format is
-#
-#   <branch-regex> <tag> <reference commit>
-#
-# The data is processed from top to bottom, the first matching line wins.
-
-# bugfix is the branch for preparation of the 1.11.x bugfix releases
-# so are any bug/... branches
-bugfix 1.11.7 4bef84e2966fc2eee8c8e7eed2c4f21be6a9c159
-bug/.* 1.11.7 4bef84e2966fc2eee8c8e7eed2c4f21be6a9c159
-
-# next is currently the branch for preparation of 1.11.0rc8
-# so is regression/...
-next 1.11.0rc8 82247d9679259c50a6552eb4cedbe16e9c4f8476
-regression/.* 1.11.0rc8 82247d9679259c50a6552eb4cedbe16e9c4f8476
-
-# dev is ongoing work towards 1.12.0
-# so are fix/... wip/...
-dev 1.12.0 ad3fdb9cb641b52db8e7f479d388c10317597c76
-fix/.* 1.12.0 ad3fdb9cb641b52db8e7f479d388c10317597c76
-wip/.* 1.12.0 ad3fdb9cb641b52db8e7f479d388c10317597c76
-dependabot/.* 1.12.0 ad3fdb9cb641b52db8e7f479d388c10317597c76
-"""
+BRANCH_VERSIONS = [
+    # bugfix is the branch for preparation of the 1.11.x bugfix releases
+    # so are any bug/... branches
+    {
+        "tag": "1.11.7",
+        "commit": "4bef84e2966fc2eee8c8e7eed2c4f21be6a9c159",
+        "patterns": ["bugfix", "bug/.*"],
+    },
+    # next is currently the branch for preparation of 1.11.0rc8
+    # so is regression/...
+    {
+        "tag": "1.11.0rc8",
+        "commit": "82247d9679259c50a6552eb4cedbe16e9c4f8476",
+        "patterns": ["next", "regression/*"],
+    },
+    # dev is ongoing work towards 1.12.0
+    # so are fix/..., wip/..., dependabot/...
+    {
+        "tag": "1.12.0",
+        "commit": "ad3fdb9cb641b52db8e7f479d388c10317597c76",
+        "patterns": ["dev", "fix/.*", "wip/.*", "dependabot/.*"],
+    },
+]
 
 # ---------------------------------------------------------------------------------------
 
@@ -213,27 +210,29 @@ def _parse_branch_versions():
     if not BRANCH_VERSIONS:
         return []
 
-    import re
-
     branch_versions = []
-    for line in BRANCH_VERSIONS.splitlines():
-        if "#" in line:
-            line = line[: line.index("#")]
-        line = line.strip()
-        if not line:
+
+    for item in BRANCH_VERSIONS:
+        tag = item.get("tag")
+        commit = item.get("commit")
+        patterns = item.get("patterns")
+
+        if tag is None or commit is None or patterns is None:
+            # invalid entry
             continue
 
-        try:
-            split_line = [x.strip() for x in line.split()]
-            if not len(split_line):
-                continue
-            if len(split_line) != 3:
+        if not isinstance(patterns, list):
+            # invalid entry
+            continue
+
+        for pattern in patterns:
+            try:
+                matcher = re.compile(pattern)
+                branch_versions.append([matcher, tag, commit])
+            except Exception:
+                # invalid pattern
                 continue
 
-            matcher = re.compile(split_line[0])
-            branch_versions.append([matcher, split_line[1], split_line[2]])
-        except Exception:
-            break
     return branch_versions
 
 
