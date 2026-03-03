@@ -1000,6 +1000,7 @@ def gcodeFileCommand(storage, path):
             "unselect": [],
             "slice": [],
             "analyse": [],
+            "refresh_thumbnails": [],
             "copy": ["destination"],
             "move": ["destination"],
             "uploadSd": [],
@@ -1277,6 +1278,26 @@ def gcodeFileCommand(storage, path):
                     storage, path, printer_profile_id=printer_profile
                 ):
                     abort(400, description="No analysis possible")
+
+        elif command == "refresh_thumbnails":
+            with Permissions.FILES_UPLOAD.require(403):
+                if not fileManager.capabilities(storage).thumbnails:
+                    abort(
+                        400,
+                        description=f"Thumbnails are not supported on storage {storage}",
+                    )
+
+                if not _verifyFileExists(storage, path) and not _verifyFolderExists(
+                    storage, path
+                ):
+                    abort(404)
+
+                recursive = data.get("recursive") in valid_boolean_trues
+                force = data.get("force") in valid_boolean_trues
+
+                fileManager.refresh_thumbnails(
+                    storage, path, force=force, recursive=recursive
+                )
 
         elif command == "copy" or command == "move":
             with Permissions.FILES_UPLOAD.require(403):

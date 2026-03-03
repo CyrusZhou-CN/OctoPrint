@@ -1393,6 +1393,11 @@ class FileManager:
     ) -> tuple[StorageThumbnail, IO]:
         return self._storage(location).read_thumbnail(path, sizehint=sizehint)
 
+    def refresh_thumbnails(
+        self, location, path, force: bool = False, recursive: bool = False
+    ) -> None:
+        self._storage(location).refresh_thumbnails(path, force=force, recursive=recursive)
+
     def get_additional_metadata(self, location, path, key):
         return self._storage(location).get_additional_metadata(path, key)
 

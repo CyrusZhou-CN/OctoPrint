@@ -705,6 +705,11 @@ class PrinterFilesMixin:
     ) -> Optional[tuple[StorageThumbnail, IO]]:
         return None
 
+    def refresh_thumbnails(
+        self, path: str, force: bool = False, recursive: bool = False
+    ) -> None:
+        pass
+
     def create_job(self, path: str, owner: str = None, params: dict = None) -> PrintJob:
         printer_file = self.get_printer_file(path)
         if not printer_file:

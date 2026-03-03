@@ -121,6 +121,21 @@
         return this.issueEntryCommand(location, path, "analyse", parameters || {}, opts);
     };
 
+    OctoPrintFilesClient.prototype.refreshThumbnails = function (
+        location,
+        path,
+        parameters,
+        opts
+    ) {
+        return this.issueEntryCommand(
+            location,
+            path,
+            "refresh_thumbnails",
+            parameters || {},
+            opts
+        );
+    };
+
     OctoPrintFilesClient.prototype.slice = function (location, path, parameters, opts) {
         return this.issueEntryCommand(location, path, "slice", parameters || {}, opts);
     };
