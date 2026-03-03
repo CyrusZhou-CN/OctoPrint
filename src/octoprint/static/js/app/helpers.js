@@ -1335,12 +1335,16 @@ function showProgressModal(options, promise) {
             }
         })
         .done(function () {
+            icon.addClass("fa-check");
             if (close && outcome) {
                 modal.modal("hide");
             }
         })
+        .fail(() => {
+            icon.addClass("fa-x");
+        })
         .always(function () {
-            icon.removeClass("fa-spinner fa-spin").addClass("fa-x");
+            icon.removeClass("fa-spinner fa-spin");
             button.prop("disabled", false);
         });
 
