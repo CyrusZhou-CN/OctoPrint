@@ -6018,16 +6018,17 @@ class PrintingGcodeFileInformation(PrintingFileInformation):
         self._offsets_callback = offsets_callback
         self._current_tool_callback = current_tool_callback
         self._close_on_eof = close_on_eof
+        self._start_pos = 0
 
         self._read_lines = 0
         if self._handle:
-            self._pos = self._handle.tell()
+            self._start_pos = self._pos = self._handle.tell()
 
             self._handle.seek(os.SEEK_END)
             self._size = self._handle.tell()
             self._handle.seek(self._pos)
         else:
-            self._pos = 0
+            self._start_pos = self._pos = 0
             if not os.path.exists(self._filename) or not os.path.isfile(self._filename):
                 raise OSError(f"File {self._filename} does not exist")
             self._size = os.stat(self._filename).st_size
@@ -6072,7 +6073,8 @@ class PrintingGcodeFileInformation(PrintingFileInformation):
         PrintingFileInformation.start(self)
         with self._handle_mutex:
             if self._handle:
-                # we initially got a file object
+                # we initially got a file object, reset it to the start position
+                self._handle.seek(self._start_pos)
                 self._pos = self._handle.tell()
             else:
                 bom = get_bom(self._filename, encoding="utf-8-sig")
@@ -6086,6 +6088,7 @@ class PrintingGcodeFileInformation(PrintingFileInformation):
                     # be stripped transparently and we'll have no chance
                     # catching that.
                     self._pos += len(bom)
+                self._start_pos = self._pos
             self._read_lines = 0
 
     def close(self):
