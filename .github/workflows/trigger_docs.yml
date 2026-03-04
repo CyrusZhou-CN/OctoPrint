@@ -9,13 +9,13 @@ on:
       - released
       - prereleased
 
+permissions: {}
+
 jobs:
   trigger:
     runs-on: ubuntu-latest
     if: github.repository == 'OctoPrint/OctoPrint'
     steps:
-      - uses: GitHubSecurityLab/actions-permissions/monitor@bf82d13b9b10051d224345ab9184f5ede0a94289 # v1.0.2-beta9
-
       - name: 🚀 Repository Dispatch
         uses: peter-evans/repository-dispatch@28959ce8df70de7be546dd1250a005dd32156697 # v4.0.1
         with:

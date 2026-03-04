@@ -3,8 +3,6 @@ rules:
     ignore:
       - add_to_backlog.yml
       - pr_automation.yml
-  excessive-permissions:
-    disable: true
   unpinned-uses:
     config:
       policies:

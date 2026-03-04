@@ -5,12 +5,13 @@ on:
   issue_comment:
     types: [created, edited]
 
+permissions:
+  issues: write
+
 jobs:
   process-bundles:
     runs-on: ubuntu-latest
     steps:
-      - uses: GitHubSecurityLab/actions-permissions/monitor@bf82d13b9b10051d224345ab9184f5ede0a94289 # v1.0.2-beta9
-
       - uses: OctoPrint/actions/process-systeminfo-bundles@main
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}

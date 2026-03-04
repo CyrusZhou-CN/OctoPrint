@@ -9,12 +9,13 @@ on:
     types:
       - opened
 
+permissions: {}
+
 jobs:
   add-to-project:
     name: Add issue or PR to OctoPrint Backlog project
     runs-on: ubuntu-latest
     steps:
-      - uses: GitHubSecurityLab/actions-permissions/monitor@bf82d13b9b10051d224345ab9184f5ede0a94289 # v1.0.2-beta9
       - uses: actions/add-to-project@244f685bbc3b7adfa8466e08b698b5577571133e # v1.0.2
         with:
           project-url: https://github.com/orgs/OctoPrint/projects/6
