@@ -5,7 +5,6 @@ from enum import Enum
 from typing import Optional, Union
 
 from octoprint.schema import BaseModel
-from octoprint.vendor.with_attrs_docs import with_attrs_docs
 
 
 class LayoutEnum(str, Enum):
@@ -14,7 +13,6 @@ class LayoutEnum(str, Enum):
     horizontal_grid = "horizontal_grid"
 
 
-@with_attrs_docs
 class CustomControlSlider(BaseModel):
     min: int = 0
     """Minimum value of the slider."""
@@ -26,7 +24,6 @@ class CustomControlSlider(BaseModel):
     """Step size per slider tick."""
 
 
-@with_attrs_docs
 class CustomControlInput(BaseModel):
     name: str
     """Name to display for the input field."""
@@ -41,7 +38,6 @@ class CustomControlInput(BaseModel):
     """If this attribute is included, instead of an input field a slider control will be rendered."""
 
 
-@with_attrs_docs
 class CustomControlContainer(BaseModel):
     children: list[Union["CustomControlContainer", "CustomControl"]] = []
     """A list of children controls or containers contained within this container."""
@@ -56,7 +52,6 @@ class CustomControlContainer(BaseModel):
     """Whether the container should start out collapsed by default."""
 
 
-@with_attrs_docs
 class CustomControl(BaseModel):
     name: str
     """The name of the control, will be displayed either on the button if it's a control sending a command or as a label for controls which only display output."""

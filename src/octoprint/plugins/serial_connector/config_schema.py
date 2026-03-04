@@ -2,7 +2,6 @@ from enum import Enum
 from typing import Optional
 
 from octoprint.schema import BaseModel
-from octoprint.vendor.with_attrs_docs import with_attrs_docs
 
 
 class AlwaysDetectNeverEnum(str, Enum):
@@ -29,7 +28,6 @@ class DisconnectCancelIgnoreEnum(str, Enum):
     ignore = "ignore"
 
 
-@with_attrs_docs
 class SerialTimeoutConfig(BaseModel):
     detectionFirst: float = 10.0
     """Timeout during initial detection attempt, in seconds."""
@@ -74,7 +72,6 @@ class SerialTimeoutConfig(BaseModel):
     """Time to wait to receive a position response before considering it unresponded, in seconds."""
 
 
-@with_attrs_docs
 class SerialMaxTimeouts(BaseModel):
     idle: int = 2
     """Max. timeouts when the printer is idle."""
@@ -86,7 +83,6 @@ class SerialMaxTimeouts(BaseModel):
     """Max. timeouts when a long running command is active."""
 
 
-@with_attrs_docs
 class SerialCapabilities(BaseModel):
     autoreport_temp: bool = True
     """Whether to enable temperature autoreport in the firmware if its support is detected."""
@@ -110,7 +106,6 @@ class SerialCapabilities(BaseModel):
     """Whether to enable long filename support for SD card writes if the firmware reports support for it."""
 
 
-@with_attrs_docs
 class SerialConfig(BaseModel):
     port: Optional[str] = None
     """The default port to use to connect to the printer. If unset or set to ``AUTO``, the port will be auto-detected."""

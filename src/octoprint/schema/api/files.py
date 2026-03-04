@@ -3,10 +3,8 @@ from typing import Optional, Union
 from pydantic import Field
 
 from octoprint.schema import BaseModel, BaseModelExtra
-from octoprint.vendor.with_attrs_docs import with_attrs_docs
 
 
-@with_attrs_docs
 class ApiAnalysisVolume(BaseModel):
     minX: float
     """Minimum X"""
@@ -22,7 +20,6 @@ class ApiAnalysisVolume(BaseModel):
     """Maximum Z"""
 
 
-@with_attrs_docs
 class ApiAnalysisDimensions(BaseModel):
     width: float
     """Width (X axis)"""
@@ -32,7 +29,6 @@ class ApiAnalysisDimensions(BaseModel):
     """Depth (Y axis)"""
 
 
-@with_attrs_docs
 class ApiAnalysisFilamentUse(BaseModel):
     length: Optional[float] = None
     """Length of used filament"""
@@ -42,7 +38,6 @@ class ApiAnalysisFilamentUse(BaseModel):
     """Weight of used filament"""
 
 
-@with_attrs_docs
 class ApiEntryAnalysis(BaseModelExtra):
     printingArea: Optional[ApiAnalysisVolume] = None
     """Bounding box of coordinates where extrusion happened"""
@@ -58,7 +53,6 @@ class ApiEntryAnalysis(BaseModelExtra):
     """Estimated filament use, mapping tool to stats"""
 
 
-@with_attrs_docs
 class ApiEntryLastPrint(BaseModel):
     success: bool
     """Whether the print was successful or not"""
@@ -70,7 +64,6 @@ class ApiEntryLastPrint(BaseModel):
     """Print duration"""
 
 
-@with_attrs_docs
 class ApiEntryPrints(BaseModel):
     success: int = 0
     """Number of successful prints"""
@@ -80,7 +73,6 @@ class ApiEntryPrints(BaseModel):
     """Information about the last print"""
 
 
-@with_attrs_docs
 class ApiEntryStatistics(BaseModelExtra):
     averagePrintTime: dict[str, float] = {}
     """Average print time of this item per printer profile"""
@@ -88,7 +80,6 @@ class ApiEntryStatistics(BaseModelExtra):
     """Last print time of this item per printer profile"""
 
 
-@with_attrs_docs
 class ApiStorageEntry(BaseModelExtra):
     name: str
     """Internal name"""
@@ -127,7 +118,6 @@ class ApiStorageEntry(BaseModelExtra):
     """
 
 
-@with_attrs_docs
 class ApiStorageFolder(ApiStorageEntry):
     children: list[Union["ApiStorageFile", "ApiStorageFolder"]] = []
     """Folder contents (files & other folders)"""
@@ -138,7 +128,6 @@ class ApiStorageFolder(ApiStorageEntry):
     """Always ``["folder"]`` for folders"""
 
 
-@with_attrs_docs
 class ApiStorageFile(ApiStorageEntry):
     gcodeAnalysis: Optional[ApiEntryAnalysis] = None
     """GCODE analysis result"""
@@ -147,7 +136,6 @@ class ApiStorageFile(ApiStorageEntry):
     """Print statistics"""
 
 
-@with_attrs_docs
 class ApiAddedEntry(BaseModel):
     name: str
     """Internal name"""
@@ -170,7 +158,6 @@ class ApiAddedEntry(BaseModel):
     """
 
 
-@with_attrs_docs
 class ApiStorageUsage(BaseModel):
     free: int
     """Free space on storage, in bytes"""
@@ -179,7 +166,6 @@ class ApiStorageUsage(BaseModel):
     """Total space on storage, in bytes"""
 
 
-@with_attrs_docs
 class ApiStorageData(BaseModelExtra):
     key: str
     """Storage key"""
@@ -200,7 +186,6 @@ class ApiStorageData(BaseModelExtra):
 ReadGcodeFilesResponse = dict[str, ApiStorageData]
 
 
-@with_attrs_docs
 class ReadGcodeFilesResponse_pre_1_12(BaseModel):
     files: list[Union[ApiStorageFile, ApiStorageFolder]]
     """List of files and folders from all storages"""
@@ -213,7 +198,6 @@ class ReadGcodeFilesResponse_pre_1_12(BaseModel):
 ReadGcodeFilesForOriginResponse = ApiStorageData
 
 
-@with_attrs_docs
 class ReadGcodeFilesForOriginResponse_pre_1_12(BaseModel):
     files: list[Union[ApiStorageFile, ApiStorageFolder]]
     """List of files and folders from storage"""
@@ -223,7 +207,6 @@ class ReadGcodeFilesForOriginResponse_pre_1_12(BaseModel):
     """Total space on storage in bytes, if available"""
 
 
-@with_attrs_docs
 class UploadResponse(BaseModel):
     file: Optional[ApiAddedEntry] = None
     """
@@ -255,7 +238,6 @@ class UploadResponse(BaseModel):
     """
 
 
-@with_attrs_docs
 class UploadResponse_pre_1_12(BaseModel):
     files: Optional[dict[str, ApiAddedEntry]] = None
     """

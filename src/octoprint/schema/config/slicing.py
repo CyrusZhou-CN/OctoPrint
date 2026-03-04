@@ -4,10 +4,8 @@ __copyright__ = "Copyright (C) 2022 The OctoPrint Project - Released under terms
 from typing import Optional
 
 from octoprint.schema import BaseModel
-from octoprint.vendor.with_attrs_docs import with_attrs_docs
 
 
-@with_attrs_docs
 class SlicingConfig(BaseModel):
     enabled: bool = True
     """Whether to enable slicing support or not."""

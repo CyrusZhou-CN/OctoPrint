@@ -6,10 +6,8 @@ from typing import Optional
 from pydantic import Field
 
 from octoprint.schema import BaseModel
-from octoprint.vendor.with_attrs_docs import with_attrs_docs
 
 
-@with_attrs_docs
 class ActionConfig(BaseModel):
     action: str
     """The identifier used internally to identify the action. Set to ``divider`` to generate a divider in the menu."""
@@ -30,7 +28,6 @@ class ActionConfig(BaseModel):
     """Whether to require a fresh credential check for executing the command."""
 
 
-@with_attrs_docs
 class SystemConfig(BaseModel):
     actions: list[ActionConfig] = []
     """A list of system actions to show in the UI."""

@@ -5,7 +5,6 @@ from enum import Enum
 from typing import Optional
 
 from octoprint.schema import BaseModel
-from octoprint.vendor.with_attrs_docs import with_attrs_docs
 
 CONST_15MIN = 15 * 60
 CONST_24H = 24 * 60
@@ -15,7 +14,6 @@ CONST_200MB = 200 * 1024 * 1024
 CONST_100KB = 100 * 1024
 
 
-@with_attrs_docs
 class ReverseProxyConfig(BaseModel):
     prefixHeader: Optional[str] = "X-Script-Name"
     """The request header from which to determine the URL prefix under which OctoPrint is served by the reverse proxy."""
@@ -90,7 +88,6 @@ class ReverseProxyConfig(BaseModel):
     """
 
 
-@with_attrs_docs
 class UploadsConfig(BaseModel):
     maxSize: int = CONST_1GB
     """Maximum size of uploaded files in bytes, defaults to 1GB."""
@@ -102,7 +99,6 @@ class UploadsConfig(BaseModel):
     """Suffix used for storing the path to the temporary file in the file upload headers when streaming uploads."""
 
 
-@with_attrs_docs
 class CommandsConfig(BaseModel):
     systemShutdownCommand: Optional[str] = None
     """Command to shut down the system OctoPrint is running on."""
@@ -123,7 +119,6 @@ class CommandsConfig(BaseModel):
     """
 
 
-@with_attrs_docs
 class OnlineCheckConfig(BaseModel):
     enabled: Optional[bool] = None
     """Whether the online check is enabled. Ships unset, the user will be asked to make a decision as part of the setup wizard."""
@@ -141,7 +136,6 @@ class OnlineCheckConfig(BaseModel):
     """Host name for which to check name resolution, defaults to OctoPrint's main domain."""
 
 
-@with_attrs_docs
 class PluginBlocklistConfig(BaseModel):
     enabled: Optional[bool] = None
     """Whether use of the blocklist is enabled. If unset, the user will be asked to make a decision as part of the setup wizard."""
@@ -156,7 +150,6 @@ class PluginBlocklistConfig(BaseModel):
     """Timeout for fetching the blocklist, in seconds (default: 3.05 seconds)."""
 
 
-@with_attrs_docs
 class DiskspaceConfig(BaseModel):
     warning: int = CONST_500MB
     """Threshold (bytes) after which to consider disk space becoming sparse, defaults to 500MB."""
@@ -165,7 +158,6 @@ class DiskspaceConfig(BaseModel):
     """Threshold (bytes) after which to consider disk space becoming critical, defaults to 200MB."""
 
 
-@with_attrs_docs
 class PreemptiveCacheConfig(BaseModel):
     exceptions: list[str] = []
     """Which server paths to exclude from the preemptive cache, e.g. ``/some/path``."""
@@ -174,7 +166,6 @@ class PreemptiveCacheConfig(BaseModel):
     """How many days to leave unused entries in the preemptive cache config."""
 
 
-@with_attrs_docs
 class IpCheckConfig(BaseModel):
     enabled: bool = True
     """Whether to enable the check."""
@@ -189,7 +180,6 @@ class SameSiteEnum(str, Enum):
     none = "None"
 
 
-@with_attrs_docs
 class CookiesConfig(BaseModel):
     secure: bool = False
     """Whether to set the ``Secure`` flag to true on cookies. Only set to true if you are running OctoPrint behind a reverse proxy taking care of SSL termination."""
@@ -207,7 +197,6 @@ class CookiesConfig(BaseModel):
     """
 
 
-@with_attrs_docs
 class PythonEolEntry(BaseModel):
     date: str
     """The date when the Python version will reach EOL, in format `YYYY-MM-DD`."""
@@ -216,7 +205,6 @@ class PythonEolEntry(BaseModel):
     """The last OctoPrint version that will support this Python version, optional."""
 
 
-@with_attrs_docs
 class PythonEolCheckConfig(BaseModel):
     enabled: bool = True
     """Whether to enable the Python EOL warning."""
@@ -234,7 +222,6 @@ class PythonEolCheckConfig(BaseModel):
     """Fallback data for Python EOL data, in case the online check fails."""
 
 
-@with_attrs_docs
 class ServerConfig(BaseModel):
     host: Optional[str] = None
     """Use this option to define the host to which to bind the server. If unset, OctoPrint will attempt to bind on all available interfaces, IPv4 and v6 unless either is disabled."""

@@ -4,7 +4,6 @@ __copyright__ = "Copyright (C) 2025 The OctoPrint Project - Released under terms
 from typing import Any
 
 from octoprint.schema import BaseModel
-from octoprint.vendor.with_attrs_docs import with_attrs_docs
 
 
 class PreferredConnection(BaseModel):
@@ -12,7 +11,6 @@ class PreferredConnection(BaseModel):
     parameters: dict[str, Any] = {}
 
 
-@with_attrs_docs
 class PrinterConnectionConfig(BaseModel):
     autorefresh: bool = True
     autorefreshInterval: int = 1

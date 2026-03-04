@@ -4,7 +4,6 @@ __copyright__ = "Copyright (C) 2022 The OctoPrint Project - Released under terms
 from enum import Enum
 
 from octoprint.schema import BaseModel
-from octoprint.vendor.with_attrs_docs import with_attrs_docs
 
 
 class StylesheetEnum(str, Enum):
@@ -12,7 +11,6 @@ class StylesheetEnum(str, Enum):
     less = "less"
 
 
-@with_attrs_docs
 class DevelWebassetsConfig(BaseModel):
     bundle: bool = True
     """
@@ -42,7 +40,6 @@ class DevelWebassetsConfig(BaseModel):
     """
 
 
-@with_attrs_docs
 class DevelCacheConfig(BaseModel):
     enabled: bool = True
     """Whether to enable caching. Defaults to true. Setting it to false will cause the UI to always be fully rerendered on request to ``/`` on the server."""
@@ -51,7 +48,6 @@ class DevelCacheConfig(BaseModel):
     """Whether to enable the preemptive cache."""
 
 
-@with_attrs_docs
 class DevelConfig(BaseModel):
     stylesheet: StylesheetEnum = StylesheetEnum.css
     """

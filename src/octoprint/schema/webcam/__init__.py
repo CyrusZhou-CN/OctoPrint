@@ -5,7 +5,6 @@ from enum import Enum
 from typing import Optional
 
 from octoprint.schema import BaseModel
-from octoprint.vendor.with_attrs_docs import with_attrs_docs
 
 
 class RatioEnum(str, Enum):
@@ -13,7 +12,6 @@ class RatioEnum(str, Enum):
     four_three = "4:3"
 
 
-@with_attrs_docs
 class WebcamCompatibility(BaseModel):
     streamTimeout: int = 5
     """The timeout of the stream in seconds"""
@@ -40,7 +38,6 @@ class WebcamCompatibility(BaseModel):
     """Whether to validate SSL certificates when retrieving a snapshot"""
 
 
-@with_attrs_docs
 class Webcam(BaseModel):
     name: str
     """Identifier of this webcam"""

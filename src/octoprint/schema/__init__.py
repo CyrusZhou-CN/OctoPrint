@@ -5,10 +5,16 @@ __copyright__ = "Copyright (C) 2022 The OctoPrint Project - Released under terms
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import ConfigDict
 
+CONFIG_KWARGS = {
+    "use_enum_values": True,
+    "validate_default": True,
+    "use_attribute_docstrings": True,
+}
+
 
 class BaseModel(PydanticBaseModel):
-    model_config = ConfigDict(use_enum_values=True, validate_default=True)
+    model_config = ConfigDict(**CONFIG_KWARGS)
 
 
 class BaseModelExtra(PydanticBaseModel):
-    model_config = ConfigDict(use_enum_values=True, validate_default=True, extra="allow")
+    model_config = ConfigDict(extra="allow", **CONFIG_KWARGS)

@@ -1,10 +1,8 @@
 from typing import Optional
 
 from octoprint.schema import BaseModel
-from octoprint.vendor.with_attrs_docs import with_attrs_docs
 
 
-@with_attrs_docs
 class ApiJobFile(BaseModel):
     name: Optional[str] = None
     """Internal name of the file being printed"""
@@ -20,7 +18,6 @@ class ApiJobFile(BaseModel):
     """Last modification date of the file being printed as timestamp"""
 
 
-@with_attrs_docs
 class ApiJobInfo(BaseModel):
     file: ApiJobFile
     """File being printed"""
@@ -32,13 +29,11 @@ class ApiJobInfo(BaseModel):
     """The use who started the job, if known"""
 
 
-@with_attrs_docs
 class ApiJobInfo_pre_1_12(ApiJobInfo):
     lastPrintTime: Optional[float] = None
     """The last print time in seconds"""
 
 
-@with_attrs_docs
 class ApiProgressInfo(BaseModel):
     completion: Optional[int] = None
     """Completion in percentage, if known"""
@@ -64,7 +59,6 @@ class ApiProgressInfo(BaseModel):
     """
 
 
-@with_attrs_docs
 class ApiJobResponse(BaseModel):
     job: ApiJobInfo
     """Information about the current job"""
@@ -76,7 +70,6 @@ class ApiJobResponse(BaseModel):
     """Error, if any"""
 
 
-@with_attrs_docs
 class ApiJobResponse_pre_1_12(ApiJobResponse):
     job: ApiJobInfo_pre_1_12
     """Information about the current job"""
