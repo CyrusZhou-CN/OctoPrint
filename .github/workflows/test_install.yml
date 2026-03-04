@@ -23,6 +23,7 @@ jobs:
         with:
           fetch-depth: 0
           path: src
+          persist-credentials: false
 
       - name: 🐍 Set up Python ${{ matrix.python }}
         uses: actions/setup-python@v6
@@ -37,6 +38,7 @@ jobs:
           ref: ${{ matrix.branch }}
           fetch-depth: 0
           path: checkout
+          persist-credentials: false
       - name: 👷 Build and install checkout
         if: ${{ matrix.branch != 'release' }}
         working-directory: checkout
