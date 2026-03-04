@@ -7,6 +7,7 @@ jobs:
   issue-automation:
     runs-on: ubuntu-latest
     steps:
+      - uses: GitHubSecurityLab/actions-permissions/monitor@bf82d13b9b10051d224345ab9184f5ede0a94289 # v1.0.2-beta9
       - uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
