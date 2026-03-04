@@ -30,7 +30,9 @@ jobs:
         if: github.event_name == 'pull_request'
         run: |
           # use base ref of PR as branch name for versioning
-          echo "GIT_VERSION_BRANCH=${{ github.event.pull_request.base.ref }}" >> $GITHUB_ENV
+          echo "GIT_VERSION_BRANCH=${GITHUB_EVENT_PULL_REQUEST_BASE_REF}" >> $GITHUB_ENV
+        env:
+          GITHUB_EVENT_PULL_REQUEST_BASE_REF: ${{ github.event.pull_request.base.ref }}
       - name: 🔨 Build distribution
         uses: OctoPrint/actions/build-dist@main
         with:
@@ -171,7 +173,7 @@ jobs:
           key: "${{ env.CACHE_KEY }}"
       - name: 🚀 Install OctoPrint
         run: |
-          pip install ${{ env.INSTALLABLE }}
+          pip install ${INSTALLABLE}
 
   test-e2e:
     name: 🧪 E2E tests

@@ -72,3 +72,7 @@ repos:
         args: ["--wrapper-quiet", "--clean-css=--s1 --advanced --compatibility=ie8"]
         additional_dependencies: ["less-plugin-clean-css"]
         files: ^(src/octoprint/static/less/(octoprint|recovery|login)\.less|src/octoprint/plugins/.*/static/less/.*\.less$)
+  - repo: https://github.com/zizmorcore/zizmor-pre-commit
+    rev: v1.22.0
+    hooks:
+      - id: zizmor

@@ -54,7 +54,7 @@ jobs:
       - name: 👷 Build and install latest release
         if: ${{ matrix.branch == 'release' }}
         run: |
-          pip install https://github.com/OctoPrint/OctoPrint/archive/${{ env.OCTOPRINT_VERSION }}.zip
+          pip install https://github.com/OctoPrint/OctoPrint/archive/${OCTOPRINT_VERSION}.zip
 
       # Test if server starts without error
       - name: 🏗 Create base config for test server
