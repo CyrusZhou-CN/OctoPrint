@@ -156,3 +156,10 @@ tasks:
     desc: Clean docs output
     cmds:
       - rm -r ./docs/_build
+
+  ### CI related
+
+  ci-update:
+    desc: Update GitHub Action workflow files to new versions of used actions
+    cmds:
+      - npx actions-up --include-branches
