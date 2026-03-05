@@ -469,16 +469,6 @@ class ConnectedSerialPrinter(ConnectedPrinter, PrinterFilesMixin):
         else:
             return self._comm.getErrorString()
 
-    def get_current_data(self, *args, **kwargs):  # TODO
-        return util.thaw_frozendict(self._stateMonitor.get_current_data())
-
-    def get_current_connection(self, *args, **kwargs):  # TODO
-        if self._comm is None:
-            return "Closed", None, None, None
-
-        port, baudrate = self._comm.getConnection()
-        return self._comm.getStateString(), port, baudrate, self._profile
-
     def is_ready(self, *args, **kwargs):
         return (
             self.is_operational()
@@ -762,7 +752,7 @@ class ConnectedSerialPrinter(ConnectedPrinter, PrinterFilesMixin):
     def on_comm_force_disconnect(self):
         self._listener.on_printer_disconnected()
 
-    def on_comm_record_fileposition(self, origin, name, pos):  # TODO
+    def on_comm_record_fileposition(self, origin, name, pos):
         self._listener.on_printer_record_recovery_position(self.current_job, pos)
 
     def on_comm_firmware_info(self, firmware_name, firmware_data):

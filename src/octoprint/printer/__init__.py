@@ -475,13 +475,6 @@ class CommonPrinterMixin:
     def unmount_storage(self, *args, **kwargs):
         """Tells the printer to unmount its internal storage (if supported)"""
 
-    def get_current_connection(self, *args, **kwargs):
-        """
-        Returns:
-            (tuple) The current connection information as a 4-tuple ``(connection_string, port, baudrate, printer_profile)``.
-                If the printer is currently not connected, the tuple will be ``("Closed", None, None, None)``.
-        """
-
     def is_closed_or_error(self, *args, **kwargs):
         """
         Returns:
@@ -928,6 +921,28 @@ class PrinterMixin(CommonPrinterMixin):
         Returns:
             object: The communication layer's transport object
         """
+
+    @deprecated(
+        message="get_current_connection has been replaced by connection_state. This compatibility layer will be removed in a future version.",
+        includedoc="Only functional if the current connector happens to be the bundled serial connector",
+        since="1.12.0",
+    )
+    def get_current_connection(self, *args, **kwargs):
+        """
+        Returns:
+            (tuple) The current connection information as a 4-tuple ``(connection_string, port, baudrate, printer_profile)``.
+                If the printer is currently not connected, or not connected through the serial connector, the tuple will be ``("Closed", None, None, None)``.
+        """
+        if self._connection is None or self._connection.connector != "serial":
+            return "Closed", None, None, None
+
+        parameters = self._connection.connection_parameters
+
+        port = parameters.get("port")
+        baudrate = parameters.get("baudrate")
+        profile = parameters.get("profile")
+
+        return self._connection.get_state_string(), port, baudrate, profile
 
     ### Printer storage stuff
 

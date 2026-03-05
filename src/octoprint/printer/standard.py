@@ -987,18 +987,6 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
     def get_temperature_history(self, *args, **kwargs):
         return list(self._temps)
 
-    def get_current_connection(self, *args, **kwargs):
-        if self._connection is None:
-            return "Closed", None, None, None
-
-        parameters = self._connection.connection_parameters
-
-        port = parameters.get("port")
-        baudrate = parameters.get("baudrate")
-        profile = parameters.get("profile")
-
-        return self._connection.get_state_string(), port, baudrate, profile
-
     def is_closed_or_error(self, *args, **kwargs):
         return self._connection is None or self._connection.is_closed_or_error()
 
@@ -1471,7 +1459,7 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
                 )
             )
 
-    def on_printer_job_cancelled(self, suppress_script=False, user=None):  # TODO
+    def on_printer_job_cancelled(self, suppress_script=False, user=None):
         self._update_progress_data()
 
         job_progress = self._connection.job_progress if self._connection else None
