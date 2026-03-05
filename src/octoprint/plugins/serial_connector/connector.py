@@ -139,6 +139,9 @@ class ConnectedSerialPrinter(ConnectedPrinter, PrinterFilesMixin):
         )
         self._comm.start()
 
+        # send an initial tool update
+        self._listener.on_printer_position_changed({"t": self._comm.getCurrentTool()})
+
     def disconnect(self, *args, **kwargs):
         if self._comm is not None:
             self._comm.close()
@@ -679,10 +682,6 @@ class ConnectedSerialPrinter(ConnectedPrinter, PrinterFilesMixin):
         self._listener.on_printer_job_progress()
         if self._progress_callback:
             self._progress_callback(progress=int(self.job_progress.progress * 100))
-
-    def on_comm_z_change(self, newZ):
-        # intentionally disabled - event now gets triggered in comm, no more push upwards
-        pass
 
     def on_comm_sd_state_change(self, sdReady):
         self._listener.on_printer_files_available(sdReady)

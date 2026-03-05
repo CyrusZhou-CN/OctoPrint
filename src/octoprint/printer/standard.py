@@ -111,6 +111,9 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
         self._messages = deque([], 300)
         self._log = deque([], 300)
 
+        self._last_z = None
+        self._last_t = None
+
         self._state: ConnectedPrinterState = ConnectedPrinterState.CLOSED
 
         self._print_after_select = False
@@ -1530,10 +1533,20 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
             thread.daemon = True
             thread.start()
 
-    def on_printer_position_changed(self, position, reason=None):
-        payload = {"reason": reason}
-        payload.update(position)
-        eventManager().fire(Events.POSITION_UPDATE, payload)
+    def on_printer_position_changed(self, position, reason: str = None):
+        if "z" in position:
+            # track z changes (we know of)
+            self._stateMonitor.set_current_z(position["z"])
+
+        if "t" in position:
+            # track tool changes (we know of)
+            self._stateMonitor.set_current_t(position["t"])
+
+        if all(axis in position for axis in ("x", "y", "z", "e", "t", "f")):
+            # only send full position reports onwards
+            payload = {"reason": reason}
+            payload.update(position)
+            eventManager().fire(Events.POSITION_UPDATE, payload)
 
     def on_printer_temperature_update(self, temperatures):
         self._add_temperature_data(temperatures)
@@ -1978,6 +1991,8 @@ class StateMonitor:
         self._offsets = {}
         self._progress = None
         self._resends = None
+        self._current_z = None
+        self._current_t = None
 
         self._progress_dirty = False
         self._resends_dirty = False
@@ -2009,12 +2024,16 @@ class StateMonitor:
         progress=None,
         offsets=None,
         resends=None,
+        z=None,
+        t=None,
     ):
         self.set_state(state)
         self.set_job_data(job_data)
         self.set_progress(progress)
         self.set_temp_offsets(offsets)
         self.set_resends(resends)
+        self.set_current_z(z)
+        self.set_current_t(t)
 
     def add_temperature(self, temperature):
         self._on_add_temperature(temperature)
@@ -2062,6 +2081,16 @@ class StateMonitor:
         self._offsets = offsets
         self._change_event.set()
 
+    def set_current_z(self, z):
+        if z != self._current_z:
+            self._current_z = z
+            self._change_event.set()
+
+    def set_current_t(self, t):
+        if t != self._current_t:
+            self._current_t = t
+            self._change_event.set()
+
     def _work(self):
         try:
             while True:
@@ -2102,6 +2131,8 @@ class StateMonitor:
             "progress": self._progress,
             "offsets": self._offsets,
             "resends": self._resends,
+            "currentZ": self._current_z,
+            "currentTool": self._current_t,
         }
 
 

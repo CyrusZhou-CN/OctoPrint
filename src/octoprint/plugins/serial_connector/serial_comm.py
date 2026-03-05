@@ -5274,6 +5274,7 @@ class MachineCom:
                 Events.TOOL_CHANGE,
                 {"old": self._toolBeforeChange, "new": self._currentTool},
             )
+            self._callback.on_comm_position_update({"t": new_tool})
 
     def _gcode_G0_sent(
         self, cmd, cmd_type=None, gcode=None, subcode=None, *args, **kwargs
@@ -5289,7 +5290,7 @@ class MachineCom:
                             Events.Z_CHANGE, {"new": z, "old": self._currentZ}
                         )
                         self._currentZ = z
-                        self._callback.on_comm_z_change(z)
+                        self._callback.on_comm_position_update({"z": z})
                 except ValueError:
                     pass
 
@@ -5844,9 +5845,6 @@ class MachineComPrintCallback:
         pass
 
     def on_comm_print_job_resumed(self, suppress_script=False, user=None):
-        pass
-
-    def on_comm_z_change(self, newZ):
         pass
 
     def on_comm_file_selected(self, filename, filesize, sd, user=None, data=None):
