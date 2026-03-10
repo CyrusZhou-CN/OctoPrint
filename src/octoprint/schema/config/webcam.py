@@ -5,7 +5,6 @@ from enum import Enum
 from typing import Optional
 
 from octoprint.schema import BaseModel
-from octoprint.vendor.with_attrs_docs import with_attrs_docs
 
 
 class TimelapseTypeEnum(str, Enum):
@@ -21,7 +20,6 @@ class RenderAfterPrintEnum(str, Enum):
     failure = "failure"
 
 
-@with_attrs_docs
 class TimelapseOptions(BaseModel):
     interval: Optional[int] = None
     """``timed`` timelapses only: The interval which to leave between images in seconds."""
@@ -33,7 +31,6 @@ class TimelapseOptions(BaseModel):
     """``zchange`` timelapses only: z-hop height during retractions to ignore for capturing snapshots."""
 
 
-@with_attrs_docs
 class TimelapseConfig(BaseModel):
     type: TimelapseTypeEnum = TimelapseTypeEnum.off
     """The timelapse type."""
@@ -58,7 +55,6 @@ class TimelapseConfig(BaseModel):
     """Additional options depending on the timelapse type."""
 
 
-@with_attrs_docs
 class WebcamConfig(BaseModel):
     webcamEnabled: bool = True
     """Use this option to enable display of a webcam stream in the UI, e.g. via MJPG-Streamer. Webcam support will be disabled if not set."""

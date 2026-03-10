@@ -29,7 +29,7 @@ class PythonEolHealthCheck(HealthCheck):
         today_obj = datetime.date.today()
         today = today_obj.isoformat()
 
-        major = sys.version_info.major
+        major = str(sys.version_info.major)
         major_minor = f"{sys.version_info.major}.{sys.version_info.minor}"
 
         # major, major_minor = ("3", "3.7")  # for testing

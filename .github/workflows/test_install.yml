@@ -8,6 +8,9 @@ on:
   schedule:
     - cron: "0 */12 * * *"
 
+permissions:
+  contents: read
+
 jobs:
   install-branch:
     name: Install branch
@@ -19,24 +22,26 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: ⬇ Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
           path: src
+          persist-credentials: false
 
       - name: 🐍 Set up Python ${{ matrix.python }}
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ matrix.python }}
 
       # Checkout code and install
       - name: ⬇ Checkout code to test
         if: ${{ matrix.branch != 'release' }}
-        uses: actions/checkout@v5
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ matrix.branch }}
           fetch-depth: 0
           path: checkout
+          persist-credentials: false
       - name: 👷 Build and install checkout
         if: ${{ matrix.branch != 'release' }}
         working-directory: checkout
@@ -52,7 +57,7 @@ jobs:
       - name: 👷 Build and install latest release
         if: ${{ matrix.branch == 'release' }}
         run: |
-          pip install https://github.com/OctoPrint/OctoPrint/archive/${{ env.OCTOPRINT_VERSION }}.zip
+          pip install https://github.com/OctoPrint/OctoPrint/archive/${OCTOPRINT_VERSION}.zip
 
       # Test if server starts without error
       - name: 🏗 Create base config for test server
@@ -80,7 +85,7 @@ jobs:
         continue-on-error: true
         env:
           DISCORD_WEBHOOK: ${{ secrets.discord_webhook }}
-        uses: Ilshidur/action-discord@master
+        uses: Ilshidur/action-discord@d2594079a10f1d6739ee50a2471f0ca57418b554 # 0.4.0
         with:
           args: "☑️ Test install on Python ${{ matrix.python }} under `${{ matrix.os }}` for `OctoPrint/OctoPrint:${{ matrix.branch }}` was successful"
       - name: 📧 Discord failure notification
@@ -88,6 +93,6 @@ jobs:
         if: failure()
         env:
           DISCORD_WEBHOOK: ${{ secrets.discord_webhook }}
-        uses: Ilshidur/action-discord@master
+        uses: Ilshidur/action-discord@d2594079a10f1d6739ee50a2471f0ca57418b554 # 0.4.0
         with:
           args: "🚫 Test install on Python ${{ matrix.python }} under `${{ matrix.os }}` for `OctoPrint/OctoPrint:${{ matrix.branch }}` failed"

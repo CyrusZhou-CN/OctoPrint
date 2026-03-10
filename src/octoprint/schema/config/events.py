@@ -5,7 +5,6 @@ from enum import Enum
 from typing import Optional
 
 from octoprint.schema import BaseModel
-from octoprint.vendor.with_attrs_docs import with_attrs_docs
 
 
 class SubscriptionTypeEnum(str, Enum):
@@ -13,7 +12,6 @@ class SubscriptionTypeEnum(str, Enum):
     gcode = "gcode"
 
 
-@with_attrs_docs
 class EventSubscription(BaseModel):
     event: str
     """The event to subscribe to."""
@@ -34,7 +32,6 @@ class EventSubscription(BaseModel):
     """If set to ``true``, OctoPrint will log the command after performing all placeholder replacements."""
 
 
-@with_attrs_docs
 class EventsConfig(BaseModel):
     enabled: bool = True
     """Whether event subscriptions should be enabled or not."""

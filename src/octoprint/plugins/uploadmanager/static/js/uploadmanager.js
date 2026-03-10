@@ -1105,6 +1105,50 @@ $(function () {
             }
         };
 
+        self.refreshingThumbnails = ko.observable(false);
+        self.enableRefreshThumbnails = () => {
+            const selected = self.selectedFiles();
+            if (!selected || selected.length === 0) return false;
+
+            const capabilities = self.files.storageCapabilities(selected[0].origin);
+            return capabilities.thumbnails;
+        };
+        self.refreshThumbnails = () => {
+            if (!self.enableRefreshThumbnails()) return;
+
+            const files = self.selectedFiles();
+            if (files.length === 0) return;
+
+            self.refreshingThumbnails(true);
+            if (files.length > 1) {
+                self._bulkAction(
+                    (file) => {
+                        return OctoPrint.files.refreshThumbnails(file.origin, file.path, {
+                            force: true
+                        });
+                    },
+                    gettext("Refreshing thumbnails"),
+                    gettext("Refreshing thumbnails for %(count)d items..."),
+                    gettext("Refreshing thumbnails for %(filename)s..."),
+                    gettext("Refreshed thumbnails for %(filename)s..."),
+                    gettext(
+                        "Refreshing thumbnails of %(filename)s failed, continuing..."
+                    ),
+                    gettext("Refreshing thumbnails of %(filename)s failed: %(error)s")
+                ).always(() => {
+                    self.refreshingThumbnails(false);
+                });
+            } else {
+                OctoPrint.files
+                    .refreshThumbnails(files[0].origin, files[0].path, {
+                        force: true
+                    })
+                    .always(() => {
+                        self.refreshingThumbnails(false);
+                    });
+            }
+        };
+
         self._bulkAction = (
             callback,
             title,

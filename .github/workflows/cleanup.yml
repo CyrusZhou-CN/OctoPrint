@@ -5,12 +5,17 @@ on:
     - cron: "42 23 * * *"
   workflow_dispatch:
 
+permissions: {}
+
 jobs:
   lock:
     name: 🔒 Lock issues & PRs closed over a year
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
     steps:
-      - uses: dessant/lock-threads@v5
+      - uses: dessant/lock-threads@7266a7ce5c1df01b1c6db85bf8cd86c737dadbe7 # v6.0.0
         with:
           github-token: ${{ github.token }}
           process-only: "issues, prs"
@@ -18,6 +23,8 @@ jobs:
   cleanup:
     name: 🧹 Close issues marked as incomplete & older than 14 days
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
     steps:
       - id: date
         run: |

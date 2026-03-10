@@ -1016,8 +1016,8 @@ def _get_serial_settings():
         "baudrate": preferred_connection_params.get("baudrate"),
         "exclusive": s.getBoolean(["plugins", "serial_connector", "exclusive"]),
         "lowLatency": s.getBoolean(["plugins", "serial_connector", "lowLatency"]),
-        "portOptions": connection_options.get("ports", []),
-        "baudrateOptions": connection_options.get("baudrates", []),
+        "portOptions": connection_options.get("port", []),
+        "baudrateOptions": connection_options.get("baudrate", []),
         "autoconnect": s.getBoolean(["plugins", "serial_connector", "autoconnect"]),
         "timeoutConnection": s.getFloat(
             ["plugins", "serial_connector", "timeout", "connection"]
@@ -1108,7 +1108,7 @@ def _get_serial_settings():
         ),
         "alwaysSendChecksum": s.get(["plugins", "serial_connector", "sendChecksum"])
         == "always",
-        "neverSendChecksum": s.getBoolean(["plugins", "serial_connector", "sendChecksum"])
+        "neverSendChecksum": s.get(["plugins", "serial_connector", "sendChecksum"])
         == "never",
         "sendChecksumWithUnknownCommands": s.getBoolean(
             ["plugins", "serial_connector", "sendChecksumWithUnknownCommands"]

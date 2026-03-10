@@ -1188,7 +1188,7 @@ class FileManager:
                                 f"Error while removing file from storage {source_storage}"
                             )
                             raise StorageError(
-                                f"Unexpected error while file from storage {source_storage}",
+                                f"Unexpected error while removing file from storage {source_storage}",
                                 code=StorageError.UNKNOWN,
                                 cause=exc,
                             ) from exc
@@ -1392,6 +1392,11 @@ class FileManager:
         self, location, path, sizehint=None
     ) -> tuple[StorageThumbnail, IO]:
         return self._storage(location).read_thumbnail(path, sizehint=sizehint)
+
+    def refresh_thumbnails(
+        self, location, path, force: bool = False, recursive: bool = False
+    ) -> None:
+        self._storage(location).refresh_thumbnails(path, force=force, recursive=recursive)
 
     def get_additional_metadata(self, location, path, key):
         return self._storage(location).get_additional_metadata(path, key)

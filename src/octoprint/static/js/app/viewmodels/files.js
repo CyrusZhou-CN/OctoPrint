@@ -29,7 +29,6 @@ $(function () {
         });
 
         self.uploadButton = undefined;
-        self.uploadProgressBar = undefined;
 
         self.dropOverlay = undefined;
         self.dropZone = undefined;
@@ -316,6 +315,7 @@ $(function () {
 
         self.uploadProgressText = ko.observable();
         self.uploadProgressPercentage = ko.observable();
+        self.uploadProgressActive = ko.observable();
 
         // list style incl. persistence
         var listStyleStorageKey = "gcodeFiles.currentListStyle";
@@ -634,7 +634,10 @@ $(function () {
                 }
             }
 
-            self._filesToFocus = self._filesToFocus || focus;
+            self._filesToFocus =
+                self._filesToFocus && self._filesToFocus.length
+                    ? self._filesToFocus
+                    : focus;
             self._switchToPath = self._switchToPath || switchToPath;
 
             if (self._otherRequestInProgress !== undefined) {
@@ -819,10 +822,12 @@ $(function () {
                 .createFolder(storage, name, self.currentPath())
                 .done(function (data) {
                     self.requestData({
-                        focus: {
-                            path: data.folder.name,
-                            location: data.folder.origin
-                        }
+                        focus: [
+                            {
+                                path: data.folder.name,
+                                location: data.folder.origin
+                            }
+                        ]
                     })
                         .done(function () {
                             self.addFolderDialog.modal("hide");
@@ -1015,19 +1020,37 @@ $(function () {
             });
         };
 
+        self.initPrinterStorage = function () {
+            if (!self.loginState.hasPermission(self.access.permissions.CONTROL)) return;
+            OctoPrint.printer.initStorage();
+        };
         self.initSdCard = function () {
-            if (!self.loginState.hasPermission(self.access.permissions.CONTROL)) return;
-            OctoPrint.printer.initSd();
+            log.warn(
+                "initSdCard has been deprecated as of OctoPrint 1.12.0, use initPrinterStorage instead"
+            );
+            self.initPrinterStorage();
         };
 
+        self.releasePrinterStorage = function () {
+            if (!self.loginState.hasPermission(self.access.permissions.CONTROL)) return;
+            OctoPrint.printer.releaseStorage();
+        };
         self.releaseSdCard = function () {
-            if (!self.loginState.hasPermission(self.access.permissions.CONTROL)) return;
-            OctoPrint.printer.releaseSd();
+            log.warn(
+                "releaseSdCard has been deprecated as of OctoPrint 1.12.0, use releasePrinterStorage instead"
+            );
+            self.releasePrinterStorage();
         };
 
-        self.refreshSdFiles = function () {
+        self.refreshPrinterStorage = function () {
             if (!self.loginState.hasPermission(self.access.permissions.CONTROL)) return;
-            OctoPrint.printer.refreshSd();
+            OctoPrint.files.listForLocation("printer", true, true);
+        };
+        self.refreshSdFiles = function () {
+            log.warn(
+                "refreshSdFiles has been deprecated as of OctoPrint 1.12.0, use the printer storage directly instead"
+            );
+            self.refreshPrinterStorage();
         };
 
         self.moveFileOrFolder = function (source, destination, storage) {
@@ -1789,9 +1812,6 @@ $(function () {
 
             self.uploadButton = $("#gcode_upload");
 
-            self.uploadProgress = $("#gcode_upload_progress");
-            self.uploadProgressBar = $(".bar", self.uploadProgress);
-
             self.dropOverlay = $("#drop_overlay");
             self.dropZone = $("#drop");
             self.dropZoneBackground = $("#drop_background");
@@ -1817,8 +1837,8 @@ $(function () {
         };
 
         self.onEventSlicingStarted = function (payload) {
-            self.uploadProgress.addClass("progress-striped").addClass("active");
-            self.uploadProgressBar.css("width", "100%");
+            self.uploadProgressActive(true);
+            self.uploadProgressPercentage(100);
             if (payload.progressAvailable) {
                 self.uploadProgressPercentage(0);
                 self.uploadProgressText(
@@ -1839,15 +1859,13 @@ $(function () {
         };
 
         self.onEventSlicingCancelled = function (payload) {
-            self.uploadProgress.removeClass("progress-striped").removeClass("active");
-            self.uploadProgressBar.css("width", "0%");
+            self.uploadProgressActive(false);
             self.uploadProgressText("");
             self.uploadProgressPercentage(0);
         };
 
         self.onEventSlicingDone = function (payload) {
-            self.uploadProgress.removeClass("progress-striped").removeClass("active");
-            self.uploadProgressBar.css("width", "0%");
+            self.uploadProgressActive(false);
             self.uploadProgressText("");
             self.uploadProgressPercentage(0);
 
@@ -1868,8 +1886,7 @@ $(function () {
         };
 
         self.onEventSlicingFailed = function (payload) {
-            self.uploadProgress.removeClass("progress-striped").removeClass("active");
-            self.uploadProgressBar.css("width", "0%");
+            self.uploadProgressActive(false);
             self.uploadProgressText("");
             self.uploadProgressPercentage(0);
 
@@ -1898,15 +1915,13 @@ $(function () {
         };
 
         self.onEventTransferStarted = function (payload) {
-            self.uploadProgress.addClass("progress-striped").addClass("active");
-            self.uploadProgressBar.css("width", "100%");
+            self.uploadProgressActive(true);
             self.uploadProgressPercentage(100);
             self.uploadProgressText(gettext("Streaming ..."));
         };
 
         self.onEventTransferDone = function (payload) {
-            self.uploadProgress.removeClass("progress-striped").removeClass("active");
-            self.uploadProgressBar.css("width", "0");
+            self.uploadProgressActive(false);
             self.uploadProgressText("");
             self.uploadProgressPercentage(0);
 
@@ -1925,12 +1940,11 @@ $(function () {
                 type: "success"
             });
 
-            self.requestData({focus: {location: "printer", path: payload.remote}});
+            self.requestData({focus: [{location: "printer", path: payload.remote}]});
         };
 
         self.onEventTransferFailed = function (payload) {
-            self.uploadProgress.removeClass("progress-striped").removeClass("active");
-            self.uploadProgressBar.css("width", "0");
+            self.uploadProgressActive(false);
             self.uploadProgressText("");
             self.uploadProgressPercentage(0);
 
@@ -1991,15 +2005,9 @@ $(function () {
         };
 
         self._setProgressBar = function (percentage, text, active) {
-            self.uploadProgressBar.css("width", percentage + "%");
             self.uploadProgressText(text);
             self.uploadProgressPercentage(percentage);
-
-            if (active) {
-                self.uploadProgress.addClass("progress-striped active");
-            } else {
-                self.uploadProgress.removeClass("progress-striped active");
-            }
+            self.uploadProgressActive(active);
         };
 
         self._uploadExistsQueue = []; // Files will be in this queue if their test fails and something needs to be done
@@ -2161,16 +2169,14 @@ $(function () {
         };
 
         self._handleUploadDone = function (e, data) {
-            var focus = undefined;
-            if (data.result.files.hasOwnProperty("printer")) {
-                focus = {location: "printer", path: data.result.files.printer.path};
-            } else if (data.result.files.hasOwnProperty("local")) {
-                focus = {location: "local", path: data.result.files.local.path};
+            const focus = {
+                location: data.result.file.origin,
+                path: data.result.file.path
+            };
+            if (!self._filesToFocus) {
+                self._filesToFocus = [];
             }
-
-            if (focus) {
-                self._filesToFocus.push(focus);
-            }
+            self._filesToFocus.push(focus);
 
             if (focus && _.endsWith(focus.path.toLowerCase(), ".stl")) {
                 self.slicing.show(focus.location, focus.path);
@@ -2183,7 +2189,7 @@ $(function () {
                 self._setProgressBar(0, "", false);
             };
 
-            if (self._filesToFocus.length > 0) {
+            if (self._filesToFocus && self._filesToFocus.length > 0) {
                 // Only refresh the list if there were files uploaded successfully
                 self._setProgressBar(100, gettext("Refreshing list ..."), true);
                 self.requestData({focus: self._filesToFocus}).always(function () {

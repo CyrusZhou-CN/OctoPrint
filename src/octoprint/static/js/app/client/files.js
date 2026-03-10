@@ -75,9 +75,23 @@
         recursively,
         opts
     ) {
+        let force;
+        if (typeof opts === "boolean") {
+            force = opts;
+            opts = {};
+        } else {
+            force = false;
+        }
+
         recursively = recursively || false;
+        force = force || false;
+
         return this.base
-            .getWithQuery(resourceForLocation(location), {recursive: recursively}, opts)
+            .getWithQuery(
+                resourceForLocation(location),
+                {recursive: recursively, force: force},
+                opts
+            )
             .done(preProcessList);
     };
 
@@ -105,6 +119,21 @@
 
     OctoPrintFilesClient.prototype.analyse = function (location, path, parameters, opts) {
         return this.issueEntryCommand(location, path, "analyse", parameters || {}, opts);
+    };
+
+    OctoPrintFilesClient.prototype.refreshThumbnails = function (
+        location,
+        path,
+        parameters,
+        opts
+    ) {
+        return this.issueEntryCommand(
+            location,
+            path,
+            "refresh_thumbnails",
+            parameters || {},
+            opts
+        );
     };
 
     OctoPrintFilesClient.prototype.slice = function (location, path, parameters, opts) {

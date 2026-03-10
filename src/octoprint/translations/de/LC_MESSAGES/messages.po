@@ -3,9 +3,9 @@
 # This file is distributed under the same license as the OctoPrint project.
 msgid ""
 msgstr ""
-"Project-Id-Version: OctoPrint 1.11.6\n"
+"Project-Id-Version: OctoPrint 1.11.7\n"
 "Report-Msgid-Bugs-To: i18n@octoprint.org\n"
-"POT-Creation-Date: 2026-01-27 10:43+0100\n"
+"POT-Creation-Date: 2026-02-17 16:43+0100\n"
 "PO-Revision-Date: 2025-12-01 12:05+0100\n"
 "Last-Translator: Gina Häußge <gina@octoprint.org>\n"
 "Language: de\n"
@@ -49,7 +49,7 @@ msgstr ""
 #: src/octoprint/access/permissions.py:317
 msgid ""
 "Allows to retrieve a list of all uploaded files and folders, "
-"includingtheir metadata (e.g. date, file size, analysis results, ...)"
+"including their metadata (e.g. date, file size, analysis results, ...)"
 msgstr ""
 "Erlaubt das Abrufen eines Liste aller hochgeladenen Dateien und "
 "Verzeichnisse, inkl. ihrer Metadaten (z.B. Datum, Dateigröße, "
@@ -93,7 +93,7 @@ msgstr "Erlaubt das starten, pausieren und abbrechen eines Druckauftrags"
 
 #: src/octoprint/access/permissions.py:368
 msgid ""
-"Allows access to the GCODE viewer if the \"File Download\"permission is "
+"Allows access to the GCODE viewer if the \"File Download\" permission is "
 "also set."
 msgstr ""
 "Erlaubt den Zugriff auf den GCODE viewer falls die \"File Download\" "
@@ -109,7 +109,7 @@ msgstr ""
 
 #: src/octoprint/access/permissions.py:388
 msgid ""
-"Allows to control of the printer by using the temperature controls,the "
+"Allows to control of the printer by using the temperature controls, the "
 "control tab or sending commands through the terminal."
 msgstr ""
 "Erlaubt vollen Zugriff auf den Drucker, inkl. Temperatur, Steuerung oder "
@@ -229,40 +229,40 @@ msgstr ""
 #: src/octoprint/plugins/achievements/static/js/achievements.js:234
 msgid "This will reset this year's stats. This action cannot be undone!"
 msgstr ""
-"Das wird die Statistiken dieses Jahres zurücksetzen. Diese Aktion kann nicht "
-"rückgängig gemacht werden!"
+"Das wird die Statistiken dieses Jahres zurücksetzen. Diese Aktion kann "
+"nicht rückgängig gemacht werden!"
 
 #: src/octoprint/plugins/achievements/static/js/achievements.js:304
 #, python-format
 msgid ""
 "Enjoying OctoPrint? Looks like it! <a href=\"%(url)s\" target=\"_blank\" "
-"rel=\"noopener noreferer\">It might be time to give something back "
+"rel=\"noopener noreferrer\">It might be time to give something back "
 "then</a> - thank you!"
 msgstr ""
 "Gefällt dir OctoPrint? Es scheint so! <a href=\"%(url)s\" "
-"target=\"_blank\" rel=\"noopener noreferer\">Dann könnte es Zeit sein, "
+"target=\"_blank\" rel=\"noopener noreferrer\">Dann könnte es Zeit sein, "
 "etwas zurückzugeben</a> - Danke!"
 
 #: src/octoprint/plugins/achievements/static/js/achievements.js:307
 #, python-format
 msgid ""
 "Getting value from OctoPrint? <a href=\"%(url)s\" target=\"_blank\" "
-"rel=\"noopener noreferer\">Then please consider supporting its sole "
+"rel=\"noopener noreferrer\">Then please consider supporting its sole "
 "maintainer with a donation</a> - thank you!"
 msgstr ""
 "Erhältst du einen Mehrwert von OctoPrint? <a href=\"%(url)s\" "
-"target=\"_blank\" rel=\"noopener noreferer\">Dann denke bitte über eine "
+"target=\"_blank\" rel=\"noopener noreferrer\">Dann denke bitte über eine "
 "Spende an seine Vollzeit-Entwicklerin nach</a> - Danke!"
 
 #: src/octoprint/plugins/achievements/static/js/achievements.js:310
 #, python-format
 msgid ""
 "Has OctoPrint helped you enjoy your printer more? <a href=\"%(url)s\" "
-"target=\"_blank\" rel=\"noopener noreferer\">Then please consider "
+"target=\"_blank\" rel=\"noopener noreferrer\">Then please consider "
 "supporting its continued development</a> - thank you!"
 msgstr ""
 "Hat dir OctoPrint geholfen, deinen Drucker mehr zu genießen? <a "
-"href=\"%(url)s\" target=\"_blank\" rel=\"noopener noreferer\">Dann denke "
+"href=\"%(url)s\" target=\"_blank\" rel=\"noopener noreferrer\">Dann denke "
 "bitte über eine Unterstützung der weiteren Entwicklung nach</a> - Danke!"
 
 #: src/octoprint/plugins/achievements/static/js/achievements.js:322
@@ -491,13 +491,13 @@ msgid ""
 "Use this to write a valid <em>regular expression</em> to hide "
 "notifications having the pattern defined in it. Chain multiple filters "
 "using \"|\". For more information, please see <a href=\"%%(tut_url)s\" "
-"target=\"_blank\" rel=\"noopener noreferer\">the Python docs on regular "
+"target=\"_blank\" rel=\"noopener noreferrer\">the Python docs on regular "
 "expressions</a>"
 msgstr ""
 "Benutze dies um einen gültigen <em>Regulären Ausdruck</em> zu schreiben, "
 "um Benachrichtigungen mit dem darin definierten Muster zu verstecken. "
 "Verkette mehrere Filter mit \"|\". Für mehr Informationen, siehe <a "
-"href=\"%%(tut_url)s\" target=\"_blank\" rel=\"noopener noreferer\">die "
+"href=\"%%(tut_url)s\" target=\"_blank\" rel=\"noopener noreferrer\">die "
 "Python Dokumentation zu regulären Ausdrücken</a>"
 
 #: src/octoprint/plugins/action_command_notification/templates/action_command_notification_sidebar.jinja2:8
@@ -775,7 +775,7 @@ msgstr ""
 "identifiziert, möchte Zugriff auf OctoPrint über die API haben. Die "
 "Anfrage hierzu kommt von <code>%(remote_address)s</code>."
 
-#: src/octoprint/plugins/appkeys/__init__.py:696
+#: src/octoprint/plugins/appkeys/__init__.py:703
 msgid ""
 "Without this plugin third party clients will no longer be able to obtain "
 "an API key without you manually copy-pasting it."
@@ -2436,7 +2436,7 @@ msgid ""
 "    Error tracking will cause any logged exceptions in the server and the"
 " browser interface to be sent\n"
 "    to OctoPrint's <a href=\"https://sentry.io/\" target=\"_blank\" "
-"rel=\"noopener noreferer\">Sentry instance</a>.\n"
+"rel=\"noopener noreferrer\">Sentry instance</a>.\n"
 "</p>\n"
 "<p>\n"
 "    By enabling it you help to gather detailed information on the cause "
@@ -2454,7 +2454,7 @@ msgstr ""
 "<p>\n"
 "  Fehlertracking sendet jede geloggte Exception in Server und "
 "Webinterface zu OctoPrint's <a href=\"https://sentry.io/\" "
-"target=\"_blank\" rel=\"noopener noreferer\">Sentry-Instanz</a>.\n"
+"target=\"_blank\" rel=\"noopener noreferrer\">Sentry-Instanz</a>.\n"
 "</p>\n"
 "<p>\n"
 "  Wenn du es einschaltest hilfst du, detaillierte Informationen zu den "
@@ -2494,12 +2494,12 @@ msgid ""
 "    The Error Tracking plugin is using a Sentry instance kindly provided "
 "by\n"
 "    <a href=\"https://sentry.io/\" target=\"_blank\" rel=\"noopener "
-"noreferer\">sentry.io</a>. For information on their service\n"
+"noreferrer\">sentry.io</a>. For information on their service\n"
 "    please refer to their <a href=\"https://sentry.io/security/\" "
-"target=\"_blank\" rel=\"noopener noreferer\">Security & Compliance "
+"target=\"_blank\" rel=\"noopener noreferrer\">Security & Compliance "
 "documentation</a>\n"
 "    and their <a href=\"https://sentry.io/privacy/\" target=\"_blank\" "
-"rel=\"noopener noreferer\">Privacy Policy</a>.\n"
+"rel=\"noopener noreferrer\">Privacy Policy</a>.\n"
 "</p>\n"
 msgstr ""
 "\n"
@@ -2507,13 +2507,13 @@ msgstr ""
 "  Das Fehlertrackingplugin nutzt eine Sentry-Instanz die "
 "freundlicherweise von\n"
 "  <a href=\"https://sentry.io/\" target=\"_blank\" rel=\"noopener "
-"noreferer\">sentry.io</a> zur Verfügung gestellt wird. Für Informationen "
+"noreferrer\">sentry.io</a> zur Verfügung gestellt wird. Für Informationen "
 "zu ihrem Service\n"
 "  schau dir bitte ihre <a href=\"https://sentry.io/security/\" "
-"target=\"_blank\" rel=\"noopener noreferer\">Security & Compliance "
+"target=\"_blank\" rel=\"noopener noreferrer\">Security & Compliance "
 "documentation</a> und ihre\n"
 "  <a href=\"https://sentry.io/privacy/\" target=\"_blank\" rel=\"noopener"
-" noreferer\">Privacy Policy</a> an.\n"
+" noreferrer\">Privacy Policy</a> an.\n"
 "</p>\n"
 
 #: src/octoprint/plugins/eventmanager/__init__.py:44
@@ -2550,11 +2550,11 @@ msgstr "Hinzufügen"
 #, python-format
 msgid ""
 "For additional information on OctoPrint events please see <a "
-"href=\"%(url)s\" target=\"_blank\" rel=\"noopener noreferer\">the "
+"href=\"%(url)s\" target=\"_blank\" rel=\"noopener noreferrer\">the "
 "official documentation</a>."
 msgstr ""
 "Für weitere Informationen zu OctoPrints Events siehe bitte <a "
-"href=\"%(url)s\" target=\"_blank\" rel=\"noopener noreferer\">die "
+"href=\"%(url)s\" target=\"_blank\" rel=\"noopener noreferrer\">die "
 "Dokumentation</a>."
 
 #: src/octoprint/plugins/eventmanager/templates/eventmanager_settings.jinja2:33
@@ -3131,7 +3131,7 @@ msgid ""
 "key that gives full admin access to your whole OctoPrint instance. It "
 "will be removed in OctoPrint 1.13.0. Instead of using the global key you "
 "should create individual <a href=\"%(url)s\" target=\"_blank\" "
-"rel=\"noopener noreferer\">Application Keys</a> for your third party "
+"rel=\"noopener noreferrer\">Application Keys</a> for your third party "
 "clients. That way they get permissions matching the user account used for"
 " key creation and you can also revoke access to one app without having to"
 " change the keys for all other apps. It's also recommended to create a "
@@ -3142,7 +3142,7 @@ msgstr ""
 "ein einzelner Key, der vollen Adminzugriff auf die gesamte OctoPrint "
 "Instanz gibt. Er wird in OctoPrint 1.13.0 entfernt. Anstelle des globalen"
 " API Keys solltest du individuelle <a href=\"%(url)s\" target=\"_blank\" "
-"rel=\"noopener noreferer\">Application Keys</a> für Third-Party-Clients "
+"rel=\"noopener noreferrer\">Application Keys</a> für Third-Party-Clients "
 "erstellen. Dadurch bekommen diese die Zugriffsrechte des jeweiligen für "
 "die Erstellung des Keys genutzten Nutzeraccounts und du kannst einem "
 "Client auch einfach wieder den Zugriff entziehen, ohne für alle anderen "
@@ -3226,7 +3226,7 @@ msgstr ""
 #, python-format
 msgid ""
 "You currently have <code>%(logfile)s</code> enabled. Please remember to "
-"turn it off again once your are done debugging whatever issue prompted "
+"turn it off again once you are done debugging whatever issue prompted "
 "you to turn it on."
 msgstr ""
 "Du hast aktuell <code>%(logfile)s</code> aktiviert. Bitte denk daran, es "
@@ -5384,11 +5384,11 @@ msgstr "Gib einen neuen Token ein..."
 #, python-format
 msgid ""
 "Set this if you keep running into rate limiting issues. <a "
-"href=\"%(url)s\" target=\"_blank\" rel=\"noopener noreferer\">See here "
+"href=\"%(url)s\" target=\"_blank\" rel=\"noopener noreferrer\">See here "
 "for how to obtain a token</a>."
 msgstr ""
 "Nutze dies, falls du auf Ratelimiting-Probleme stößt. <a href=\"%(url)s\""
-" target=\"_blank\" rel=\"noopener noreferer\">Hier findest du, wie du "
+" target=\"_blank\" rel=\"noopener noreferrer\">Hier findest du, wie du "
 "einen Token erhältst</a>."
 
 #: src/octoprint/plugins/softwareupdate/templates/snippets/githubToken.jinja2:14
@@ -6286,13 +6286,13 @@ msgstr "Konnte deinen Drucker nicht automatisch erkennen"
 msgid ""
 "No working connection parameters could be found. Are you sure your "
 "printer is physically connected and supported? Refer to <a "
-"href=\"%(url)s\" target=\"_blank\" rel=\"noopener noreferer\">the FAQ</a>"
+"href=\"%(url)s\" target=\"_blank\" rel=\"noopener noreferrer\">the FAQ</a>"
 " for help in debugging this."
 msgstr ""
 "Es konnten keine funktionierenden Verbindungsparameter gefunden werden. "
 "Bist du sicher, dassdein Drucker physisch verbunden ist und unterstützt "
 "wird? Schau in die <a href=\"%(url)s\" target=\"_blank\" rel=\"noopener "
-"noreferer\">FAQ</a> für Hilfe beim Debuggen dieser Situation."
+"noreferrer\">FAQ</a> für Hilfe beim Debuggen dieser Situation."
 
 #: src/octoprint/static/js/app/dataupdater.js:445
 msgid "Unknown error"
@@ -6448,94 +6448,94 @@ msgstr "Bitte gib einen neuen Wert ein:"
 msgid "Progress"
 msgstr "Fortschritt"
 
-#: src/octoprint/static/js/app/main.js:206
+#: src/octoprint/static/js/app/main.js:229
 msgid "Reloading..."
 msgstr "Lade neu..."
 
-#: src/octoprint/static/js/app/main.js:285
+#: src/octoprint/static/js/app/main.js:308
 msgid "Offline"
 msgstr "Offline"
 
-#: src/octoprint/static/js/app/main.js:286
+#: src/octoprint/static/js/app/main.js:309
 msgid "Offline after error"
 msgstr "Offline nach Fehler"
 
-#: src/octoprint/static/js/app/main.js:287
+#: src/octoprint/static/js/app/main.js:310
 #: src/octoprint/static/js/app/viewmodels/system.js:152
 msgid "Error"
 msgstr "Fehler"
 
-#: src/octoprint/static/js/app/main.js:288
+#: src/octoprint/static/js/app/main.js:311
 msgid "Opening serial connection"
 msgstr "Öffne serielle Verbindung"
 
-#: src/octoprint/static/js/app/main.js:289
+#: src/octoprint/static/js/app/main.js:312
 msgid "Detecting serial connection"
 msgstr "Detektiere serielle Verbindung"
 
-#: src/octoprint/static/js/app/main.js:290
+#: src/octoprint/static/js/app/main.js:313
 msgid "Connecting"
 msgstr "Verbinde"
 
-#: src/octoprint/static/js/app/main.js:291
+#: src/octoprint/static/js/app/main.js:314
 msgid "Operational"
 msgstr "Bereit"
 
-#: src/octoprint/static/js/app/main.js:292
+#: src/octoprint/static/js/app/main.js:315
 msgid "Starting"
 msgstr "Starte"
 
-#: src/octoprint/static/js/app/main.js:293
+#: src/octoprint/static/js/app/main.js:316
 msgid "Starting print from SD"
 msgstr "Starte Druck von SD"
 
-#: src/octoprint/static/js/app/main.js:294
+#: src/octoprint/static/js/app/main.js:317
 msgid "Starting to send file to SD"
 msgstr "Starte Dateitransfer zu SD"
 
-#: src/octoprint/static/js/app/main.js:295
+#: src/octoprint/static/js/app/main.js:318
 msgid "Printing from SD"
 msgstr "Drucke von SD"
 
-#: src/octoprint/static/js/app/main.js:296
+#: src/octoprint/static/js/app/main.js:319
 msgid "Sending file to SD"
 msgstr "Sende Datei zu SD"
 
-#: src/octoprint/static/js/app/main.js:297
+#: src/octoprint/static/js/app/main.js:320
 msgid "Printing"
 msgstr "Drucke"
 
-#: src/octoprint/static/js/app/main.js:298
+#: src/octoprint/static/js/app/main.js:321
 msgid "Paused"
 msgstr "Pausiert"
 
-#: src/octoprint/static/js/app/main.js:299
+#: src/octoprint/static/js/app/main.js:322
 msgid "Closed"
 msgstr "Geschlossen"
 
-#: src/octoprint/static/js/app/main.js:300
+#: src/octoprint/static/js/app/main.js:323
 msgid "Transferring file to SD"
 msgstr "Sende Datei zu SD"
 
-#: src/octoprint/static/js/app/main.js:301
+#: src/octoprint/static/js/app/main.js:324
 #: src/octoprint/templates/dialogs/settings/serialconnection.jinja2:576
 msgid "Pausing"
 msgstr "Pausiere"
 
-#: src/octoprint/static/js/app/main.js:302
+#: src/octoprint/static/js/app/main.js:325
 msgid "Resuming"
 msgstr "Setze fort"
 
-#: src/octoprint/static/js/app/main.js:303
+#: src/octoprint/static/js/app/main.js:326
 #: src/octoprint/templates/dialogs/settings/serialconnection.jinja2:585
 msgid "Cancelling"
 msgstr "Breche ab"
 
-#: src/octoprint/static/js/app/main.js:304
+#: src/octoprint/static/js/app/main.js:327
 msgid "Finishing"
 msgstr "Beende"
 
-#: src/octoprint/static/js/app/main.js:1109
+#: src/octoprint/static/js/app/main.js:1132
 msgid "Loading OctoPrint's UI, please wait..."
 msgstr "Lade OctoPrints Userinterface, bitte warten..."
 
@@ -7321,7 +7321,7 @@ msgstr ""
 
 #: src/octoprint/static/js/app/viewmodels/settings.js:718
 #: src/octoprint/static/js/app/viewmodels/usersettings.js:189
-msgid "This will delete the API Key. It will cease to to function immediately."
+msgid "This will delete the API Key. It will cease to function immediately."
 msgstr "Dies wird den API-Key löschen. Er wird sofort aufhören, zu funktionieren."
 
 #: src/octoprint/static/js/app/viewmodels/settings.js:1301
@@ -7333,7 +7333,7 @@ msgid ""
 "risk. However, <strong>if you yourself have any additional reverse "
 "proxies configured</strong> in front of OctoPrint, make sure those are "
 "configured correctly.</p><p><a href='%(url)s' target='_blank' "
-"rel='noopener noreferer'>Read more in the FAQ</a>.</p>"
+"rel='noopener noreferrer'>Read more in the FAQ</a>.</p>"
 msgstr ""
 "<p>Du hast Autologin aktiviert. Das bedeutet, dass du automatisch "
 "eingeloggt wirst, wenn du OctoPrint von einer lokalen IP aus "
@@ -7341,7 +7341,7 @@ msgstr ""
 "kein Sicherheitsrisiko darstellt. Allerdings, <strong>falls du selbst "
 "zusätzliche Reverse Proxies konfiguriert hast</strong>, stelle sicher, "
 "dass diese korrekt konfiguriert sind.</p><p><a href='%(url)s' "
-"target='_blank' rel='noopener noreferer'>Lies mehr in der FAQ</a>.</p>"
+"target='_blank' rel='noopener noreferrer'>Lies mehr in der FAQ</a>.</p>"
 
 #: src/octoprint/static/js/app/viewmodels/settings.js:1309
 msgid "Autologin Heads-up"
@@ -8960,10 +8960,10 @@ msgstr "Parity Double Open Workaround anwenden"
 #, python-format
 msgid ""
 "Use this if you are running into <a href=\"%%(url)s\" target=\"_blank\" "
-"rel=\"noopener noreferer\">this problem</a>."
+"rel=\"noopener noreferrer\">this problem</a>."
 msgstr ""
 "Nutze dies, falls du <a href=\"%%(url)s\" target=\"_blank\" "
-"rel=\"noopener noreferer\">dieses Problem</a>beobachtest."
+"rel=\"noopener noreferrer\">dieses Problem</a>beobachtest."
 
 #: src/octoprint/templates/dialogs/settings/serialconnection.jinja2:87
 msgid "If detected as potentially needed"
@@ -9558,7 +9558,7 @@ msgstr ""
 
 #: src/octoprint/templates/dialogs/settings/serialconnection.jinja2:515
 msgid ""
-"Commands that are know to run long and hence should suppress "
+"Commands that are known to run long and hence should suppress "
 "communication timeouts from being triggered."
 msgstr ""
 "Befehle, von denen bekannt ist, dass sie lang zur Ausführung benötigen "
@@ -11318,7 +11318,7 @@ msgstr "Minimales Intervall"
 
 #: src/octoprint/templates/tabs/timelapse.jinja2:29
 msgid ""
-"OctoPrint will rate limit snapshots to this minimum interval. This it to "
+"OctoPrint will rate limit snapshots to this minimum interval. This is to "
 "prevent against performance issues with vase mode/continuous z prints."
 msgstr ""
 "OctoPrint wird Zeitrafferaufnahmen auf dieses minimale Intervall "
@@ -11485,11 +11485,11 @@ msgstr "Ungerenderte Zeitrafferaufnahmen"
 msgid "Frames"
 msgstr "Frames"
 
-#: src/octoprint/templates/tabs/timelapse.jinja2:239
+#: src/octoprint/templates/tabs/timelapse.jinja2:243
 msgid "Delete unrendered timelapse"
 msgstr "Ungerenderte Zeitrafferaufnahme löschen"
 
-#: src/octoprint/templates/tabs/timelapse.jinja2:239
+#: src/octoprint/templates/tabs/timelapse.jinja2:246
 msgid "Render timelapse"
 msgstr "Zeitrafferaufnahme rendern"
 

@@ -1,3 +1,4 @@
+# ruff: noqa TID251
 import unittest
 
 import ddt

@@ -382,7 +382,7 @@ class DaemonTest(unittest.TestCase):
         mock_kill.side_effect = OSError()
 
         self.daemon.remove_pidfile = mock.MagicMock()
-        self.daemon.remove_pidfile.side_effect = IOError()
+        self.daemon.remove_pidfile.side_effect = OSError()
 
         # test
         result = self.daemon.is_running()
@@ -409,10 +409,10 @@ class DaemonTest(unittest.TestCase):
         self.assertEqual(result, pid)
         m.assert_called_once_with(self.pidfile, encoding="utf-8")
 
-    def test_get_pid_ioerror(self):
+    def test_get_pid_oserror(self):
         # setup
         handle = mock.MagicMock()
-        handle.__enter__.side_effect = IOError()
+        handle.__enter__.side_effect = OSError()
 
         # test
         with mock.patch("builtins.open", mock.mock_open(), create=True) as m:

@@ -10,6 +10,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-${{ github.event_name }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 env:
   DEFAULT_PYTHON: "3.12"
 
@@ -18,18 +21,21 @@ jobs:
     name: 🔨 Build distribution
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
+          persist-credentials: false
       - name: 🏗 Set up Python ${{ env.DEFAULT_PYTHON }}
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ env.DEFAULT_PYTHON }}
       - name: 🏗 Set up PR environment
         if: github.event_name == 'pull_request'
         run: |
           # use base ref of PR as branch name for versioning
-          echo "GIT_VERSION_BRANCH=${{ github.event.pull_request.base.ref }}" >> $GITHUB_ENV
+          echo "GIT_VERSION_BRANCH=${GITHUB_EVENT_PULL_REQUEST_BASE_REF}" >> $GITHUB_ENV
+        env:
+          GITHUB_EVENT_PULL_REQUEST_BASE_REF: ${{ github.event.pull_request.base.ref }}
       - name: 🔨 Build distribution
         uses: OctoPrint/actions/build-dist@main
         with:
@@ -39,9 +45,11 @@ jobs:
     name: 🧹 Pre-commit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - name: 🏗 Set up Python ${{ env.DEFAULT_PYTHON }}
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ env.DEFAULT_PYTHON }}
       - name: 🚀 Run pre-commit
@@ -57,9 +65,11 @@ jobs:
         python: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - name: 🏗 Set up Python ${{ matrix.python }}
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ matrix.python }}
       - name: 🧰 Determine cache key
@@ -67,7 +77,7 @@ jobs:
           hash=$(cat setup.py | sha256sum | cut -d" " -f1)
           echo "CACHE_KEY=${{ github.job }}-${{ runner.os }}-python-${{ matrix.python }}-setuppy-$hash" >> $GITHUB_ENV
       - name: 🧰 Cache pip cache
-        uses: actions/cache@v4
+        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
         id: pip-cache
         with:
           path: "~/.cache/pip"
@@ -109,7 +119,9 @@ jobs:
     needs: build
     runs-on: ubuntu-22.04 # change back to ubuntu-latest once we figure out why puppeteer is unhappy under 24.04
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - name: 🏗 Set up test dependencies
         run: |
           npm -g install node-qunit-puppeteer@2.1.2
@@ -130,12 +142,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: ⬇ Download build result
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
         with:
           name: dist
           path: dist
       - name: 🏗 Set up Python ${{ matrix.python }}
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ matrix.python }}
       - name: 🧰 Determine installable & cache key for wheel
@@ -157,14 +169,14 @@ jobs:
           hash=$(tar -axzf "$sdist" "$setup" -O | sha256sum | cut -d" " -f1)
           echo "CACHE_KEY=${{ github.job }}-${{ runner.os }}-python-${{ matrix.python }}-setuppy-$hash" >> $GITHUB_ENV
       - name: 🧰 Cache pip cache
-        uses: actions/cache@v4
+        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
         id: pip-cache
         with:
           path: "~/.cache/pip"
           key: "${{ env.CACHE_KEY }}"
       - name: 🚀 Install OctoPrint
         run: |
-          pip install ${{ env.INSTALLABLE }}
+          pip install ${INSTALLABLE}
 
   test-e2e:
     name: 🧪 E2E tests
@@ -176,7 +188,7 @@ jobs:
         python: ["3.9", "3.13", "3.14"]
     steps:
       - name: ⬇ Download build result
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
         with:
           name: dist
           path: dist
@@ -191,7 +203,7 @@ jobs:
           echo "CACHE_KEY=${{ github.job }}-${{ runner.os }}-python-${{ matrix.python }}-wheel-$hash" >> $GITHUB_ENV
 
       - name: 🧰 Cache pip cache
-        uses: actions/cache@v4
+        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
         id: pip-cache
         with:
           path: "~/.cache/pip"
@@ -216,9 +228,11 @@ jobs:
       - test-install
       - test-e2e
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: ⬇ Download build result
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
         with:
           name: dist
           path: dist
@@ -251,7 +265,7 @@ jobs:
       id-token: write
     steps:
       - name: ⬇ Download build result
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
         with:
           name: dist
           path: dist
@@ -260,7 +274,7 @@ jobs:
           rm dist/*.source.tar.gz
           rm dist/sha512sums.txt
       - name: ⬆ Upload to index
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # v1.13.0
         continue-on-error: true
         with:
           repository-url: https://test.pypi.org/legacy/
@@ -277,7 +291,7 @@ jobs:
       id-token: write
     steps:
       - name: ⬇ Download build result
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
         with:
           name: dist
           path: dist
@@ -286,7 +300,7 @@ jobs:
           rm dist/*.source.tar.gz
           rm dist/sha512sums.txt
       - name: ⬆ Publish to index
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # v1.13.0
 
   notify-custopizer-build:
     name: 📧 Notify OctoPi-UpToDate
@@ -299,7 +313,7 @@ jobs:
           OCTOPRINT_VERSION=$(echo $GITHUB_REF | cut -d/ -f3)
           echo "OCTOPRINT_VERSION=$OCTOPRINT_VERSION" >> $GITHUB_ENV
       - name: 🚀 Repository Dispatch
-        uses: peter-evans/repository-dispatch@v4
+        uses: peter-evans/repository-dispatch@28959ce8df70de7be546dd1250a005dd32156697 # v4.0.1
         with:
           token: ${{ secrets.REPODISPATCH_TOKEN }}
           repository: OctoPrint/OctoPi-UpToDate

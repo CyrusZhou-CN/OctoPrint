@@ -113,6 +113,15 @@
                        data-bind="attr: {href: $root.downloadUrl }, css: { disabled: !$root.enableDownload() }"><i class="fa-solid fa-cloud-arrow-down"></i></a>
                 </div>
 
+                <div class="btn-group">
+                    <button class="btn btn-small"
+                            title="{{ _('Refresh thumbnails') |edq }}"
+                            data-bind="click: function() { if ($root.enableRefreshThumbnails()) { $root.refreshThumbnails() } }, css: { disabled: !$root.enableRefreshThumbnails() }">
+                        <i class="fa-solid"
+                           data-bind="css: { 'fa-image': !$root.refreshingThumbnails(), 'fa-spin': $root.refreshingThumbnails, 'fa-spinner': $root.refreshingThumbnails }"></i>
+                    </button>
+                </div>
+
                 <div class="flex-grow"></div>
 
                 <div class="btn-group">

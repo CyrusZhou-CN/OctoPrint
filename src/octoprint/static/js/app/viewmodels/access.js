@@ -35,12 +35,18 @@ $(function () {
 
             self.currentUser = ko.observable(self.emptyUser).extend({notify: "always"});
 
-            self.isCurrentUser = (user) => {
+            self.isUserMyself = (user) => {
                 return user && user.name && user.name == access.loginState.username();
+            };
+            self.isCurrentUser = (user) => {
+                log.warn(
+                    "isCurrentUser(user) has been deprecated in favor of isUserMyself(user)"
+                );
+                return self.isUserMyself(user);
             };
 
             self.isDeleteUserEnabled = (user) => {
-                return !self.isCurrentUser(user);
+                return !self.isUserMyself(user);
             };
 
             self.apikeysVisible = ko.observable(false);
@@ -314,7 +320,7 @@ $(function () {
                     self.changePasswordDialog.modal("show");
                 };
 
-                if (self.isCurrentUser(user)) {
+                if (self.isUserMyself(user)) {
                     proceed();
                 } else {
                     access.loginState.reauthenticateIfNecessary(proceed);
@@ -337,12 +343,13 @@ $(function () {
                         })
                         .fail(function (xhr) {
                             if (xhr.status === 403) {
-                                self.currentPasswordMismatch(true);
+                                self.editor.currentPasswordMismatch(true);
                             }
                         });
                 };
 
-                if (self.isCurrentUser()) {
+                const user = self.currentUser();
+                if (self.isUserMyself(user)) {
                     proceed();
                 } else {
                     access.loginState.reauthenticateIfNecessary(proceed);

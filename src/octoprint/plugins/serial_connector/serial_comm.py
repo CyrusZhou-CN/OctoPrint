@@ -209,6 +209,9 @@ def serialList():
                         i += 1
                 except OSError:
                     pass
+        except FileNotFoundError:
+            _logger.debug("No hardware serial devices found")
+            pass
         except Exception:
             _logger.exception("Error while enumerating the available serial ports")
 
@@ -281,7 +284,10 @@ def baudrateList(candidates=None):
     )
     if blocklistedBaudrates:
         for baudrate in blocklistedBaudrates:
-            candidates.remove(baudrate)
+            try:
+                candidates.remove(baudrate)
+            except ValueError:
+                pass
 
     # last used baudrate = first to try, move to start
     prev = settings().getInt(["plugins", "serial_connector", "baudrate"])
@@ -3893,7 +3899,7 @@ class MachineCom:
 
     def _get_communication_timeout_interval(self):
         # special rules during serial detection
-        if self._state != self.STATE_DETECT_SERIAL:
+        if self._state == self.STATE_DETECT_SERIAL:
             if self._detection_retry == 0:
                 # first try
                 return self._timeout_intervals.get("detectionFirst", 10.0)
@@ -5271,6 +5277,7 @@ class MachineCom:
                 Events.TOOL_CHANGE,
                 {"old": self._toolBeforeChange, "new": self._currentTool},
             )
+            self._callback.on_comm_position_update({"t": new_tool})
 
     def _gcode_G0_sent(
         self, cmd, cmd_type=None, gcode=None, subcode=None, *args, **kwargs
@@ -5286,7 +5293,7 @@ class MachineCom:
                             Events.Z_CHANGE, {"new": z, "old": self._currentZ}
                         )
                         self._currentZ = z
-                        self._callback.on_comm_z_change(z)
+                        self._callback.on_comm_position_update({"z": z})
                 except ValueError:
                     pass
 
@@ -5843,9 +5850,6 @@ class MachineComPrintCallback:
     def on_comm_print_job_resumed(self, suppress_script=False, user=None):
         pass
 
-    def on_comm_z_change(self, newZ):
-        pass
-
     def on_comm_file_selected(self, filename, filesize, sd, user=None, data=None):
         pass
 
@@ -6015,16 +6019,17 @@ class PrintingGcodeFileInformation(PrintingFileInformation):
         self._offsets_callback = offsets_callback
         self._current_tool_callback = current_tool_callback
         self._close_on_eof = close_on_eof
+        self._start_pos = 0
 
         self._read_lines = 0
         if self._handle:
-            self._pos = self._handle.tell()
+            self._start_pos = self._pos = self._handle.tell()
 
             self._handle.seek(os.SEEK_END)
             self._size = self._handle.tell()
             self._handle.seek(self._pos)
         else:
-            self._pos = 0
+            self._start_pos = self._pos = 0
             if not os.path.exists(self._filename) or not os.path.isfile(self._filename):
                 raise OSError(f"File {self._filename} does not exist")
             self._size = os.stat(self._filename).st_size
@@ -6069,7 +6074,8 @@ class PrintingGcodeFileInformation(PrintingFileInformation):
         PrintingFileInformation.start(self)
         with self._handle_mutex:
             if self._handle:
-                # we initially got a file object
+                # we initially got a file object, reset it to the start position
+                self._handle.seek(self._start_pos)
                 self._pos = self._handle.tell()
             else:
                 bom = get_bom(self._filename, encoding="utf-8-sig")
@@ -6083,6 +6089,7 @@ class PrintingGcodeFileInformation(PrintingFileInformation):
                     # be stripped transparently and we'll have no chance
                     # catching that.
                     self._pos += len(bom)
+                self._start_pos = self._pos
             self._read_lines = 0
 
     def close(self):

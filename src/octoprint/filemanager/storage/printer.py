@@ -471,6 +471,11 @@ class PrinterFileStorage(StorageInterface):
     ) -> Optional[tuple[StorageThumbnail, IO]]:
         return self._connection.download_thumbnail(path, sizehint=sizehint)
 
+    def refresh_thumbnails(
+        self, path, force: bool = False, recursive: bool = False
+    ) -> None:
+        self._connection.refresh_thumbnails(path, force=force, recursive=recursive)
+
     def add_link(self, path, rel, data):
         pass  # not supported
 

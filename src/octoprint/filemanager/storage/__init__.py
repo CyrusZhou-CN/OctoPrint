@@ -532,6 +532,11 @@ class StorageInterface:
     def read_thumbnail(self, path: str, sizehint: str = None) -> Optional[IO]:
         raise NotImplementedError()
 
+    def refresh_thumbnails(
+        self, path: str, force: bool = False, recursive: bool = False
+    ) -> bool:
+        raise NotImplementedError()
+
     def get_additional_metadata(self, path, key):
         """
         Fetches additional metadata at ``key`` from the metadata of ``path``.

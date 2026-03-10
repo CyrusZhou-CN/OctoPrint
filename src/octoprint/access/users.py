@@ -66,7 +66,7 @@ class UserManager(GroupChangeListener):
             self._settings.getInt(["accessControl", "sessionStaleAfter"]) * 60
         )
 
-        self._login_status_listeners: list["LoginStatusListener"] = []
+        self._login_status_listeners: list["LoginStatusListener"] = []  # noqa: UP037
 
     def register_login_status_listener(self, listener: "LoginStatusListener"):
         self._login_status_listeners.append(listener)

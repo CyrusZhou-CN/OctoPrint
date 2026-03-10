@@ -16,7 +16,7 @@ abstracted version of the actual printer communication.
    :members:
 
 .. autoclass:: PrinterMixin
-   : members:
+   :members:
 
 .. autoclass:: PrinterCallback
    :members:
@@ -99,7 +99,7 @@ class ConnectedPrinterCapabilities(BaseModel):
 
 class CommonPrinterMixin:
     """
-    The :class:`PrinterInterface` represents the developer interface to the :class:`~octoprint.printer.standard.Printer`
+    The :class:`CommonPrinterMixin` represents the developer interface to the :class:`~octoprint.printer.standard.Printer`
     instance.
     """
 
@@ -353,7 +353,7 @@ class CommonPrinterMixin:
 
     @property
     def active_job(self):
-        if self.is_printing() or self.is_pausing or self.is_paused():
+        if self.is_printing() or self.is_pausing() or self.is_paused():
             return self.current_job
         return None
 
@@ -466,12 +466,14 @@ class CommonPrinterMixin:
             (list) The temperature history.
         """
 
-    def get_current_connection(self, *args, **kwargs):
-        """
-        Returns:
-            (tuple) The current connection information as a 4-tuple ``(connection_string, port, baudrate, printer_profile)``.
-                If the printer is currently not connected, the tuple will be ``("Closed", None, None, None)``.
-        """
+    def is_storage_mounted(self, *args, **kwargs):
+        """Returns whether the printer has its internal storage mounted or not (if supported)"""
+
+    def mount_storage(self, *args, **kwargs):
+        """Tells the printer to mount its internal storage (if supported)"""
+
+    def unmount_storage(self, *args, **kwargs):
+        """Tells the printer to unmount its internal storage (if supported)"""
 
     def is_closed_or_error(self, *args, **kwargs):
         """
@@ -696,6 +698,11 @@ class PrinterFilesMixin:
     ) -> Optional[tuple[StorageThumbnail, IO]]:
         return None
 
+    def refresh_thumbnails(
+        self, path: str, force: bool = False, recursive: bool = False
+    ) -> None:
+        pass
+
     def create_job(self, path: str, owner: str = None, params: dict = None) -> PrintJob:
         printer_file = self.get_printer_file(path)
         if not printer_file:
@@ -829,8 +836,8 @@ class PrinterMixin(CommonPrinterMixin):
             preferred = settings().get(["printerConnection", "preferred", "parameters"])
 
         connection_options = serial_connector.get_connection_options()
-        ports = connection_options.get("ports", [])
-        baudrates = connection_options.get("baudrates", [])
+        ports = connection_options.get("port", [])
+        baudrates = connection_options.get("baudrate", [])
 
         return {
             "ports": sorted(ports, key=natural_key),
@@ -842,7 +849,7 @@ class PrinterMixin(CommonPrinterMixin):
 
     @deprecated(
         message="select_file has been deprecated and will be removed in a future version. Please use set_job instead.",
-        includedoc="Replaced by :func:`PrinterInterface.set_job`",
+        includedoc="Replaced by :func:`PrinterMixin.set_job`",
         since="1.12.0",
     )
     def select_file(
@@ -882,18 +889,18 @@ class PrinterMixin(CommonPrinterMixin):
 
     @deprecated(
         message="unselect_file has been deprecated and will be removed in a future version. Please use set_job instead.",
-        includedoc="Replaced by :func:`PrinterInterface.set_job`",
+        includedoc="Replaced by :func:`PrinterMixin.set_job`",
         since="1.12.0",
     )
     def unselect_file(self, *args, **kwargs):
         """
-        Unselects and currently selected file.
+        Unselects any currently selected file.
         """
         self.set_job(None)
 
     @deprecated(
         message="fake_ack has been renamed to repair_communication. This compatibility layer will be removed in a future version. Please use repair_communication instead.",
-        includedoc="Replaced by :func:`PrinterInterface.repair_communication`",
+        includedoc="Replaced by :func:`PrinterMixin.repair_communication`",
         since="1.12.0",
     )
     def fake_ack(self, *args, **kwargs):
@@ -914,6 +921,54 @@ class PrinterMixin(CommonPrinterMixin):
         Returns:
             object: The communication layer's transport object
         """
+
+    @deprecated(
+        message="get_current_connection has been replaced by connection_state. This compatibility layer will be removed in a future version.",
+        includedoc="Only functional if the current connector happens to be the bundled serial connector",
+        since="1.12.0",
+    )
+    def get_current_connection(self, *args, **kwargs):
+        """
+        Returns:
+            (tuple) The current connection information as a 4-tuple ``(connection_string, port, baudrate, printer_profile)``.
+                If the printer is currently not connected, or not connected through the serial connector, the tuple will be ``("Closed", None, None, None)``.
+        """
+        if self._connection is None or self._connection.connector != "serial":
+            return "Closed", None, None, None
+
+        parameters = self._connection.connection_parameters
+
+        port = parameters.get("port")
+        baudrate = parameters.get("baudrate")
+        profile = parameters.get("profile")
+
+        return self._connection.get_state_string(), port, baudrate, profile
+
+    ### Printer storage stuff
+
+    @deprecated(
+        message="is_sd_ready has been deprecated and will be removed in a future version. Please use is_storage_mounted instead.",
+        includedoc="Replaced by :func:`PrinterMixin.is_storage_mounted`",
+        since="1.12.0",
+    )
+    def is_sd_ready(self, *args, **kwargs):
+        return self.is_storage_mounted()
+
+    @deprecated(
+        message="init_sd_card has been deprecated and will be removed in a future version. Please use mount_storage instead.",
+        includedoc="Replaced by :func:`PrinterMixin.mount_storage`",
+        since="1.12.0",
+    )
+    def init_sd_card(self, *args, **kwargs):
+        return self.mount_storage(*args, **kwargs)
+
+    @deprecated(
+        message="release_sd_card has been deprecated and will be removed in a future version. Please use unmount_storage instead.",
+        includedoc="Replaced by :func:`PrinterMixin.unmount_storage`",
+        since="1.12.0",
+    )
+    def release_sd_card(self, *args, **kwargs):
+        return self.unmount_storage(*args, **kwargs)
 
 
 PrinterInterface = PrinterMixin

@@ -590,7 +590,7 @@ class OctoPrintSessionInterface(flask.sessions.SecureCookieSessionInterface):
     def save_session(self, app, session, response):
         from octoprint.server.util import LoginMechanism
 
-        if session.get("_login_mechanism") == LoginMechanism.APIKEY:
+        if session.get("login_mechanism") == LoginMechanism.APIKEY:
             return
         return super().save_session(app, session, response)
 
@@ -1835,6 +1835,7 @@ def collect_core_assets(preferred_stylesheet="css"):
         "js/app/bindings/gettext.js",
         "js/app/bindings/invisible.js",
         "js/app/bindings/popover.js",
+        "js/app/bindings/progressbar.js",
         "js/app/bindings/qrcode.js",
         "js/app/bindings/slimscrolledforeach.js",
         "js/app/bindings/toggle.js",

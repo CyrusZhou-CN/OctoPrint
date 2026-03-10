@@ -163,6 +163,7 @@ $(function () {
         self.estimatedPrintTime = ko.observable(undefined);
 
         self.currentHeight = ko.observable(undefined);
+        self.currentTool = ko.observable(undefined);
 
         self.errorInfoAvailable = ko.observable(false);
         self.errorInfo = {};
@@ -375,6 +376,7 @@ $(function () {
             self._processStateData(data.state);
             self._processJobData(data.job);
             self._processProgressData(data.progress);
+            self._processToolData(data.currentTool);
             self._processZData(data.currentZ);
             self._processBusyFiles(data.busyFiles);
             self._processResends(data.resends);
@@ -480,6 +482,10 @@ $(function () {
 
         self._processZData = function (data) {
             self.currentHeight(data);
+        };
+
+        self._processToolData = function (data) {
+            self.currentTool(data);
         };
 
         self._processBusyFiles = function (data) {

@@ -139,6 +139,9 @@ class ConnectedSerialPrinter(ConnectedPrinter, PrinterFilesMixin):
         )
         self._comm.start()
 
+        # send an initial tool update
+        self._listener.on_printer_position_changed({"t": self._comm.getCurrentTool()})
+
     def disconnect(self, *args, **kwargs):
         if self._comm is not None:
             self._comm.close()
@@ -237,7 +240,7 @@ class ConnectedSerialPrinter(ConnectedPrinter, PrinterFilesMixin):
             "G91",
             "G28 {}".format(" ".join(f"{x.upper()}0" for x in axes)),
             "G90",
-            tags=kwargs.get("tags", set) | {"trigger:printer.home"},
+            tags=kwargs.get("tags", set()) | {"trigger:printer.home"},
         )
 
     def extrude(self, amount, speed=None, *args, **kwargs):
@@ -293,7 +296,6 @@ class ConnectedSerialPrinter(ConnectedPrinter, PrinterFilesMixin):
             return
 
         self._comm.setTemperatureOffset(offsets)
-        self._setOffsets(self._comm.getOffsets())
 
     @property
     def temperature_offsets(self) -> dict:
@@ -376,9 +378,8 @@ class ConnectedSerialPrinter(ConnectedPrinter, PrinterFilesMixin):
         if self._comm is None:
             return None
 
-        with self._selectedFileMutex:
-            if self._selectedFile is None:
-                return None
+        if self._job is None:
+            return None
 
         return self._comm.getFilePosition()
 
@@ -468,16 +469,6 @@ class ConnectedSerialPrinter(ConnectedPrinter, PrinterFilesMixin):
         else:
             return self._comm.getErrorString()
 
-    def get_current_data(self, *args, **kwargs):  # TODO
-        return util.thaw_frozendict(self._stateMonitor.get_current_data())
-
-    def get_current_connection(self, *args, **kwargs):  # TODO
-        if self._comm is None:
-            return "Closed", None, None, None
-
-        port, baudrate = self._comm.getConnection()
-        return self._comm.getStateString(), port, baudrate, self._profile
-
     def is_ready(self, *args, **kwargs):
         return (
             self.is_operational()
@@ -558,11 +549,12 @@ class ConnectedSerialPrinter(ConnectedPrinter, PrinterFilesMixin):
             raise PrinterFilesUnavailableError(message)
 
         try:
+            tags = kwargs.get("tags", set()) | {"trigger:printer.add_sd_file"}
             return self._comm.startFileTransfer(
                 source,
                 target,
                 special=not valid_file_type(target, "gcode"),
-                tags=kwargs.get("tags", set()),
+                tags=tags,
             )
         except Exception as exc:
             self._logger.exception("Error while starting file transfer")
@@ -681,10 +673,6 @@ class ConnectedSerialPrinter(ConnectedPrinter, PrinterFilesMixin):
         if self._progress_callback:
             self._progress_callback(progress=int(self.job_progress.progress * 100))
 
-    def on_comm_z_change(self, newZ):
-        # intentionally disabled - event now gets triggered in comm, no more push upwards
-        pass
-
     def on_comm_sd_state_change(self, sdReady):
         self._listener.on_printer_files_available(sdReady)
 
@@ -764,7 +752,7 @@ class ConnectedSerialPrinter(ConnectedPrinter, PrinterFilesMixin):
     def on_comm_force_disconnect(self):
         self._listener.on_printer_disconnected()
 
-    def on_comm_record_fileposition(self, origin, name, pos):  # TODO
+    def on_comm_record_fileposition(self, origin, name, pos):
         self._listener.on_printer_record_recovery_position(self.current_job, pos)
 
     def on_comm_firmware_info(self, firmware_name, firmware_data):

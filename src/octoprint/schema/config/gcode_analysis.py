@@ -4,7 +4,6 @@ __copyright__ = "Copyright (C) 2022 The OctoPrint Project - Released under terms
 from enum import Enum
 
 from octoprint.schema import BaseModel
-from octoprint.vendor.with_attrs_docs import with_attrs_docs
 
 
 class RunAtEnum(str, Enum):
@@ -13,7 +12,6 @@ class RunAtEnum(str, Enum):
     always = "always"
 
 
-@with_attrs_docs
 class GcodeAnalysisConfig(BaseModel):
     maxExtruders: int = 10
     """Maximum number of extruders to support/to sanity check for."""

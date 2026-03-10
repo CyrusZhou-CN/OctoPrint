@@ -107,7 +107,24 @@ class ConnectedPrinterListenerMixin:
     ):
         pass
 
-    def on_printer_position_changed(self, position, reason=None):
+    def on_printer_position_changed(self, position: dict, reason: str = None):
+        """
+        ``position`` will be a dict that might contain any of
+
+          * ``x``: currently known x coordinate
+          * ``y``: currently known y coordinate
+          * ``z``: currently known z coordinate
+          * ``e``: currently known e coordinate
+          * ``t``: currently known tool index (0-based)
+          * ``f``: currently known feedrate (e.g. for move commands `G0`, `G1` or `G28` sent through OctoPrint)
+
+        A :ref:`PositionUpdate event <sec-events-available_events-gcode_processing>` will only be
+        triggered if all of the keys are available.
+
+        If ``z`` is provided, the current Z value provided in the state pushes will be updated (if needed).
+
+        If ``t`` is provided, the current tool index provided in the state pushes will be updated (if needed).
+        """
         pass
 
     def on_printer_temperature_update(self, temperatures):

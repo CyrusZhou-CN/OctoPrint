@@ -4,7 +4,6 @@ __copyright__ = "Copyright (C) 2022 The OctoPrint Project - Released under terms
 from enum import Enum
 
 from octoprint.schema import BaseModel
-from octoprint.vendor.with_attrs_docs import with_attrs_docs
 
 
 class ColorEnum(str, Enum):
@@ -17,7 +16,6 @@ class ColorEnum(str, Enum):
     default = "default"
 
 
-@with_attrs_docs
 class ComponentOrderConfig(BaseModel):
     navbar: list[str] = [
         "settings",
@@ -109,7 +107,6 @@ class ComponentOrderConfig(BaseModel):
     """Order of generic items."""
 
 
-@with_attrs_docs
 class ComponentDisabledConfig(BaseModel):
     navbar: list[str] = []
     """Disabled navbar items."""
@@ -129,7 +126,6 @@ class ComponentDisabledConfig(BaseModel):
     """Disabled generic items."""
 
 
-@with_attrs_docs
 class ComponentConfig(BaseModel):
     order: ComponentOrderConfig = ComponentOrderConfig()
     """Defines the order of the components within their respective containers."""
@@ -144,7 +140,6 @@ class ThumbnailAlignmentEnum(str, Enum):
     center = "center"
 
 
-@with_attrs_docs
 class ThumbnailConfig(BaseModel):
     filelistEnabled: bool = True
     """Whether to display thumbnails for printables on the file list, if available."""
@@ -165,7 +160,6 @@ class ThumbnailConfig(BaseModel):
     """Percentage of state panel width to use for thumbnail. Note that if the image is smaller, it won't be scaled up."""
 
 
-@with_attrs_docs
 class AppearanceConfig(BaseModel):
     name: str = ""
     """Use this to give your OctoPrint instance a name. It will be displayed in the title bar (as "<Name> [OctoPrint]") and in the navigation bar (as "OctoPrint: <>")"""

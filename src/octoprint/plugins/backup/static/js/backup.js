@@ -110,6 +110,13 @@ $(function () {
         self.restoreProgressText = ko.observable("");
         self.restoreProgressError = ko.observable(false);
         self.restoreProgressActive = ko.observable(false);
+        self.restoreProgressClass = ko.computed(() => {
+            if (self.restoreProgressError()) {
+                return "bar-danger";
+            } else {
+                return "";
+            }
+        });
         self.setRestoreProgress = (operation, progress) => {
             if (progress === undefined || progress < 0) {
                 self.restoreProgressPercentage(100);

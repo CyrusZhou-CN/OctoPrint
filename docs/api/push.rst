@@ -66,7 +66,7 @@ OctoPrint's SockJS socket also accepts three commands from the client to the ser
   * ``events``: Either a boolean value indicating whether to generally receive event messages, or a list of event
     types to receive event messages for.
 
-  If you send a ``subscribe`` message, OctoPrint will default the connection to not subscribe you to anything you did't explicitly
+  If you send a ``subscribe`` message, OctoPrint will default the connection to not subscribe you to anything you didn't explicitly
   request. ``subscribe`` messages do replace previous ones.
 
   Example for a ``subscribe`` message subscribing only to updates from plugin ``example`` but neither state nor events:
@@ -119,7 +119,7 @@ OctoPrint's SockJS socket also accepts three commands from the client to the ser
   clients lacking the ``STATUS`` permission.
 
   The ``auth`` message expects the user id of the user to authenticate followed by ``:`` and a session key to be
-  obtained from the successful payload of a :ref:`(passive or active) login via the API <sec-api-general-login>`.
+  obtained from the successful payload of a :ref:`(passive or active) login via the API <sec-api-authentication-login>`.
 
   Example for a ``auth`` client-server-message:
 
@@ -236,9 +236,13 @@ Data model
      - :ref:`Progress information <sec-api-datamodel-jobs-progress>`
      - Information about the current print/streaming progress
    * - ``currentZ``
-     - 1
+     - 0..1
      - Float
-     - Current height of the Z-Axis (= current height of model) during printing from a local file
+     - Current height of the Z-Axis (= current height of model) based on position updates or commands *sent through OctoPrint*, ``null`` if unknown.
+   * - ``currentTool``
+     - 0..1
+     - Integer
+     - Currently selected tool based on commands *sent through OctoPrint*, ``null`` if unknown.
    * - ``offsets``
      - 0..1
      - :ref:`Temperature offsets <sec-api-datamodel-printer-tempoffset>`

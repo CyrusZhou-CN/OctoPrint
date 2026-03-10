@@ -4,10 +4,8 @@ __copyright__ = "Copyright (C) 2022 The OctoPrint Project - Released under terms
 from typing import Optional
 
 from octoprint.schema import BaseModel
-from octoprint.vendor.with_attrs_docs import with_attrs_docs
 
 
-@with_attrs_docs
 class GcodeScriptsConfig(BaseModel):
     afterPrinterConnected: Optional[str] = None
     """Script run after the connection to the printer has been established."""
@@ -45,7 +43,6 @@ class GcodeScriptsConfig(BaseModel):
     """Additional snippets that can be used in other scripts."""
 
 
-@with_attrs_docs
 class ScriptsConfig(BaseModel):
     gcode: GcodeScriptsConfig = GcodeScriptsConfig()
     """GCODE scripts configuration"""

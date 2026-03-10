@@ -34,7 +34,7 @@
                                data-bind="value: timelapseMinDelay, valueUpdate: 'afterkeydown', enable: !isPrinting()">
                         <span class="add-on">{{ _("sec") }}</span>
                     </div>
-                    <span class="help-block">{{ _("OctoPrint will rate limit snapshots to this minimum interval. This it to prevent against performance issues with vase mode/continuous z prints.") }}</span>
+                    <span class="help-block">{{ _("OctoPrint will rate limit snapshots to this minimum interval. This is to prevent against performance issues with vase mode/continuous z prints.") }}</span>
                 </div>
             </div>
 
@@ -173,11 +173,7 @@
 <h1 data-bind="visible: renderProgressBarString">{{ _("Timelapse Render Progress") }}</h1>
 
 <div id="render_progress"
-     class="progress progress-text-centered"
-     data-bind="visible: renderProgressBarString, css: { 'progress-striped' : renderAnimation, active : renderAnimation }">
-    <div class="bar" data-bind="style: {width: renderProgressString() + '%'}"></div>
-    <span class="progress-text-back"
-          data-bind="css: { 'progress-text-front': (renderProgressString() >= 50), 'progress-text-back': (renderProgressString() < 50) }, text: renderProgressBarString()"></span>
+     data-bind="visible: !!renderProgressBarString(), progressbar: { percentage: renderProgressString, text: renderProgressBarString, active: renderAnimation }">
 </div>
 
 <h1>{{ _("Finished Timelapses") }}</h1>
@@ -349,7 +345,7 @@
                 <tr data-bind="attr: {title: name}">
                     <td class="timelapse_unrendered_checkbox">
                         <input type="checkbox"
-                               data-bind="value: name, checked: $root.markedForUnrenderedDeletion, invisible: !$root.loginState.hasPermissionKo($root.access.permissions.TIMELAPSTIMELAPSE_MANAGE_UNRENDEREDE_DELETE)()">
+                               data-bind="value: name, checked: $root.markedForUnrenderedDeletion, invisible: !$root.loginState.hasPermissionKo($root.access.permissions.TIMELAPSE_MANAGE_UNRENDERED)()">
                     </td>
                     <td class="timelapse_unrendered_name" data-bind="text: name"></td>
                     <td class="timelapse_unrendered_count" data-bind="text: count"></td>

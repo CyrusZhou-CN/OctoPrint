@@ -5,6 +5,9 @@ on:
   issue_comment:
     types: [created, edited]
 
+permissions:
+  issues: write
+
 jobs:
   process-bundles:
     runs-on: ubuntu-latest

@@ -346,24 +346,21 @@ class AchievementsPlugin(
             self._data.stats.print_duration_total += payload["time"]
             self._current_year_stats.print_duration_total += payload["time"]
 
-            if Events.PRINT_CANCELLED:
-                self._trigger_achievement(
-                    Achievements.ALL_BEGINNINGS_ARE_HARD, write=False
-                )
+            self._trigger_achievement(Achievements.ALL_BEGINNINGS_ARE_HARD, write=False)
 
-                if payload["progress"] > 95:
-                    self._trigger_achievement(Achievements.SO_CLOSE, write=False)
+            if payload["progress"] > 95:
+                self._trigger_achievement(Achievements.SO_CLOSE, write=False)
 
-                ## cancelled per day
+            ## cancelled per day
 
-                if now.date().isoformat() != self._data.state.date_last_cancelled_print:
-                    self._data.state.date_last_cancelled_print = now.date().isoformat()
-                    self._data.state.prints_cancelled_today = 0
-                self._data.state.prints_cancelled_today += 1
-                self._data.state.consecutive_prints_cancelled_today += 1
+            if now.date().isoformat() != self._data.state.date_last_cancelled_print:
+                self._data.state.date_last_cancelled_print = now.date().isoformat()
+                self._data.state.prints_cancelled_today = 0
+            self._data.state.prints_cancelled_today += 1
+            self._data.state.consecutive_prints_cancelled_today += 1
 
-                if self._data.state.consecutive_prints_cancelled_today >= 10:
-                    self._trigger_achievement(Achievements.ONE_OF_THOSE_DAYS, write=False)
+            if self._data.state.consecutive_prints_cancelled_today >= 10:
+                self._trigger_achievement(Achievements.ONE_OF_THOSE_DAYS, write=False)
 
             changed = True
             yearly_changed = True

@@ -111,6 +111,9 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
         self._messages = deque([], 300)
         self._log = deque([], 300)
 
+        self._last_z = None
+        self._last_t = None
+
         self._state: ConnectedPrinterState = ConnectedPrinterState.CLOSED
 
         self._print_after_select = False
@@ -186,7 +189,7 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
                 file=self._dict(name=None, path=None, size=None, origin=None, date=None),
                 estimatedPrintTime=None,
                 lastPrintTime=None,
-                filament=self._dict(length=None, volume=None),
+                filament=self._dict(),
                 user=None,
             ),
             progress=self._dict(
@@ -754,6 +757,7 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
         tags |= {"trigger:printer.set_temperature_offset"}
 
         self._connection.set_temperature_offset(offsets=offsets, tags=tags)
+        self._set_offsets(self._connection.temperature_offsets)
 
     def _convert_rate_value(self, factor, min_val=None, max_val=None):
         if not isinstance(factor, (int, float)):
@@ -792,6 +796,11 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
         tags |= {"trigger:printer.flow_rate"}
 
         self._connection.flow_rate(factor, tags=tags)
+
+    @property
+    def current_job(self):
+        with self._selected_job_mutex:
+            return self._selected_job
 
     def set_job(
         self,
@@ -983,18 +992,6 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
     def get_temperature_history(self, *args, **kwargs):
         return list(self._temps)
 
-    def get_current_connection(self, *args, **kwargs):
-        if self._connection is None:
-            return "Closed", None, None, None
-
-        parameters = self._connection.connection_parameters
-
-        port = parameters.get("port")
-        baudrate = parameters.get("baudrate")
-        profile = parameters.get("profile")
-
-        return self._connection.state_string(), port, baudrate, profile
-
     def is_closed_or_error(self, *args, **kwargs):
         return self._connection is None or self._connection.is_closed_or_error()
 
@@ -1029,9 +1026,31 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
         for line in lines:
             self._add_log(line)
 
-    # ~~ sd file handling
+    # ~~ printer storage
 
-    def is_sd_ready(self, *args, **kwargs):
+    def mount_storage(self, *args, **kwargs):
+        if (
+            not self._connection
+            or not isinstance(self._connection, PrinterFilesMixin)
+            or self.is_storage_mounted()
+        ):
+            return
+
+        tags = kwargs.get("tags", set()) | {"trigger:printer.mount_storage"}
+
+        self._connection.mount_printer_files(tags=tags)
+
+    def unmount_storage(self, *args, **kwargs):
+        if not self.is_storage_mounted():
+            return
+
+        tags = kwargs.get("tags", set()) | {"trigger:printer.unmount_storage"}
+
+        cast(PrinterFilesMixin, self._connection).unmount_printer_files(tags=tags)
+
+    # ~~ deprecated printer storage stuff, now to be done through dedicated PrinterStorage
+
+    def is_storage_mounted(self, *args, **kwargs):
         if (
             not settings().getBoolean(["feature", "sdSupport"])
             or self._connection is None
@@ -1041,8 +1060,13 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
 
         return self._connection.printer_files_mounted
 
+    @util.deprecated(
+        message="get_sd_files has been deprecated and will be removed in a future version. Please use the PrinterStorage instead.",
+        includedoc="Functionality moved to :class:`~octoprint.filemanager.storage.printer.PrinterStorage`",
+        since="1.12.0",
+    )
     def get_sd_files(self, *args, **kwargs):
-        if not self.is_sd_ready():
+        if not self.is_storage_mounted():
             return []
 
         refresh = kwargs.get("refresh", False)
@@ -1054,10 +1078,15 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
             )
         ]
 
+    @util.deprecated(
+        message="add_sd_file has been deprecated and will be removed in a future version. Please use the PrinterStorage instead.",
+        includedoc="Functionality moved to :class:`~octoprint.filemanager.storage.printer.PrinterStorage`",
+        since="1.12.0",
+    )
     def add_sd_file(
         self, filename, path, on_success=None, on_failure=None, *args, **kwargs
     ):
-        if not self.is_sd_ready() or not self._connection.is_ready():
+        if not self.is_storage_mounted() or not self._connection.is_ready():
             self._logger.error("No connection to printer or printer is busy")
             return
 
@@ -1122,50 +1151,34 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
 
         else:
             # no plugin feels responsible, use the default implementation
-            tags = kwargs.get("tags", set()) | {"trigger:printer.add_sd_file"}
             local = self._file_manager.path_on_disk(FileDestinations.LOCAL, filename)
-            remote = connection.upload_printer_file(local, path, tags=tags)
+            remote = connection.upload_printer_file(local, path)
             return remote
 
+    @util.deprecated(
+        message="delete_sd_file has been deprecated and will be removed in a future version. Please use the PrinterStorage instead.",
+        includedoc="Functionality moved to :class:`~octoprint.filemanager.storage.printer.PrinterStorage`",
+        since="1.12.0",
+    )
     def delete_sd_file(self, filename, *args, **kwargs):
-        if not self.is_sd_ready():
+        if not self.is_storage_mounted():
             return
 
-        tags = kwargs.get("tags", set()) | {"trigger:printer.delete_sd_file"}
+        cast(PrinterFilesMixin, self._connection).delete_printer_file("/" + filename)
 
-        cast(PrinterFilesMixin, self._connection).delete_printer_file(
-            "/" + filename, tags=tags
-        )
-
-    def init_sd_card(self, *args, **kwargs):
-        if (
-            not self._connection
-            or not isinstance(self._connection, PrinterFilesMixin)
-            or self.is_sd_ready()
-        ):
-            return
-
-        tags = kwargs.get("tags", set()) | {"trigger:printer.init_sd_card"}
-
-        self._connection.mount_printer_files(tags=tags)
-
-    def release_sd_card(self, *args, **kwargs):
-        if not self.is_sd_ready():
-            return
-
-        tags = kwargs.get("tags", set()) | {"trigger:printer.release_sd_card"}
-
-        cast(PrinterFilesMixin, self._connection).unmount_printer_files(tags=tags)
-
+    @util.deprecated(
+        message="refresh_sd_files has been deprecated and will be removed in a future version. Please use the PrinterStorage instead.",
+        includedoc="Functionality moved to :class:`~octoprint.filemanager.storage.printer.PrinterStorage`",
+        since="1.12.0",
+    )
     def refresh_sd_files(self, blocking=False, *args, **kwargs):
-        if not self.is_sd_ready():
+        if not self.is_storage_mounted():
             return
 
-        tags = kwargs.get("tags", set()) | {"trigger:printer.refresh_sd_files"}
         timeout = kwargs.get("timeout", 10)
 
         cast(PrinterFilesMixin, self._connection).refresh_printer_files(
-            blocking=blocking, timeout=timeout, tags=tags
+            blocking=blocking, timeout=timeout
         )
 
     # ~~ ConnectedPrinterListenerMixin
@@ -1451,7 +1464,7 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
                 )
             )
 
-    def on_printer_job_cancelled(self, suppress_script=False, user=None):  # TODO
+    def on_printer_job_cancelled(self, suppress_script=False, user=None):
         self._update_progress_data()
 
         job_progress = self._connection.job_progress if self._connection else None
@@ -1513,10 +1526,20 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
             thread.daemon = True
             thread.start()
 
-    def on_printer_position_changed(self, position, reason=None):
-        payload = {"reason": reason}
-        payload.update(position)
-        eventManager().fire(Events.POSITION_UPDATE, payload)
+    def on_printer_position_changed(self, position, reason: str = None):
+        if "z" in position:
+            # track z changes (we know of)
+            self._stateMonitor.set_current_z(position["z"])
+
+        if "t" in position:
+            # track tool changes (we know of)
+            self._stateMonitor.set_current_t(position["t"])
+
+        if all(axis in position for axis in ("x", "y", "z", "e", "t", "f")):
+            # only send full position reports onwards
+            payload = {"reason": reason}
+            payload.update(position)
+            eventManager().fire(Events.POSITION_UPDATE, payload)
 
     def on_printer_temperature_update(self, temperatures):
         self._add_temperature_data(temperatures)
@@ -1892,7 +1915,7 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
             error=self.is_error(),
             paused=self.is_paused(),
             ready=self.is_ready(),
-            sdReady=self.is_sd_ready(),
+            sdReady=self.is_storage_mounted(),
         )
 
     def _payload_for_print_job_event(
@@ -1961,6 +1984,8 @@ class StateMonitor:
         self._offsets = {}
         self._progress = None
         self._resends = None
+        self._current_z = None
+        self._current_t = None
 
         self._progress_dirty = False
         self._resends_dirty = False
@@ -1992,12 +2017,16 @@ class StateMonitor:
         progress=None,
         offsets=None,
         resends=None,
+        z=None,
+        t=None,
     ):
         self.set_state(state)
         self.set_job_data(job_data)
         self.set_progress(progress)
         self.set_temp_offsets(offsets)
         self.set_resends(resends)
+        self.set_current_z(z)
+        self.set_current_t(t)
 
     def add_temperature(self, temperature):
         self._on_add_temperature(temperature)
@@ -2045,6 +2074,16 @@ class StateMonitor:
         self._offsets = offsets
         self._change_event.set()
 
+    def set_current_z(self, z):
+        if z != self._current_z:
+            self._current_z = z
+            self._change_event.set()
+
+    def set_current_t(self, t):
+        if t != self._current_t:
+            self._current_t = t
+            self._change_event.set()
+
     def _work(self):
         try:
             while True:
@@ -2085,6 +2124,8 @@ class StateMonitor:
             "progress": self._progress,
             "offsets": self._offsets,
             "resends": self._resends,
+            "currentZ": self._current_z,
+            "currentTool": self._current_t,
         }
 
 

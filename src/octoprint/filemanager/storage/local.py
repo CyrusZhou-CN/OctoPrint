@@ -818,6 +818,31 @@ class LocalFileStorage(StorageInterface):
 
         return info, open(thumb, mode="rb")
 
+    def refresh_thumbnails(
+        self, path: str, force: bool = False, recursive: bool = False
+    ) -> None:
+        path_on_disk = self.path_on_disk(path)
+
+        if os.path.isdir(path_on_disk):
+
+            def process_folder(folder: str, base: str):
+                for item in os.scandir(folder):
+                    if item.name.startswith("."):
+                        continue
+
+                    if item.is_dir():
+                        if recursive:
+                            process_folder(item.path, f"{base}/{item.name}")
+                        continue
+
+                    if force or len(self._get_thumbnails(folder, item.name)) == 0:
+                        self._extract_thumbnails(f"{base}/{item.name}")
+
+            process_folder(path_on_disk, path)
+
+        elif force or not self.has_thumbnail(path):
+            self._extract_thumbnails(path)
+
     def _to_thumbnail_info(
         self, thumb: str, sizehint: str, printable: str
     ) -> StorageThumbnail:
@@ -1686,7 +1711,7 @@ class LocalFileStorage(StorageInterface):
                     else:
                         shutil.copy2(src, dst)
                 except Exception:
-                    self._logger.exception("Error copying/moving {src} to {dst}")
+                    self._logger.exception(f"Error copying/moving {src} to {dst}")
 
     def _get_metadata(self, path, force=False):
         import json

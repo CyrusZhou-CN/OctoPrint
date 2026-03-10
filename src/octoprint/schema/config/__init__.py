@@ -4,7 +4,6 @@ __copyright__ = "Copyright (C) 2022 The OctoPrint Project - Released under terms
 from typing import Union
 
 from octoprint.schema import BaseModel
-from octoprint.vendor.with_attrs_docs import with_attrs_docs
 
 from .access_control import AccessControlConfig
 from .api import ApiConfig
@@ -29,7 +28,6 @@ from .terminalfilters import DEFAULT_TERMINAL_FILTERS, TerminalFilterEntry
 from .webcam import WebcamConfig
 
 
-@with_attrs_docs
 class Config(BaseModel):
     accessControl: AccessControlConfig = AccessControlConfig()
     api: ApiConfig = ApiConfig()

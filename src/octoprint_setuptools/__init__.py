@@ -1,5 +1,11 @@
+# ruff: noqa: UP010, UP009
 # -*- coding: utf-8 -*-
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import (
+    absolute_import,
+    division,
+    print_function,
+    unicode_literals,
+)
 
 ### NOTE #################################################################################
 # This file has to stay format compatible to Python 2, or pip under Python 2 will
