@@ -250,8 +250,8 @@ $(function () {
             return self.storageCanUpload(storage);
         });
         self.currentStorageCanUpload.subscribe(() => {
-            self.updateButton();
             self.evaluateDropzone();
+            self.updateButton();
         });
         self.currentStorageCanAddFolder = ko.pureComputed(() => {
             const storage = self.currentStorage();
@@ -1026,7 +1026,7 @@ $(function () {
         };
         self.initSdCard = function () {
             log.warn(
-                "initSdCard has been deprecated as of OctoPrint 1.12.0, use initPrinterStorage instead"
+                "initSdCard has been deprecated as of OctoPrint 2.0.0, use initPrinterStorage instead"
             );
             self.initPrinterStorage();
         };
@@ -1037,7 +1037,7 @@ $(function () {
         };
         self.releaseSdCard = function () {
             log.warn(
-                "releaseSdCard has been deprecated as of OctoPrint 1.12.0, use releasePrinterStorage instead"
+                "releaseSdCard has been deprecated as of OctoPrint 2.0.0, use releasePrinterStorage instead"
             );
             self.releasePrinterStorage();
         };
@@ -1048,7 +1048,7 @@ $(function () {
         };
         self.refreshSdFiles = function () {
             log.warn(
-                "refreshSdFiles has been deprecated as of OctoPrint 1.12.0, use the printer storage directly instead"
+                "refreshSdFiles has been deprecated as of OctoPrint 2.0.0, use the printer storage directly instead"
             );
             self.refreshPrinterStorage();
         };
@@ -1414,7 +1414,7 @@ $(function () {
         self.getAdditionalData = function (data) {
             var output = "";
             if (data["user"]) {
-                output += gettext("Uploaded by") + ": " + data["user"] + "<br>";
+                output += gettext("Uploaded by") + ": " + _.escape(data["user"]) + "<br>";
             }
             if (data["gcodeAnalysis"]) {
                 if (
@@ -1750,9 +1750,9 @@ $(function () {
                 self.loginState.hasPermission(self.access.permissions.FILES_UPLOAD) &&
                 self.currentStorageCanUpload()
             ) {
-                self.uploadButton.fileupload("enable");
+                self.uploadButton().fileupload("enable");
             } else {
-                self.uploadButton.fileupload("disable");
+                self.uploadButton().fileupload("disable");
             }
         };
 
@@ -1810,7 +1810,11 @@ $(function () {
 
             //~~ Gcode upload
 
-            self.uploadButton = $("#gcode_upload");
+            // Must re-query the DOM element on each call because jQuery File Upload
+            // clones and replaces the file input after every file selection
+            //
+            // See https://github.com/blueimp/jQuery-File-Upload/wiki/Frequently-Asked-Questions#why-is-the-file-input-field-cloned-and-replaced-after-each-selection
+            self.uploadButton = () => $("#gcode_upload");
 
             self.dropOverlay = $("#drop_overlay");
             self.dropZone = $("#drop");
@@ -1929,10 +1933,9 @@ $(function () {
                 title: gettext("Streaming done"),
                 text: _.sprintf(
                     gettext(
-                        "Streamed %(local)s to %(remote)s on SD, took %(time).2f seconds"
+                        "Streamed %(remote)s to printer storage, took %(time).2f seconds"
                     ),
                     {
-                        local: _.escape(payload.local),
                         remote: _.escape(payload.remote),
                         time: payload.time
                     }
@@ -1951,8 +1954,8 @@ $(function () {
             new PNotify({
                 title: gettext("Streaming failed"),
                 text: _.sprintf(
-                    gettext("Did not finish streaming %(local)s to %(remote)s on SD"),
-                    {local: _.escape(payload.local), remote: _.escape(payload.remote)}
+                    gettext("Did not finish streaming %(remote)s to printer storage"),
+                    {remote: _.escape(payload.remote)}
                 ),
                 type: "error"
             });
@@ -1961,13 +1964,19 @@ $(function () {
         };
 
         self._setDropzone = (enable) => {
-            const button = self.uploadButton;
-            const url = API_BASEURL + "files/" + self.currentStorage();
+            const button = self.uploadButton();
+            const storage = self.currentStorage();
 
             if (button === undefined) return;
+            if (
+                button.attr("data-storage") == storage &&
+                button.attr("data-dropenabled") == "" + enable
+            )
+                return;
 
+            // TODO: update options instead of re-init
             button.fileupload({
-                url: url,
+                url: API_BASEURL + "files/" + storage,
                 dataType: "json",
                 dropZone: enable ? self.dropZone : null,
                 sequentialUploads: true,
@@ -1981,6 +1990,7 @@ $(function () {
                 stop: self._handleUploadStop,
                 progressall: self._handleUploadProgress
             });
+            button.attr("data-storage", storage).attr("data-dropenabled", "" + enable);
         };
 
         self._dragNDropEnabled = false;
@@ -2026,7 +2036,7 @@ $(function () {
             };
 
             // Collect an item from the queue that needs an overwrite dialog
-            const {data, response, path, fileSizeTooBig} =
+            const {data, response, path, storage, fileSizeTooBig} =
                 self._uploadExistsQueue.shift();
             const file = data.files[0];
 
@@ -2057,7 +2067,7 @@ $(function () {
             $("span.not_enough_space", self.uploadExistsDialog).toggle(fileSizeTooBig);
             $("input", self.uploadExistsDialog)
                 .val("")
-                .prop("placeholder", response.suggestion);
+                .prop("placeholder", response.suggestion || "");
             $("a.upload-rename", self.uploadExistsDialog)
                 .toggle(!fileSizeTooBig)
                 .prop("disabled", false)
@@ -2066,7 +2076,9 @@ $(function () {
                     var newName = $("input", self.uploadExistsDialog).val();
                     if (newName === "") newName = response.suggestion;
 
-                    OctoPrint.files.exists("local", path, newName).done(function (r) {
+                    if (!newName) return;
+
+                    OctoPrint.files.exists(storage, path, newName).done(function (r) {
                         if (r.exists) {
                             $(".control-group", self.uploadExistsDialog).addClass(
                                 "error"
@@ -2120,6 +2132,7 @@ $(function () {
                                 data,
                                 response,
                                 path,
+                                storage,
                                 fileSizeTooBig
                             };
                             self._uploadExistsQueue.push(queueEntry);

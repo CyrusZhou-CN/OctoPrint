@@ -382,6 +382,8 @@ class TemperatureRecord:
     def copy_from(self, other):
         self._tools = other.tools
         self._bed = other.bed
+        self._chamber = other.chamber
+        self._custom = other.custom
 
     def set_tool(self, tool, actual=None, target=None):
         current = self._tools.get(tool, (None, None))
@@ -683,9 +685,7 @@ class MachineCom:
         self._busy_protocol_detected = False
         self._busy_protocol_support = False
 
-        self._trigger_ok_after_resend = self._settings.get_boolean(
-            ["supportResendsWithoutOk"]
-        )
+        self._trigger_ok_after_resend = self._settings.get(["supportResendsWithoutOk"])
         self._resend_ok_timer = None
 
         self._resendActive = False
@@ -6025,7 +6025,7 @@ class PrintingGcodeFileInformation(PrintingFileInformation):
         if self._handle:
             self._start_pos = self._pos = self._handle.tell()
 
-            self._handle.seek(os.SEEK_END)
+            self._handle.seek(0, whence=os.SEEK_END)
             self._size = self._handle.tell()
             self._handle.seek(self._pos)
         else:

@@ -54,7 +54,7 @@
     };
     OctoPrintPrinterClient.prototype.issueSdCommand = function (command, payload, opts) {
         log.warn(
-            "OctoPrintClient.printer.issueSdCommand has been deprecated as of OctoPrint 1.12.0, use OctoPrintClient.printer.issueStorageCommand instead"
+            "OctoPrintClient.printer.issueSdCommand has been deprecated as of OctoPrint 2.0.0, use OctoPrintClient.printer.issueStorageCommand instead"
         );
         return this.issueStorageCommand(command, payload, opts);
     };
@@ -143,7 +143,7 @@
     };
     OctoPrintPrinterClient.prototype.getSdState = function (opts) {
         log.warn(
-            "OctoPrintClient.printer.getSdState has been deprecated as of OctoPrint 1.12.0, use OctoPrintClient.printer.getStorageState instead"
+            "OctoPrintClient.printer.getSdState has been deprecated as of OctoPrint 2.0.0, use OctoPrintClient.printer.getStorageState instead"
         );
         return this.getStorageState(opts);
     };
@@ -293,7 +293,7 @@
     };
     OctoPrintPrinterClient.prototype.initSd = function (opts) {
         log.warn(
-            "OctoPrintClient.printer.initSd has been deprecated as of OctoPrint 1.12.0, use OctoPrintClient.printer.initStorage instead"
+            "OctoPrintClient.printer.initSd has been deprecated as of OctoPrint 2.0.0, use OctoPrintClient.printer.initStorage instead"
         );
         return this.initStorage(opts);
     };
@@ -303,14 +303,14 @@
     };
     OctoPrintPrinterClient.prototype.releaseSd = function (opts) {
         log.warn(
-            "OctoPrintClient.printer.releaseSd has been deprecated as of OctoPrint 1.12.0, use OctoPrintClient.printer.releaseStorage instead"
+            "OctoPrintClient.printer.releaseSd has been deprecated as of OctoPrint 2.0.0, use OctoPrintClient.printer.releaseStorage instead"
         );
         return this.releaseStorage(opts);
     };
 
     OctoPrintPrinterClient.prototype.refreshSd = function (opts) {
         log.warn(
-            "OctoPrintClient.printer.refreshSd has been deprecated as of OctoPrint 1.12.0, use OctoPrintClient.files.listForLocation instead"
+            "OctoPrintClient.printer.refreshSd has been deprecated as of OctoPrint 2.0.0, use OctoPrintClient.files.listForLocation instead"
         );
         return this.issueStorageCommand("refresh", {}, opts);
     };

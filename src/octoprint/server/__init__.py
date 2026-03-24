@@ -48,6 +48,7 @@ import octoprint.filemanager
 import octoprint.util
 import octoprint.util.net
 from octoprint.server import util
+from octoprint.server.util.flask import server_side_logout
 from octoprint.systemcommands import system_command_manager
 from octoprint.util.json import JsonEncoding
 from octoprint.vendor.flask_principal import (  # noqa: F401
@@ -196,39 +197,46 @@ def on_user_loaded_from_cookie(sender, user=None):
         session["credentials_seen"] = False
 
 
-def load_user(id):
-    if id is None:
+def load_user(userid):
+    """Tries to load the user from the flask session"""
+    if userid is None:
         return None
 
-    if id == "_api":  # TODO Remove in 1.13.0
+    if userid == "_api":  # TODO Remove in 1.13.0
         return userManager.api_user_factory()
 
-    if id == "_internal":
+    if userid == "_internal":
         return userManager.internal_user_factory()
 
-    if session and "usersession.id" in session:
-        sessionid = session["usersession.id"]
-    else:
-        sessionid = None
+    sessionid = None
+    sessionsig = ""
+    if session:
+        sessionid = session.get("usersession.id")
+        sessionsig = session.get("usersession.signature", "")
 
-    if session and "usersession.signature" in session:
-        sessionsig = session["usersession.signature"]
-    else:
-        sessionsig = ""
+        login_mechanism = session.get("login_mechanism")
+        if (
+            login_mechanism == util.LoginMechanism.REMOTE_USER
+            and userid
+            != request.headers.get(settings().get(["accessControl", "remoteUserHeader"]))
+        ):
+            # remote user header doesn't match anymore, we interpret that as a logout, see #5279
+            server_side_logout(userid, sessionid=sessionid)
+            return None
 
     if sessionid:
         # session["_fresh"] is False if the session comes from a remember me cookie,
         # True if it came from a use of the login dialog
         user = userManager.find_user(
-            userid=id, session=sessionid, fresh=session.get("_fresh", False)
+            userid=userid, session=sessionid, fresh=session.get("_fresh", False)
         )
     else:
-        user = userManager.find_user(userid=id)
+        user = userManager.find_user(userid=userid)
 
     if (
         user
         and user.is_active
-        and (not sessionid or validate_session_signature(sessionsig, id, sessionid))
+        and (not sessionid or validate_session_signature(sessionsig, userid, sessionid))
     ):
         return user
 
@@ -236,6 +244,8 @@ def load_user(id):
 
 
 def load_user_from_request(request):
+    """Tries to load user from API key, Basic Auth or Remote User Header"""
+
     # API key?
     apikey = util.get_api_key(request)
     if apikey:
@@ -243,18 +253,19 @@ def load_user_from_request(request):
         if user:
             return user
 
+    # Basic Authentication?
     if settings().getBoolean(["accessControl", "trustBasicAuthentication"]):
-        # Basic Authentication?
         user = util.get_user_for_authorization_header(request)
         if user:
             return user
 
-    if settings().getBoolean(["accessControl", "trustRemoteUser"]):
-        # Remote user header?
+    # Remote User Header?
+    if settings().get(["accessControl", "trustedAuthProxies"]):
         user = util.get_user_for_remote_user_header(request)
         if user:
             return user
 
+    # No user found
     return None
 
 
@@ -1718,6 +1729,8 @@ class Server:
                 and not current_user.is_anonymous
             ):
                 return Identity(current_user.get_id())
+            else:
+                return OctoPrintAnonymousIdentity()
 
         principals.identity_loader(current_user_identity_loader)
 

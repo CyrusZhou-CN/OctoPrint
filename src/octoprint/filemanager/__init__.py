@@ -699,7 +699,7 @@ class FileManager:
         return self._storage(destination).folder_exists(path)
 
     @deprecated(
-        "list_files has been deprecated in favor of list_storage_entries", since="1.12.0"
+        "list_files has been deprecated in favor of list_storage_entries", since="2.0.0"
     )
     def list_files(
         self,
@@ -733,7 +733,7 @@ class FileManager:
         return result
 
     @deprecated(
-        "get_file has been deprecated in favor of get_storage_entry", since="1.12.0"
+        "get_file has been deprecated in favor of get_storage_entry", since="2.0.0"
     )
     def get_file(self, location: str, path: str) -> dict:
         return self._storage(location).get_file(path)
@@ -1296,14 +1296,14 @@ class FileManager:
 
     @deprecated(
         "add_link has been deprecated and will be removed in a future version",
-        since="1.12.0",
+        since="2.0.0",
     )
     def add_link(self, location, path, rel, data):
         self._storage(location).add_link(path, rel, data)
 
     @deprecated(
         "add_link has been deprecated and will be removed in a future version",
-        since="1.12.0",
+        since="2.0.0",
     )
     def remove_link(self, location, path, rel, data):
         self._storage(location).remove_link(path, rel, data)
@@ -1422,6 +1422,9 @@ class FileManager:
 
     def sanitize_name(self, location, name):
         return self._storage(location).sanitize_name(name)
+
+    def available_name(self, location, path, name):
+        return self._storage(location).available_name(path, name)
 
     def sanitize_path(self, location, path):
         return self._storage(location).sanitize_path(path)

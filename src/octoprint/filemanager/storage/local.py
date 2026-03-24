@@ -582,10 +582,12 @@ class LocalFileStorage(StorageInterface):
         self,
         path: str,
         file_obj: AbstractFileWrapper,
-        allow_overwrite=False,
-        display=None,
-        user=None,
-        progress_callback=None,
+        allow_overwrite: bool = False,
+        display: str = None,
+        user: str = None,
+        progress_callback: callable = None,
+        *args,
+        **kwargs,
     ):
         display_path, display_name = self.canonicalize(path)
         path = self.sanitize_path(display_path)

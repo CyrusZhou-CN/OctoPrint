@@ -19,6 +19,8 @@ from octoprint.settings import settings as s
 from octoprint.util import atomic_write, deprecated, generate_api_key, to_bytes, yaml
 from octoprint.util import get_fully_qualified_classname as fqcn
 
+NOLOGIN_PWHASH = "nologin"
+
 password_hashers = []
 
 try:
@@ -174,6 +176,8 @@ class UserManager(GroupChangeListener):
 
     @staticmethod
     def create_password_hash(password, *args, **kwargs):
+        if password is None:
+            return NOLOGIN_PWHASH
         return password_hashers[0].hash(password)
 
     @staticmethod
@@ -785,9 +789,9 @@ class FilebasedUserManager(UserManager):
         added_groups = list(set(groups) - set(user._groups))
 
         if len(removed_groups):
-            self._dirty |= user.remove_groups_from_user(removed_groups)
+            self._dirty = user.remove_groups_from_user(removed_groups) or self._dirty
         if len(added_groups):
-            self._dirty |= user.add_groups_to_user(added_groups)
+            self._dirty = user.add_groups_to_user(added_groups) or self._dirty
 
         if self._dirty:
             self._save()
@@ -1226,6 +1230,9 @@ class User(UserMixin):
         }
 
     def check_password(self, password, legacy=False):
+        if self._passwordHash == NOLOGIN_PWHASH:
+            return False
+
         if legacy:
             return self._passwordHash == password
 
@@ -1309,7 +1316,7 @@ class User(UserMixin):
 
         dirty = False
         for permission in permissions:
-            if permissions not in self._permissions:
+            if permission not in self._permissions:
                 self._permissions.append(permission)
                 dirty = True
 

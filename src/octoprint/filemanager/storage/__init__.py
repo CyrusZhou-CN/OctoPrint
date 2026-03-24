@@ -212,7 +212,7 @@ class StorageInterface:
         raise NotImplementedError()
 
     @deprecated(
-        "last_modified has been deprecated in favor of get_lastmodified", since="1.12.0"
+        "last_modified has been deprecated in favor of get_lastmodified", since="2.0.0"
     )
     def last_modified(self, *args, **kwargs):
         return self.get_lastmodified(*args, **kwargs)
@@ -264,7 +264,7 @@ class StorageInterface:
         raise NotImplementedError()
 
     @deprecated(
-        "get_file has been deprecated in favor of get_storage_entry", since="1.12.0"
+        "get_file has been deprecated in favor of get_storage_entry", since="2.0.0"
     )
     def get_file(self, path: str) -> dict:
         entry = self.get_storage_entry(path)
@@ -274,7 +274,7 @@ class StorageInterface:
         return self._convert_storage_entry_to_dict(entry)
 
     @deprecated(
-        "list_files has been deprecated in favor of list_storage_entries", since="1.12.0"
+        "list_files has been deprecated in favor of list_storage_entries", since="2.0.0"
     )
     def list_files(
         self,
@@ -500,14 +500,14 @@ class StorageInterface:
 
     @deprecated(
         "add_link has been deprecated and will be removed in a future version",
-        since="1.12.0",
+        since="2.0.0",
     )
     def add_link(self, path, rel, data):
         pass
 
     @deprecated(
         "add_link has been deprecated and will be removed in a future version",
-        since="1.12.0",
+        since="2.0.0",
     )
     def remove_link(self, path, rel, data):
         pass
@@ -653,6 +653,29 @@ class StorageInterface:
         :return: the sanitized name
         """
         raise NotImplementedError()
+
+    def available_name(self, path, name) -> str:
+        """
+        Returns a sanitized, available name on path.
+        """
+        from os.path import splitext
+
+        sanitized = self.sanitize_name(name)
+        if not self.file_exists(self.join_path(path, sanitized)):
+            return sanitized
+
+        counter = 0
+        prefix, ext = splitext(sanitized)
+        suggestion = sanitized
+
+        while self.file_exists(self.join_path(path, suggestion)):
+            counter += 1
+            if counter > 100:
+                raise ValueError(f"Can't find a free naming suggestion for {path}/{name}")
+
+            suggestion = self.sanitize_name(f"{prefix}_{counter}{ext}")
+
+        return suggestion
 
     def split_path(self, path):
         """

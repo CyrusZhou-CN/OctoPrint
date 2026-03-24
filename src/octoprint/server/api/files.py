@@ -5,7 +5,6 @@ __copyright__ = "Copyright (C) 2014 The OctoPrint Project - Released under terms
 import datetime
 import hashlib
 import logging
-import os
 import threading
 from collections.abc import Iterable
 from typing import Optional
@@ -184,7 +183,7 @@ def _create_etag(path, filter=None, recursive=False, lm=None):
     unless=lambda: request.values.get("force", False)
     or request.values.get("_refresh", False),
 )
-def readGcodeFiles():  # pre 1.12.0
+def readGcodeFiles():  # pre 2.0.0
     filter = request.values.get("filter", False)
     recursive = request.values.get("recursive", "false") in valid_boolean_trues
     force = request.values.get("force", "false") in valid_boolean_trues
@@ -205,7 +204,7 @@ def readGcodeFiles():  # pre 1.12.0
 
     usage = psutil.disk_usage(settings().getBaseFolder("uploads", check_writable=False))
 
-    data = apischema.ReadGcodeFilesResponse_pre_1_12(
+    data = apischema.ReadGcodeFilesResponse_pre_2_0_0(
         files=files,
         free=usage.free,
         total=usage.total,
@@ -213,7 +212,7 @@ def readGcodeFiles():  # pre 1.12.0
     return jsonify(**data.model_dump(by_alias=True, exclude_none=True))
 
 
-@readGcodeFiles.version(">=1.12.0")
+@readGcodeFiles.version(">=2.0.0")
 @Permissions.FILES_LIST.require(403)
 @with_revalidation_checking(
     etag_factory=lambda lm=None: _create_etag(
@@ -228,7 +227,7 @@ def readGcodeFiles():  # pre 1.12.0
     unless=lambda: request.values.get("force", False)
     or request.values.get("_refresh", False),
 )
-def readGcodeFiles_post_1_12_0():  # 1.12.0+
+def readGcodeFiles_post_2_0_0():  # 2.0.0+
     filter = request.values.get("filter", False)
     recursive = request.values.get("recursive", "false") in valid_boolean_trues
     force = request.values.get("force", "false") in valid_boolean_trues
@@ -282,21 +281,15 @@ def runFilesTest():
         joined = fileManager.join_path(storage, sanitized_path, sanitized_name)
         return sanitized_path, sanitized_name, joined
 
-    def run_sanitize(storage: str, path: str, name: str) -> dict:
-        sanitized_path, sanitized_name, sanitized = sanitize(
-            data["storage"], data["path"], data["filename"]
-        )
+    def run_sanitize(storage: str, path: str, filename: str) -> dict:
+        sanitized_path, sanitized_name, sanitized = sanitize(storage, path, filename)
         return {
             "sanitized": sanitized,
             "sanitized_path": sanitized_path,
             "sanitized_name": sanitized_name,
         }
 
-    def run_exists(storage: str, path: str, name: str) -> dict:
-        storage = data["storage"]
-        path = data["path"]
-        filename = data["filename"]
-
+    def run_exists(storage: str, path: str, filename: str) -> dict:
         sanitized_path, sanitized_name, sanitized = sanitize(storage, path, filename)
         result = {
             "exists": False,
@@ -307,27 +300,14 @@ def runFilesTest():
 
         exists = _getFileDetails(storage, sanitized)
         if exists:
-            suggestion = sanitized_name
-            name, ext = os.path.splitext(sanitized_name)
-            counter = 0
-            while fileManager.file_exists(
-                storage,
-                fileManager.join_path(
-                    storage,
-                    sanitized_path,
-                    suggestion,
-                ),
-            ):
-                counter += 1
-                suggestion = fileManager.sanitize_name(storage, f"{name}_{counter}{ext}")
-            result.update(
-                {
-                    "exists": True,
-                    "suggestion": suggestion,
-                    "size": exists.size,
-                    "date": exists.date,
-                }
-            )
+            result.update({"exists": True, "size": exists.size, "date": exists.date})
+
+            try:
+                suggestion = fileManager.available_name(storage, path, filename)
+                result.update({"suggestion": suggestion})
+            except ValueError:
+                # could not find a suggestion
+                pass
 
         return result
 
@@ -374,7 +354,7 @@ def readGcodeFilesForOrigin(origin):
         )
         usage = fileManager.get_usage(origin)
 
-        if api_version_matches(">=1.12.0"):  # 1.12.0+
+        if api_version_matches(">=2.0.0"):  # 2.0.0+
             response = apischema.ApiStorageData(
                 key=storage_meta.key,
                 name=storage_meta.name,
@@ -387,8 +367,8 @@ def readGcodeFilesForOrigin(origin):
                     free=usage.total - usage.used, total=usage.total
                 )
 
-        else:  # pre 1.12.0
-            response = apischema.ReadGcodeFilesForOriginResponse_pre_1_12(files=files)
+        else:  # pre 2.0.0
+            response = apischema.ReadGcodeFilesForOriginResponse_pre_2_0_0(files=files)
 
             if usage:
                 response.free = usage.total - usage.used
@@ -900,7 +880,7 @@ def uploadGcodeFile(target):
                     + f"downloads/files/{target}/{quoted_name}"
                 )
 
-            if api_version_matches(">=1.12.0"):
+            if api_version_matches(">=2.0.0"):
                 resp = apischema.UploadResponse(
                     file=entry,
                     done=upload_done,
@@ -908,7 +888,7 @@ def uploadGcodeFile(target):
                     effectivePrint=to_print,
                 )
             else:
-                resp = apischema.UploadResponse_pre_1_12(
+                resp = apischema.UploadResponse_pre_2_0_0(
                     files={target: entry},
                     done=upload_done,
                     effectiveSelect=to_select,
@@ -971,10 +951,10 @@ def uploadGcodeFile(target):
                 },
             )
 
-            if api_version_matches(">=1.12.0"):
+            if api_version_matches(">=2.0.0"):
                 resp = apischema.UploadResponse(folder=folder, done=True)
             else:
-                resp = apischema.UploadResponse_pre_1_12(folder=folder, done=True)
+                resp = apischema.UploadResponse_pre_2_0_0(folder=folder, done=True)
 
             r = make_response(jsonify(**resp.model_dump(by_alias=True)), 201)
             r.headers["Location"] = folder.refs["resource"]

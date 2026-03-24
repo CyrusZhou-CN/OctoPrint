@@ -98,7 +98,20 @@ class BackupPlugin(
     ##~~ SettingsPlugin
 
     def get_settings_defaults(self):
-        return {"restore_unsupported": False}
+        return {"path": None, "restore_unsupported": False}
+
+    def on_settings_load(self):
+        config = super().on_settings_load()
+        config["path"] = self.backups_path
+        return config
+
+    def on_settings_save(self, data):
+        if data.get("path") == self.default_backups_path:
+            data["path"] = None
+        super().on_settings_save(data)
+
+    def get_settings_restricted_paths(self):
+        return {"admin": [["path"], ["restore_unsupported"]]}
 
     ##~~ AssetPlugin
 
@@ -152,7 +165,7 @@ class BackupPlugin(
     @no_firstrun_access
     @Permissions.ADMIN.require(403)
     def delete_unknown_plugins(self):
-        data_file = os.path.join(self.get_plugin_data_folder(), UNKNOWN_PLUGINS_FILE)
+        data_file = os.path.join(self.backups_path, UNKNOWN_PLUGINS_FILE)
         try:
             os.remove(data_file)
         except Exception:
@@ -215,7 +228,7 @@ class BackupPlugin(
 
         elif flask.request.json and "path" in flask.request.json:
             # existing backup is supposed to be restored
-            backup_folder = self.get_plugin_data_folder()
+            backup_folder = self.backups_path
             path = os.path.realpath(
                 os.path.join(backup_folder, flask.request.json["path"])
             )
@@ -336,7 +349,7 @@ class BackupPlugin(
             kwargs={
                 "settings": self._settings,
                 "plugin_manager": self._plugin_manager,
-                "datafolder": self.get_plugin_data_folder(),
+                "datafolder": self.backups_path,
                 "on_install_plugins": on_install_plugins,
                 "on_report_unknown_plugins": on_report_unknown_plugins,
                 "on_invalid_backup": on_invalid_backup,
@@ -382,7 +395,7 @@ class BackupPlugin(
         )
         from octoprint.util import is_hidden_path
 
-        plugin_folder = self.get_plugin_data_folder()
+        plugin_folder = self.backups_path
 
         def path_check(path):
             joined = os.path.join(plugin_folder, path)
@@ -511,12 +524,11 @@ class BackupPlugin(
 
             if path is not None:
                 datafolder, filename = os.path.split(os.path.abspath(path))
+                if not os.path.isdir(datafolder):
+                    os.makedirs(datafolder)
             else:
                 filename = None
-                datafolder = os.path.join(settings.getBaseFolder("data"), "backup")
-
-            if not os.path.isdir(datafolder):
-                os.makedirs(datafolder)
+                datafolder = BackupPlugin._backups_path(settings)
 
             def on_backup_start(name, temporary_path, exclude):
                 click.echo(f"Creating backup at {name}, please wait...")
@@ -545,9 +557,7 @@ class BackupPlugin(
             )
             plugin_manager = cli_group.plugin_manager
 
-            datafolder = os.path.join(settings.getBaseFolder("data"), "backup")
-            if not os.path.isdir(datafolder):
-                os.makedirs(datafolder)
+            datafolder = BackupPlugin._backups_path(settings)
 
             # register plugin manager plugin setting overlays
             plugin_info = plugin_manager.get_plugin_info("pluginmanager")
@@ -559,9 +569,6 @@ class BackupPlugin(
                 settings.add_overlay(default_settings_overlay, at_end=True)
 
             if not os.path.isabs(path):
-                datafolder = os.path.join(settings.getBaseFolder("data"), "backup")
-                if not os.path.isdir(datafolder):
-                    os.makedirs(datafolder)
                 path = os.path.join(datafolder, path)
 
             if not os.path.exists(path):
@@ -706,7 +713,7 @@ class BackupPlugin(
                 "settings": self._settings,
                 "plugin_manager": self._plugin_manager,
                 "logger": self._logger,
-                "datafolder": self.get_plugin_data_folder(),
+                "datafolder": self.backups_path,
                 "on_backup_start": on_backup_start,
                 "on_backup_done": on_backup_done,
                 "on_backup_error": on_backup_error,
@@ -722,7 +729,7 @@ class BackupPlugin(
         Args:
             filename (str): Name of backup to delete
         """
-        backup_folder = self.get_plugin_data_folder()
+        backup_folder = self.backups_path
         full_path = os.path.realpath(os.path.join(backup_folder, filename))
         if (
             full_path.startswith(backup_folder)
@@ -737,7 +744,7 @@ class BackupPlugin(
 
     def _get_backups(self):
         backups = []
-        for entry in os.scandir(self.get_plugin_data_folder()):
+        for entry in os.scandir(self.backups_path):
             if is_hidden_path(entry.path):
                 continue
             if not self._valid_backup(entry.path):
@@ -756,7 +763,7 @@ class BackupPlugin(
         return backups
 
     def _get_unknown_plugins(self):
-        data_file = os.path.join(self.get_plugin_data_folder(), UNKNOWN_PLUGINS_FILE)
+        data_file = os.path.join(self.backups_path, UNKNOWN_PLUGINS_FILE)
         if os.path.exists(data_file):
             try:
                 with open(data_file, encoding="utf-8") as f:
@@ -996,7 +1003,13 @@ class BackupPlugin(
                 temporary_path = os.path.join(datafolder, f".{name}")
                 final_path = os.path.join(datafolder, name)
 
-                own_folder = datafolder
+                own_folders = list(
+                    {
+                        datafolder,
+                        cls._default_backups_path(settings),
+                    }
+                )
+                ignored_paths = own_folders + []
                 defaults = [
                     os.path.join(basedir, "config.yaml"),
                 ] + [
@@ -1011,16 +1024,11 @@ class BackupPlugin(
                         continue
                     size += cls._get_disk_size(
                         settings.global_get_basefolder(folder),
-                        ignored=[
-                            own_folder,
-                        ],
+                        ignored=ignored_paths,
                     )
                 size += cls._get_disk_size(
                     basedir,
-                    ignored=defaults
-                    + [
-                        own_folder,
-                    ],
+                    ignored=defaults + ignored_paths,
                 )
 
                 # since we can't know the compression ratio beforehand, we assume we need the same amount of space
@@ -1090,9 +1098,7 @@ class BackupPlugin(
                         add_to_zip(
                             configfile,
                             "basedir/config.yaml",
-                            ignored=[
-                                own_folder,
-                            ],
+                            ignored=ignored_paths,
                         )
 
                         # backup configured folder paths
@@ -1103,21 +1109,14 @@ class BackupPlugin(
                             add_to_zip(
                                 settings.global_get_basefolder(folder),
                                 "basedir/" + folder.replace("_", "/"),
-                                ignored=[
-                                    own_folder,
-                                ]
-                                + additional_excludes,
+                                ignored=ignored_paths + additional_excludes,
                             )
 
                         # backup anything else that might be lying around in our basedir
                         add_to_zip(
                             basedir,
                             "basedir",
-                            ignored=defaults
-                            + [
-                                own_folder,
-                            ]
-                            + additional_excludes,
+                            ignored=defaults + ignored_paths + additional_excludes,
                         )
 
                         # add list of installed plugins
@@ -1139,8 +1138,10 @@ class BackupPlugin(
 
                     return final_path
 
-                except Exception:
+                except (Exception, KeyboardInterrupt):
                     backup_error = True
+                    if os.path.exists(temporary_path):
+                        os.remove(temporary_path)
                     raise
                 finally:
                     for plugin, hook in plugin_manager.get_hooks(
@@ -1576,6 +1577,29 @@ class BackupPlugin(
                 )
 
         return True
+
+    @property
+    def backups_path(self):
+        return self._backups_path(self._settings)
+
+    @property
+    def default_backups_path(self):
+        return self._default_backups_path(self._settings)
+
+    @classmethod
+    def _backups_path(cls, settings, create=True):
+        path = settings.get(["path"])
+        if path is None:
+            path = cls._default_backups_path(settings)
+
+        if not os.path.isdir(path) and create:
+            os.makedirs(path)
+
+        return path
+
+    @classmethod
+    def _default_backups_path(cls, settings):
+        return os.path.join(settings.getBaseFolder("data"), "backup")
 
     @classmethod
     def _build_backup_filename(cls, settings):

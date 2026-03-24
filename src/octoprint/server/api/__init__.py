@@ -16,7 +16,7 @@ from flask import (
     request,
     session,
 )
-from flask_login import current_user, login_user, logout_user
+from flask_login import current_user, login_user
 from werkzeug.exceptions import HTTPException
 
 import octoprint.access.users
@@ -41,6 +41,7 @@ from octoprint.server.util.flask import (
     limit,
     no_firstrun_access,
     passive_login,
+    server_side_logout,
     session_signature,
     to_api_credentials_seen,
 )
@@ -65,7 +66,7 @@ from . import system as api_system  # noqa: F401,E402
 from . import timelapse as api_timelapse  # noqa: F401,E402
 from . import users as api_users  # noqa: F401,E402
 
-API_VERSION_PRE_1_12 = "0.1"
+API_VERSION_PRE_2_0_0 = "0.1"
 
 api.after_request(noCachingExceptGetResponseHandler)
 
@@ -288,14 +289,14 @@ def wizardFinish():
 def apiVersion():
     return jsonify(
         server=octoprint.server.VERSION,
-        api=API_VERSION_PRE_1_12,
+        api=API_VERSION_PRE_2_0_0,
         text=f"OctoPrint {octoprint.server.DISPLAY_VERSION}",
     )
 
 
-@apiVersion.version(">=1.12.0")
+@apiVersion.version(">=2.0.0")
 @Permissions.STATUS.require(403)
-def apiVersion_post_1_12():
+def apiVersion_post_2_0():
     return jsonify(
         server=octoprint.server.VERSION,
         text=f"OctoPrint {octoprint.server.DISPLAY_VERSION}",
@@ -335,7 +336,7 @@ def login():
         reauthenticate = current_user and current_user.get_id() == username
 
         if "usersession.id" in session and not reauthenticate:
-            _logout(current_user)
+            server_side_logout(current_user.get_id(), sessionid=session["usersession.id"])
 
         user = octoprint.server.userManager.find_user(username)
         if user is not None:
@@ -473,14 +474,9 @@ def logout():
     username = None
     if current_user:
         username = current_user.get_id()
+        server_side_logout(username, sessionid=session.get("usersession.id"))
 
-    # logout from user manager...
-    _logout(current_user)
-
-    # ... and from flask login (and principal)
-    logout_user()
-
-    # ... and send an active logout session cookie
+    # send an active logout session cookie
     r = make_response(jsonify(octoprint.server.userManager.anonymous_user_factory()))
     r.set_cookie("active_logout", "true")
 
@@ -489,14 +485,6 @@ def logout():
         auth_log(f"Logging out user {username} from {request.remote_addr}")
 
     return r
-
-
-def _logout(user):
-    if "usersession.id" in session:
-        del session["usersession.id"]
-    if "login_mechanism" in session:
-        del session["login_mechanism"]
-    octoprint.server.userManager.logout_user(user)
 
 
 @api.route("/currentuser", methods=["GET"])

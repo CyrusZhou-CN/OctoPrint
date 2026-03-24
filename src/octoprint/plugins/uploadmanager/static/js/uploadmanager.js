@@ -249,13 +249,13 @@ $(function () {
         };
 
         self.foldersOnlyList = ko.dependentObservable(function () {
-            filter = function (data) {
+            var filter = function (data) {
                 return data["type"] && data["type"] == "folder";
             };
             return _.filter(self.listHelper.paginatedItems(), filter);
         });
         self.filesOnlyList = ko.dependentObservable(function () {
-            filter = function (data) {
+            var filter = function (data) {
                 return data["type"] && data["type"] != "folder";
             };
             return _.filter(self.listHelper.paginatedItems(), filter);
@@ -546,8 +546,9 @@ $(function () {
             if (!selected || selected.length !== 1) return false;
 
             const data = selected[0];
+            if (data.type !== "machinecode") return false;
 
-            return data.type == "machinecode" && printAfterLoad
+            return printAfterLoad
                 ? self.files.enableSelectAndPrint(data, printAfterLoad)
                 : self.files.enableSelect(data);
         };
@@ -596,11 +597,11 @@ $(function () {
                 (type == "folder" && capabilities.copy_folder);
             const crossStorageCopyPossible = _.any(
                 _.map(
+                    self.files.storageOptions(),
                     (storage) =>
                         storage.key !== data.origin &&
                         ((type === "folder" && storage.capabilities.add_folder) ||
-                            (type !== "folder" && storage.capabilities.upload_file)),
-                    self.files.storageOptions()
+                            (type !== "folder" && storage.capabilities.upload_file))
                 )
             );
 
@@ -627,12 +628,12 @@ $(function () {
                 (type == "folder" && capabilities.remove_folder);
             const crossStorageMovePossible = _.any(
                 _.map(
+                    self.files.storageOptions(),
                     (storage) =>
                         storage.key !== data.origin &&
                         ((type === "folder" && storage.capabilities.add_folder) ||
                             (type !== "folder" && storage.capabilities.upload_file)) &&
-                        inStorageRemovePossible,
-                    self.files.storageOptions()
+                        inStorageRemovePossible
                 )
             );
 
@@ -687,6 +688,12 @@ $(function () {
             }
         });
 
+        self.download = () => {
+            if (!self.enableDownload()) return;
+            const url = self.downloadUrl();
+            if (url) window.location.href = url;
+        };
+
         self.slice = () => {
             if (!self.enableSlicing()) return;
 
@@ -730,7 +737,7 @@ $(function () {
                                     "Creating new folder %(filename)s failed: %(error)s"
                                 ),
                                 {
-                                    filename: _.escape(`local:${value}`),
+                                    filename: _.escape(`${storage}:${value}`),
                                     error: _.escape(_errorFromJqXHR(jqXHR))
                                 }
                             )
@@ -831,8 +838,8 @@ $(function () {
             const files = self.selectedFiles();
             if (files.length === 0) return;
 
-            const hasFiles = _.any(_.map((f) => f.type !== "folder", files));
-            const hasFolders = _.any(_.map((f) => f.type === "folder", files));
+            const hasFiles = _.any(_.map(files, (f) => f.type !== "folder"));
+            const hasFolders = _.any(_.map(files, (f) => f.type === "folder"));
 
             const location = files[0].origin;
             const capabilities = self.files.storageCapabilities(location);
@@ -876,14 +883,14 @@ $(function () {
             const storageOptions = self.files.storageOptions();
             selectStorageElement.empty();
             _.each(storageOptions, (storage) => {
-                if (storage === location && !inStorageActionPossible) {
+                if (storage.key === location && !inStorageActionPossible) {
                     // skip current storage if it doesn't support copy/move
                     return;
                 }
                 if (
-                    storage !== location &&
-                    ((hasFiles && !self.files.storageCanUpload(storage)) ||
-                        (hasFolders && !self.files.storageCanAddFolder(storage)))
+                    storage.key !== location &&
+                    ((hasFiles && !self.files.storageCanUpload(storage.key)) ||
+                        (hasFolders && !self.files.storageCanAddFolder(storage.key)))
                 ) {
                     // skip other storages that can't write files or add folders
                     return;
@@ -990,7 +997,7 @@ $(function () {
                 ),
                 _.sprintf(
                     gettext(
-                        "Copying %%(filename)s to %(storage)s:%(destination)s failed: %(error)s"
+                        "Copying %%(filename)s to %(storage)s:%(destination)s failed: %%(error)s"
                     ),
                     {storage, destination}
                 ),
@@ -1046,7 +1053,7 @@ $(function () {
                 ),
                 _.sprintf(
                     gettext(
-                        "Moving %%(filename)s to %(storage)s:%(destination)s failed: %(error)s"
+                        "Moving %%(filename)s to %(storage)s:%(destination)s failed: %%(error)s"
                     ),
                     {storage, destination}
                 ),

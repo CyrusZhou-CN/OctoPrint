@@ -18,8 +18,8 @@ class SomeSubclass(frozendict): ...
 
 
 def test_deprecated_dump():
-    warnings.simplefilter("always")
     with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
         assert json.dump({"foo": "bar"}) == '{"foo":"bar"}'
 
         assert len(w) == 1
@@ -44,7 +44,7 @@ def test_encoding_loads():
 
 
 def test_encoding_dumps_typeerror():
-    with pytest.raises(TypeError):
+    with pytest.raises(TypeError, match="Unserializable type"):
         json.encoding.dumps(SomeClass())
 
 

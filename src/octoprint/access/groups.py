@@ -453,9 +453,14 @@ class FilebasedGroupManager(GroupManager):
             added_permissions = list(set(permissions) - set(group._permissions))
 
             if removed_permissions:
-                self._dirty |= group.remove_permissions_from_group(removed_permissions)
+                self._dirty = (
+                    group.remove_permissions_from_group(removed_permissions)
+                    or self._dirty
+                )
             if added_permissions:
-                self._dirty |= group.add_permissions_to_group(added_permissions)
+                self._dirty = (
+                    group.add_permissions_to_group(added_permissions) or self._dirty
+                )
 
             notifications.append(
                 (
@@ -472,9 +477,11 @@ class FilebasedGroupManager(GroupManager):
             added_subgroups = list(set(subgroups) - set(group._subgroups))
 
             if removed_subgroups:
-                self._dirty = group.remove_subgroups_from_group(removed_subgroups)
+                self._dirty = (
+                    group.remove_subgroups_from_group(removed_subgroups) or self._dirty
+                )
             if added_subgroups:
-                self._dirty = group.add_subgroups_to_group(added_subgroups)
+                self._dirty = group.add_subgroups_to_group(added_subgroups) or self._dirty
 
             notifications.append(
                 (
@@ -514,6 +521,16 @@ class GroupUnremovable(Exception):
 class GroupCantBeChanged(Exception):
     def __init__(self, key):
         Exception.__init__(self, "Group can't be changed: %s" % key)
+
+
+class CyclicSubgroupReference(Exception):
+    def __init__(self, key, subgroup_key):
+        Exception.__init__(
+            self,
+            "Adding subgroup {} to group {} would create a cycle".format(
+                subgroup_key, key
+            ),
+        )
 
 
 class Group:
@@ -611,7 +628,7 @@ class Group:
 
         dirty = False
         for permission in permissions:
-            if permissions not in self.permissions:
+            if permission not in self.permissions:
                 self._permissions.append(permission)
                 dirty = True
 
@@ -636,6 +653,18 @@ class Group:
 
         return dirty
 
+    def has_subgroup_transitive(self, key, seen=None):
+        """Check if key appears in this group's transitive subgroup chain."""
+        if seen is None:
+            seen = set()
+        if self._key in seen:
+            return False
+        seen.add(self._key)
+        for subgroup in self._subgroups:
+            if subgroup._key == key or subgroup.has_subgroup_transitive(key, seen):
+                return True
+        return False
+
     def add_subgroups_to_group(self, subgroups):
         """Adds a list of subgroups to a group"""
         if not self.is_changeable():
@@ -653,6 +682,8 @@ class Group:
 
         dirty = False
         for group in subgroups:
+            if group._key == self._key or group.has_subgroup_transitive(self._key):
+                raise CyclicSubgroupReference(self._key, group._key)
             if group.is_toggleable() and group not in self._subgroups:
                 self._subgroups.append(group)
                 dirty = True

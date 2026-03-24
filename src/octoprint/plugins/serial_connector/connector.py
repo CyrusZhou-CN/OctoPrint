@@ -608,6 +608,12 @@ class ConnectedSerialPrinter(ConnectedPrinter, PrinterFilesMixin):
 
         return self._comm.get_remote_name(name)
 
+    def available_file_name(self, path: str, name: str, *args, **kwargs):
+        if not self._comm:
+            raise PrinterFilesUnavailableError("No connection to printer")
+
+        return self._comm.get_remote_name(name, free=True)
+
     # ~~ comm.MachineComPrintCallback implementation
 
     def on_comm_log(self, message):
@@ -644,6 +650,9 @@ class ConnectedSerialPrinter(ConnectedPrinter, PrinterFilesMixin):
         error_str = None
         if self._comm is not None:
             error_str = self._comm.getErrorString()
+            self._port, self._baudrate = self._comm.getConnection()
+
+        self.set_state(state, error=error_str)  # this will call the listener
 
         if state in {
             ConnectedPrinterState.CLOSED,
@@ -656,8 +665,6 @@ class ConnectedSerialPrinter(ConnectedPrinter, PrinterFilesMixin):
             self.error_info = None
 
             super().set_job(None)
-
-        self.set_state(state, error=error_str)  # this will call the listener
 
     def on_comm_error(self, error, reason, consequence=None, faq=None, logs=None):
         self.error_info = ErrorInformation(
@@ -718,12 +725,11 @@ class ConnectedSerialPrinter(ConnectedPrinter, PrinterFilesMixin):
         self, local_filename, remote_filename, filesize, user=None
     ):
         job = UploadJob(
-            storage=FileDestinations.LOCAL,
-            path=local_filename,
-            display=local_filename,
+            storage=FileDestinations.PRINTER,
+            path=remote_filename,
+            display=remote_filename,
             size=filesize,
             owner=user,
-            remote_path=remote_filename,
         )
         super().set_job(job)
         self._listener.on_printer_files_upload_start(job)
@@ -750,7 +756,7 @@ class ConnectedSerialPrinter(ConnectedPrinter, PrinterFilesMixin):
         )
 
     def on_comm_force_disconnect(self):
-        self._listener.on_printer_disconnected()
+        self._listener.on_printer_disconnect()
 
     def on_comm_record_fileposition(self, origin, name, pos):
         self._listener.on_printer_record_recovery_position(self.current_job, pos)

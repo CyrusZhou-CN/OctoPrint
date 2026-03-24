@@ -57,6 +57,86 @@ $(function () {
         self.backupUploadName = ko.observable();
         self.backupUploadSource = undefined;
 
+        self.config_path = ko.observable();
+        self.testPathConfigOk = ko.observable(false);
+        self.testPathConfigBroken = ko.observable(false);
+        self.testPathConfigBusy = ko.observable(false);
+        self.testPathConfigText = ko.observable("");
+        self.testPathConfig = () => {
+            self.loginState.reauthenticateIfNecessary(() => {
+                self.testPathConfigBusy(true);
+
+                const path = self.config_path();
+                const opts = {
+                    check_type: "dir",
+                    check_access: "w",
+                    allow_create_dir: true,
+                    check_writable_dir: true
+                };
+
+                OctoPrint.util
+                    .testPath(path, opts)
+                    .done((response) => {
+                        if (!response.result) {
+                            if (response.broken_symlink) {
+                                self.testPathConfigText(
+                                    gettext("The path is a broken symlink.")
+                                );
+                            } else if (!response.exists) {
+                                self.testPathConfigText(
+                                    gettext(
+                                        "The path does not exist and cannot be created."
+                                    )
+                                );
+                            } else if (!response.typeok) {
+                                self.testPathConfigText(
+                                    gettext("The path is not a folder.")
+                                );
+                            } else if (!response.access) {
+                                self.testPathConfigText(
+                                    gettext("The path is not writable.")
+                                );
+                            }
+                        } else {
+                            self.testPathConfigText(gettext("The path is valid"));
+                        }
+                        self.testPathConfigOk(response.result);
+                        self.testPathConfigBroken(!response.result);
+                    })
+                    .always(() => {
+                        self.testPathConfigBusy(false);
+                    });
+            });
+        };
+
+        self.configurationDialog = $("#settings_plugin_backup_configurationdialog");
+        self.showPluginSettings = function () {
+            self._copyConfig();
+            self.configurationDialog.modal();
+        };
+        self.savePluginSettings = function () {
+            let path = self.config_path();
+            if (path !== null && path.trim() === "") {
+                path = null;
+            }
+            var data = {
+                plugins: {
+                    backup: {
+                        path: path
+                    }
+                }
+            };
+            self.settings.saveData(data, () => {
+                self.configurationDialog.modal("hide");
+                self._copyConfig();
+                self.requestData();
+            });
+        };
+
+        self._copyConfig = () => {
+            self.config_path(self.settings.settings.plugins.backup.path());
+        };
+
         self.isAboveUploadSize = function (data) {
             return data.size > self.maxUploadSize();
         };

@@ -31,6 +31,7 @@ from octoprint.printer import (
     PrinterMixin,
 )
 from octoprint.printer.connection import (
+    PRINTING_STATES,
     ConnectedPrinter,
     ConnectedPrinterListenerMixin,
     ConnectedPrinterState,
@@ -663,7 +664,7 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
             tags = set()
         tags |= {"trigger:printer.jog"}
 
-        self._connection.jog(axes, relative=True, speed=speed, tags=tags)
+        self._connection.jog(axes, relative=relative, speed=speed, tags=tags)
 
     def home(self, axes, tags=None, *args, **kwargs):
         if self._connection is None:
@@ -701,6 +702,9 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
         self._connection.extrude(amount, speed=speed, tags=tags)
 
     def change_tool(self, tool, tags=None, *args, **kwargs):
+        if self._connection is None:
+            return
+
         if not PrinterMixin.valid_tool_regex.match(tool):
             raise ValueError(f'tool must match "tool[0-9]+": {tool}')
 
@@ -711,6 +715,9 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
         self._connection.change_tool(tool, tags=tags)
 
     def set_temperature(self, heater, value, tags=None, *args, **kwargs):
+        if self._connection is None:
+            return
+
         if not PrinterMixin.valid_heater_regex.match(heater):
             raise ValueError(
                 'heater must match "tool", "tool([0-9])", "bed" or "chamber": {heater}'.format(
@@ -946,10 +953,13 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
         self._connection.cancel_print(user=user, tags=tags, params=params)
 
     def get_state_string(self, state=None, *args, **kwargs):
-        if self._connection is None:
-            return "Offline"
-        else:
-            return self._connection.get_state_string(state=state)
+        if state is None:
+            state = self._state
+        if self._connection is not None:
+            return self._connection.get_state_string(
+                state=state
+            )  # get the connector's custom state string
+        return state.value
 
     def get_state_id(self, state=None, *args, **kwargs):
         if state is None:
@@ -1063,7 +1073,7 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
     @util.deprecated(
         message="get_sd_files has been deprecated and will be removed in a future version. Please use the PrinterStorage instead.",
         includedoc="Functionality moved to :class:`~octoprint.filemanager.storage.printer.PrinterStorage`",
-        since="1.12.0",
+        since="2.0.0",
     )
     def get_sd_files(self, *args, **kwargs):
         if not self.is_storage_mounted():
@@ -1081,7 +1091,7 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
     @util.deprecated(
         message="add_sd_file has been deprecated and will be removed in a future version. Please use the PrinterStorage instead.",
         includedoc="Functionality moved to :class:`~octoprint.filemanager.storage.printer.PrinterStorage`",
-        since="1.12.0",
+        since="2.0.0",
     )
     def add_sd_file(
         self, filename, path, on_success=None, on_failure=None, *args, **kwargs
@@ -1158,7 +1168,7 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
     @util.deprecated(
         message="delete_sd_file has been deprecated and will be removed in a future version. Please use the PrinterStorage instead.",
         includedoc="Functionality moved to :class:`~octoprint.filemanager.storage.printer.PrinterStorage`",
-        since="1.12.0",
+        since="2.0.0",
     )
     def delete_sd_file(self, filename, *args, **kwargs):
         if not self.is_storage_mounted():
@@ -1169,7 +1179,7 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
     @util.deprecated(
         message="refresh_sd_files has been deprecated and will be removed in a future version. Please use the PrinterStorage instead.",
         includedoc="Functionality moved to :class:`~octoprint.filemanager.storage.printer.PrinterStorage`",
-        since="1.12.0",
+        since="2.0.0",
     )
     def refresh_sd_files(self, blocking=False, *args, **kwargs):
         if not self.is_storage_mounted():
@@ -1188,10 +1198,8 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
     ):
         old_state = self._state
 
-        if old_state in {
-            ConnectedPrinterState.PRINTING,
-        }:
-            # if we were still printing and went into an error state, mark the print as failed
+        if old_state in PRINTING_STATES:
+            # if we were in any print-related state and went into an error state, mark the print as failed
             if state in {
                 ConnectedPrinterState.CLOSED,
                 ConnectedPrinterState.ERROR,
@@ -1247,10 +1255,7 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
             if self._connection is not None:
                 self._connection = None
 
-            with self._selected_job_mutex:
-                if self._selected_job is not None:
-                    eventManager().fire(Events.FILE_DESELECTED)
-                self._set_job_data(None)
+            self.on_printer_job_changed(None)
 
             self._update_progress_data()
             self._set_offsets(None)
@@ -1277,10 +1282,12 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
                 )
             )
         else:
-            eventManager().fire(Events.FILE_DESELECTED)
-            self._logger_job.info(
-                "Print job deselected - user: {}".format(user if user else "n/a")
-            )
+            with self._selected_job_mutex:
+                if self._selected_job is not None:
+                    eventManager().fire(Events.FILE_DESELECTED)
+                    self._logger_job.info(
+                        "Print job deselected - user: {}".format(user if user else "n/a")
+                    )
 
         self._set_job_data(
             job,
@@ -1584,7 +1591,7 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
     def on_printer_files_upload_start(self, job: UploadJob):
         eventManager().fire(
             Events.TRANSFER_STARTED,
-            {"local": job.path, "remote": job.remote_path},
+            {"local": job.path, "remote": job.path},  # local is deprecated as of 2.0.0
         )
 
         self._sdStreaming = True
@@ -1604,20 +1611,26 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
     ):
         self._sdStreaming = False
 
-        payload = {"local": job.path, "remote": job.remote_path, "time": elapsed}
+        payload = {
+            "local": job.path,
+            "remote": job.path,
+            "time": elapsed,
+        }  # local is deprecated as of 2.0.0
 
         if failed:
             eventManager().fire(Events.TRANSFER_FAILED, payload)
             if callable(self._streamingFailedCallback):
                 self._streamingFailedCallback(
-                    job.path, job.remote_path, FileDestinations.PRINTER
+                    job.path, job.path, FileDestinations.PRINTER
                 )
+                self._streamingFailedCallback = self._streamingFinishedCallback = None
         else:
             eventManager().fire(Events.TRANSFER_DONE, payload)
             if callable(self._streamingFinishedCallback):
                 self._streamingFinishedCallback(
-                    job.path, job.remote_path, FileDestinations.PRINTER
+                    job.path, job.path, FileDestinations.PRINTER
                 )
+                self._streamingFailedCallback = self._streamingFinishedCallback = None
 
         self._set_job_data(None)
         self._update_progress_data()
@@ -1660,12 +1673,13 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
         self._stateMonitor.set_temp_offsets(offsets)
 
     def _set_state(self, state, state_string=None, error_string=None):
+        self._state = state
+
         if state_string is None:
             state_string = self.get_state_string()
         if error_string is None:
             error_string = self.get_error()
 
-        self._state = state
         self._stateMonitor.set_state(
             self._dict(
                 text=state_string, flags=self._get_state_flags(), error=error_string
@@ -1673,8 +1687,8 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
         )
 
         payload = {
-            "state_id": self.get_state_id(self._state),
-            "state_string": self.get_state_string(self._state),
+            "state_id": self.get_state_id(),
+            "state_string": state_string,
         }
         eventManager().fire(Events.PRINTER_STATE_CHANGED, payload)
 
@@ -1819,6 +1833,7 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
                             origin=None,
                             size=None,
                             date=None,
+                            upload=None,
                         ),
                         estimatedPrintTime=None,
                         filament=None,
@@ -1857,6 +1872,7 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
                         date=int(job.date.astimezone(None).timestamp())
                         if job.date
                         else None,
+                        upload=isinstance(job, UploadJob),
                     ),
                     estimatedPrintTime=estimatedPrintTime,
                     filament=filament,

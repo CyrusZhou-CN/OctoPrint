@@ -59,17 +59,17 @@ class ConnectionStateResponse(BaseModel):
     options: ConnectionOptions
 
 
-# pre 1.12.0
+# pre 2.0.0
 
 
-class CurrentConnectionState_pre_1_12_0(BaseModel):
+class CurrentConnectionState_pre_2_0_0(BaseModel):
     state: str
     printerProfile: Optional[str]
     port: Optional[str]
     baudrate: Optional[int]
 
 
-class ConnectionOptions_pre_1_12_0(BaseModel):
+class ConnectionOptions_pre_2_0_0(BaseModel):
     ports: list[str]
     baudrates: list[int]
     printerProfiles: list[AvailablePrinterProfile]
@@ -79,9 +79,9 @@ class ConnectionOptions_pre_1_12_0(BaseModel):
     printerProfilePreference: Optional[str]
 
 
-class ConnectionStateResponse_pre_1_12_0(BaseModel):
-    current: CurrentConnectionState_pre_1_12_0
-    options: ConnectionOptions_pre_1_12_0
+class ConnectionStateResponse_pre_2_0_0(BaseModel):
+    current: CurrentConnectionState_pre_2_0_0
+    options: ConnectionOptions_pre_2_0_0
 
 
 ## API
@@ -90,18 +90,18 @@ class ConnectionStateResponse_pre_1_12_0(BaseModel):
 @api.route("/connection", methods=["GET"])
 @api_versioned
 @Permissions.STATUS.require(403)
-def connectionState():  # pre 1.12.0
+def connectionState():  # pre 2.0.0
     connection_state = printer.connection_state
 
     state = connection_state.pop("state")
     profile = connection_state.pop("profile", None)
 
-    data = ConnectionStateResponse_pre_1_12_0(
-        current=CurrentConnectionState_pre_1_12_0(
+    data = ConnectionStateResponse_pre_2_0_0(
+        current=CurrentConnectionState_pre_2_0_0(
             state=state,
             printerProfile=profile.get("id", None) if profile else None,
-            port=connection_state.get("port", ""),
-            baudrate=connection_state.get("baudrate", 0),
+            port=connection_state.get("port", None) or None,
+            baudrate=connection_state.get("baudrate", None) or None,
         ),
         options=_get_options(),
     )
@@ -109,9 +109,9 @@ def connectionState():  # pre 1.12.0
     return jsonify(data.model_dump())
 
 
-@connectionState.version(">=1.12.0")
+@connectionState.version(">=2.0.0")
 @Permissions.STATUS.require(403)
-def connectionState_1_12_0():  # 1.12.0+
+def connectionState_2_0_0():  # 2.0.0+
     connection_state = printer.connection_state
 
     connector = connection_state.pop("connector", None)
@@ -125,9 +125,9 @@ def connectionState_1_12_0():  # 1.12.0+
             connector=connector,
             parameters=connection_state,
             capabilities=capabilities,
-            profile=profile.get("_id") if profile else None,
+            profile=profile.get("id") if profile else None,
         ),
-        options=_get_options_1_12_0(),
+        options=_get_options_2_0_0(),
     )
 
     return jsonify(data.model_dump())
@@ -147,7 +147,7 @@ def connectionCommand():
         parameters = {}
         printerProfile = None
 
-        if api_version_matches(">=1.12.0"):  # 1.12.0+
+        if api_version_matches(">=2.0.0"):  # 2.0.0
             if "connector" not in data:
                 abort(400, description='required parameter "connector" is missing')
 
@@ -161,7 +161,7 @@ def connectionCommand():
                 if not isinstance(parameters, dict):
                     abort(400, description='"parameters" must be a dictionary')
 
-        else:  # pre 1.12.0
+        else:  # pre 2.0.0
             connector_name = "serial"
             connector = ConnectedPrinter.find(connector_name)
             if connector is None:
@@ -227,7 +227,7 @@ def connectionCommand():
     return NO_CONTENT
 
 
-def _get_options_1_12_0() -> ConnectionOptions:  # 1.12.0+
+def _get_options_2_0_0() -> ConnectionOptions:  # 2.0.0+
     connector_options = ConnectedPrinter.all()
     profile_options = printerProfileManager.get_all()
     default_profile = printerProfileManager.get_default()
@@ -264,7 +264,7 @@ def _get_options_1_12_0() -> ConnectionOptions:  # 1.12.0+
     )
 
 
-def _get_options() -> ConnectionOptions_pre_1_12_0:  # pre 1.12.0
+def _get_options() -> ConnectionOptions_pre_2_0_0:  # pre 2.0.0
     profile_options = printerProfileManager.get_all()
     default_profile = printerProfileManager.get_default()
 
@@ -285,7 +285,7 @@ def _get_options() -> ConnectionOptions_pre_1_12_0:  # pre 1.12.0
             ["printerConnection", "preferred", "parameters"]
         )
 
-    return ConnectionOptions_pre_1_12_0(
+    return ConnectionOptions_pre_2_0_0(
         ports=connection_options.get("port", []),
         baudrates=connection_options.get("baudrate", []),
         printerProfiles=[
@@ -296,8 +296,8 @@ def _get_options() -> ConnectionOptions_pre_1_12_0:  # pre 1.12.0
             for printer_profile in profile_options.values()
             if "id" in printer_profile
         ],
-        portPreference=preferred_connection_params.get("port"),
-        baudratePreference=preferred_connection_params.get("baudrate"),
+        portPreference=preferred_connection_params.get("port") or None,
+        baudratePreference=preferred_connection_params.get("baudrate") or None,
         printerProfilePreference=default_profile["id"]
         if "id" in default_profile
         else None,
