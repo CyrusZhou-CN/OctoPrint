@@ -771,14 +771,19 @@ def passive_login():
         return u
 
     user = login(determine_user(user))
+    login_mechanism = flask.session.get("login_mechanism")
+
     response = user.as_dict()
     response["_is_external_client"] = ip_check_enabled and not is_lan_address(
         remote_address, additional_private=ip_check_trusted
     )
-    if flask.session.get("login_mechanism") is not None:
-        response["_login_mechanism"] = flask.session.get("login_mechanism")
+    if login_mechanism is not None:
+        response["_login_mechanism"] = login_mechanism
     response["_credentials_seen"] = to_api_credentials_seen(
         flask.session.get("credentials_seen", False)
+    )
+    response["_credentials_recheck_supported"] = credentials_recheck_supported(
+        user, login_mechanism
     )
     return flask.jsonify(response)
 
@@ -1555,20 +1560,6 @@ def permission_and_fresh_credentials_validator(request, permission):
     ensure_credentials_checked_recently()
 
 
-@deprecated(
-    "admin_validator is deprecated, please use new permission_validator", since=""
-)
-def admin_validator(request):
-    from octoprint.access.permissions import Permissions
-
-    return permission_validator(request, Permissions.ADMIN)
-
-
-@deprecated("user_validator is deprecated, please use new permission_validator", since="")
-def user_validator(request):
-    return True
-
-
 def get_flask_user_from_request(request):
     """
     Retrieves the current flask user from the request context. Uses API key if available, otherwise the current
@@ -1681,6 +1672,13 @@ def firstrun_only_access(func):
     return decorated_view
 
 
+def credentials_recheck_supported(user, login_mechanism: str) -> bool:
+    user_has_password = user and getattr(user, "has_password", lambda: False)()
+    return octoprint.server.util.LoginMechanism.reauthentication_enabled(
+        login_mechanism, has_password=user_has_password
+    )
+
+
 def credentials_checked_recently():
     minutes = settings().getInt(
         ["accessControl", "defaultReauthenticationTimeout"], min=0
@@ -1689,7 +1687,7 @@ def credentials_checked_recently():
         return True
 
     login_mechanism = flask.session.get("login_mechanism")
-    if not octoprint.server.util.LoginMechanism.reauthentication_enabled(login_mechanism):
+    if not credentials_recheck_supported(flask_login.current_user, login_mechanism):
         return True
 
     credentials_seen = flask.session.get("credentials_seen")
@@ -1877,7 +1875,6 @@ def collect_core_assets(preferred_stylesheet="css"):
         "js/app/viewmodels/terminal.js",
         "js/app/viewmodels/timelapse.js",
         "js/app/viewmodels/uistate.js",
-        "js/app/viewmodels/users.js",
         "js/app/viewmodels/usersettings.js",
         "js/app/viewmodels/wizard.js",
         "js/app/viewmodels/about.js",
@@ -1899,7 +1896,6 @@ def collect_core_assets(preferred_stylesheet="css"):
         "js/app/client/slicing.js",
         "js/app/client/system.js",
         "js/app/client/timelapse.js",
-        "js/app/client/users.js",
         "js/app/client/util.js",
         "js/app/client/wizard.js",
     ]

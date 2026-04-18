@@ -110,23 +110,9 @@ class OctoPrintAnonymousIdentity(AnonymousIdentity):
             self.provides.add(need)
 
 
-import octoprint.access.groups as groups  # noqa: E402
-import octoprint.access.permissions as permissions  # noqa: E402
-
-# we set admin_permission to a GroupPermission with the default admin group
-admin_permission = octoprint.util.variable_deprecated(
-    "admin_permission has been deprecated, please use individual Permissions instead",
-    since="1.4.0",
-)(groups.GroupPermission(groups.ADMIN_GROUP))
-
-# we set user_permission to a GroupPermission with the default user group
-user_permission = octoprint.util.variable_deprecated(
-    "user_permission has been deprecated, please use individual Permissions instead",
-    since="1.4.0",
-)(groups.GroupPermission(groups.USER_GROUP))
-
 import octoprint._version  # noqa: E402
 import octoprint.access.groups as groups  # noqa: E402
+import octoprint.access.permissions as permissions  # noqa: E402
 import octoprint.access.users as users  # noqa: E402
 import octoprint.events as events  # noqa: E402
 import octoprint.filemanager.analysis  # noqa: E402
@@ -202,7 +188,7 @@ def load_user(userid):
     if userid is None:
         return None
 
-    if userid == "_api":  # TODO Remove in 1.13.0
+    if userid == "_api":  # TODO remove in 2.1.0
         return userManager.api_user_factory()
 
     if userid == "_internal":
@@ -324,10 +310,6 @@ class Server:
 
         if self._plugin_manager is None:
             self._plugin_manager = octoprint.plugin.plugin_manager()
-
-        if self._settings.getBoolean(["serial", "log"]):
-            # enable debug logging to serial.log
-            logging.getLogger("SERIAL").setLevel(logging.DEBUG)
 
         if self._settings.getBoolean(["devel", "pluginTimings"]):
             # enable plugin timings log
@@ -977,12 +959,27 @@ class Server:
         global userManager
 
         # create user manager instance
-        user_manager_factories = self._plugin_manager.get_hooks(
+        #
+        # TODO remove deprecated hook in 3.0.0 and refactor accordingly
+        deprecated_user_factory_hooks = self._plugin_manager.get_hooks(
             "octoprint.users.factory"
-        )  # legacy, set first so that new wins
-        user_manager_factories.update(
-            self._plugin_manager.get_hooks("octoprint.access.users.factory")
         )
+        user_factory_hooks = self._plugin_manager.get_hooks(
+            "octoprint.access.users.factory"
+        )
+
+        for plugin in deprecated_user_factory_hooks:
+            if plugin not in user_factory_hooks:
+                self._logger.warning(
+                    f"Plugin {plugin} has registered deprecated hook octoprint.users.factory. It should be switched to using octoprint.access.users.factory"
+                )
+
+        user_manager_factories = {}
+        user_manager_factories.update(deprecated_user_factory_hooks)
+        user_manager_factories.update(
+            user_factory_hooks
+        )  # make sure this comes after the deprecated ones, to overwrite anything from that
+
         for name, factory in user_manager_factories.items():
             try:
                 userManager = factory(components, self._settings)
@@ -1036,7 +1033,9 @@ class Server:
 
     def _setup_plugin_manager(self, components):
         from octoprint import (
+            init_blocklist_compat_overlay,
             init_custom_events,
+            init_serial_compat_overlay,
             init_settings_plugin_config_migration_and_cleanup,
             init_webcam_compat_overlay,
         )
@@ -1055,6 +1054,8 @@ class Server:
         self._plugin_manager.initialize_implementations()
 
         init_settings_plugin_config_migration_and_cleanup(self._plugin_manager)
+        init_serial_compat_overlay(self._settings)
+        init_blocklist_compat_overlay(self._settings)
         init_webcam_compat_overlay(self._settings, self._plugin_manager)
 
         self._plugin_manager.log_all_plugins()
@@ -1169,8 +1170,8 @@ class Server:
             files = {"_data/" + name: os.path.join(root, name) for name in allowed}
             loaders.append(octoprint.util.jinja.SelectedFilesLoader(files))
 
-        # TODO: Remove this in 2.0.0
-        warning_message = "Loading plugin template '{template}' from '{filename}' without plugin prefix, this is deprecated and will soon no longer be supported."
+        # TODO remove in 2.1.0
+        warning_message = "Loading plugin template '{template}' from '{filename}' without plugin prefix, this is deprecated and will no longer be supported in OctoPrint 2.1.0."
         loaders.append(
             octoprint.util.jinja.WarningLoader(
                 octoprint.util.jinja.PrefixChoiceLoader(app.jinja_env.prefix_loader),
@@ -2180,17 +2181,6 @@ class Server:
                     "content_type": "image/gif",
                 },
             ),
-            # deprecated endpoints
-            (
-                r"/api/logs",
-                util.tornado.DeprecatedEndpointHandler,
-                {"url": "/plugin/logging/logs"},
-            ),
-            (
-                r"/api/logs/(.*)",
-                util.tornado.DeprecatedEndpointHandler,
-                {"url": "/plugin/logging/logs/{0}"},
-            ),
         ]
 
         # additional routes from plugins
@@ -2797,15 +2787,15 @@ class Server:
         self._intermediary_server.server_close()
         self._logger.info("Intermediary server shut down")
 
-    def _log_safe_mode_start(self, self_mode):
-        self_mode_file = os.path.join(
+    def _log_safe_mode_start(self, safe_mode):
+        safe_mode_file = os.path.join(
             self._settings.getBaseFolder("data"), "last_safe_mode"
         )
         try:
-            with open(self_mode_file, "w+", encoding="utf-8") as f:
-                f.write(self_mode)
+            with open(safe_mode_file, "w+", encoding="utf-8") as f:
+                f.write(safe_mode)
         except Exception as ex:
-            self._logger.warn(f"Could not write safe mode file {self_mode_file}: {ex}")
+            self._logger.warning(f"Could not write safe mode file {safe_mode_file}: {ex}")
 
     def _create_socket_connection(self, session):
         global \

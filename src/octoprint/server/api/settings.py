@@ -272,12 +272,17 @@ def getSettings():
     if len(plugin_settings):
         data["plugins"] = plugin_settings
 
-    if not api_version_matches(">=2.0.0"):
+    if api_version_matches(">=2.0.0"):
+        data["printerConnection"] = {
+            "autoconnect": s.getBoolean(["printerConnection", "autoconnect"])
+        }
+    else:
         data["serial"] = _get_serial_settings()
         data["feature"]["autoUppercaseBlacklist"] = data["feature"].pop(
             "autoUppercaseBlocklist"
         )
         data["server"]["pluginBlacklist"] = data["server"].pop("pluginBlocklist")
+        data["system"]["events"] = s.get(["events"])
 
     if Permissions.WEBCAM.can() or (
         settings().getBoolean(["server", "firstRun"])
@@ -630,6 +635,13 @@ def _saveSettings(data):
                 data["printer"]["defaultExtrusionLength"],
             )
 
+    if "printerConnection" in data:
+        if "autoconnect" in data["printerConnection"]:
+            s.setBoolean(
+                ["printerConnection", "autoconnect"],
+                data["printerConnection"]["autoconnect"],
+            )
+
     if "webcam" in data:
         for key in DEPRECATED_WEBCAM_KEYS:
             if key in data["webcam"]:
@@ -792,6 +804,15 @@ def _saveSettings(data):
     if "serial" in data and not api_version_matches(">=2.0.0"):
         _set_serial_settings(data["serial"])
 
+        # forward log toggle to the plugin settings path so it gets
+        # persisted through on_settings_save
+        if "log" in data["serial"]:
+            if "plugins" not in data:
+                data["plugins"] = {}
+            if "serial_connector" not in data["plugins"]:
+                data["plugins"]["serial_connector"] = {}
+            data["plugins"]["serial_connector"]["log"] = data["serial"]["log"]
+
     if "temperature" in data:
         if "profiles" in data["temperature"]:
             result = []
@@ -829,6 +850,8 @@ def _saveSettings(data):
     if "system" in data:
         if "actions" in data["system"]:
             s.set(["system", "actions"], data["system"]["actions"])
+        if "events" in data["system"] and not api_version_matches(">=2.0.0"):
+            s.set(["events"], data["system"]["events"])
 
     if "scripts" in data:
         if "gcode" in data["scripts"] and isinstance(data["scripts"]["gcode"], dict):
@@ -1028,7 +1051,7 @@ def _get_serial_settings():
         "lowLatency": s.getBoolean(["plugins", "serial_connector", "lowLatency"]),
         "portOptions": connection_options.get("port", []),
         "baudrateOptions": connection_options.get("baudrate", []),
-        "autoconnect": s.getBoolean(["plugins", "serial_connector", "autoconnect"]),
+        "autoconnect": s.getBoolean(["printerConnection", "autoconnect"]),
         "timeoutConnection": s.getFloat(
             ["plugins", "serial_connector", "timeout", "connection"]
         ),
@@ -1533,15 +1556,3 @@ def _set_serial_settings(data: dict[str, Any]):
             ["plugins", "serial_connector", "enableShutdownActionCommand"],
             data["enableShutdownActionCommand"],
         )
-
-    oldLog = s.getBoolean(["plugins", "serial_connector", "log"])
-    if "log" in data:
-        s.setBoolean(["plugins", "serial_connector", "log"], data["log"])
-    if oldLog and not s.getBoolean(["plugins", "serial_connector", "log"]):
-        # disable debug logging to serial.log
-        logging.getLogger("SERIAL").debug("Disabling serial logging")
-        logging.getLogger("SERIAL").setLevel(logging.CRITICAL)
-    elif not oldLog and s.getBoolean(["plugins", "serial_connector", "log"]):
-        # enable debug logging to serial.log
-        logging.getLogger("SERIAL").setLevel(logging.DEBUG)
-        logging.getLogger("SERIAL").debug("Enabling serial logging")

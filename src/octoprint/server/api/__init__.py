@@ -36,6 +36,7 @@ from octoprint.server.util import (
 )
 from octoprint.server.util.flask import (
     api_versioned,
+    credentials_recheck_supported,
     ensure_credentials_checked_recently,
     get_json_command_from_request,
     limit,
@@ -64,7 +65,6 @@ from . import settings as api_settings  # noqa: F401,E402
 from . import slicing as api_slicing  # noqa: F401,E402
 from . import system as api_system  # noqa: F401,E402
 from . import timelapse as api_timelapse  # noqa: F401,E402
-from . import users as api_users  # noqa: F401,E402
 
 API_VERSION_PRE_2_0_0 = "0.1"
 
@@ -90,7 +90,9 @@ def pluginData(name):
 
     try:
         api_plugin = api_plugins[0]
-        if api_plugin.is_api_adminonly() and not current_user.is_admin:
+        if api_plugin.is_api_adminonly() and not current_user.has_permission(
+            Permissions.ADMIN
+        ):
             abort(403)
 
         if api_plugin.is_api_protected():
@@ -432,6 +434,9 @@ def login():
                 response["_login_mechanism"] = session["login_mechanism"]
                 response["_credentials_seen"] = to_api_credentials_seen(
                     session["credentials_seen"]
+                )
+                response["_credentials_recheck_supported"] = (
+                    credentials_recheck_supported(user, session["login_mechanism"])
                 )
 
                 r = make_response(jsonify(response))

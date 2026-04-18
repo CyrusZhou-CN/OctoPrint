@@ -56,6 +56,7 @@ if TYPE_CHECKING:
 class CommunicationHealth(BaseModel):
     errors: int
     total: int
+    critical: bool
 
     @computed_field
     @property
@@ -414,7 +415,7 @@ class CommonPrinterMixin:
 
     def log_lines(self, *lines):
         """
-        Logs the provided lines to the printer log and serial.log
+        Logs the provided lines to the printer log and the connector's log
         Args:
                 *lines: the lines to log
         """
@@ -620,6 +621,10 @@ class PrinterFilesMixin:
         pass
 
     def get_printer_file(self, path: str, refresh=False, *args, **kwargs) -> PrinterFile:
+        files = self.get_printer_files(refresh=refresh)
+        for f in files:
+            if f.path == path:
+                return f
         return None
 
     def get_printer_files(
@@ -711,12 +716,12 @@ class PrinterFilesMixin:
         return False
 
     def get_thumbnail(
-        self, path: str, sizehint: str = None, *args, **kwargs
+        self, path: str, platehint: int = None, sizehint: str = None, *args, **kwargs
     ) -> Optional[StorageThumbnail]:
         return None
 
     def download_thumbnail(
-        self, path: str, sizehint: str = None, *args, **kwargs
+        self, path: str, platehint: int = None, sizehint: str = None, *args, **kwargs
     ) -> Optional[tuple[StorageThumbnail, IO]]:
         return None
 
@@ -837,7 +842,7 @@ class PrinterMixin(CommonPrinterMixin):
 
     @classmethod
     @deprecated(
-        message="get_connection_option has been deprecated and will be removed in a future version. Please use ConnectedPrinter.all() in combination with get_connection_option on the returned ConnectPrinter instances instead.",
+        message="get_connection_option has been deprecated and will be removed in a future version. Please use ConnectedPrinter.all() in combination with get_connection_option on the returned ConnectedPrinter instances instead.",
         since="2.0.0",
     )
     def get_connection_options(cls, *args, **kwargs):
@@ -930,7 +935,7 @@ class PrinterMixin(CommonPrinterMixin):
 
     @deprecated(
         message="get_transport is non-functional. There is currently no alternative implementation. This compatibility layer will be removed in a future version.",
-        includedoc="No longer functional",
+        includedoc="Only functional if the current connector happens to be the bundled serial connector",
         since="2.0.0",
     )
     def get_transport(self, *args, **kwargs):
@@ -943,6 +948,26 @@ class PrinterMixin(CommonPrinterMixin):
         Returns:
             object: The communication layer's transport object
         """
+        if self._connection is None or self._connection.connector != "serial":
+            return None
+
+        comm = self._connection._comm
+        if comm is None:
+            return None
+
+        return comm._serial
+
+    @property
+    @deprecated(
+        message="_comm is no longer available here after some heavy refactoring, and was private to begin with. It should never have been used by third parties. This compatibility layer will be removed in a future version.",
+        includedoc="Only functional if the current connector happens to be the bundled serial connector",
+        since="2.0.0",
+    )
+    def _comm(self):
+        if self._connection is None or self._connection.connector != "serial":
+            return None
+
+        return self._connection._comm
 
     @deprecated(
         message="get_current_connection has been replaced by connection_state. This compatibility layer will be removed in a future version.",
@@ -991,6 +1016,27 @@ class PrinterMixin(CommonPrinterMixin):
     )
     def release_sd_card(self, *args, **kwargs):
         return self.unmount_storage(*args, **kwargs)
+
+    @deprecated(
+        message="can_modify_file has been deprecated and will be removed in 3.0.0. Please directly compare the job parameters and printing state instead.",
+        since="2.0.0",
+    )
+    def can_modify_file(self, path, sd, *args, **kwargs):
+        return not (
+            self.is_current_file(path, sd) and (self.is_printing() or self.is_paused())
+        )
+
+    @deprecated(
+        message="is_current_file has been deprecated and will be removed in 3.0.0. Please directly compare the job parameters instead.",
+        since="2.0.0",
+    )
+    def is_current_file(self, path, sd, *args, **kwargs):
+        return (
+            self.current_job is not None
+            and self.current_job.path == path
+            and self.current_job.storage
+            == (FileDestinations.PRINTER if sd else FileDestinations.LOCAL)
+        )
 
 
 PrinterInterface = PrinterMixin

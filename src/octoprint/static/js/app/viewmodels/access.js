@@ -39,14 +39,23 @@ $(function () {
                 return user && user.name && user.name == access.loginState.username();
             };
             self.isCurrentUser = (user) => {
+                // TODO remove in 3.0.0
                 log.warn(
-                    "isCurrentUser(user) has been deprecated in favor of isUserMyself(user)"
+                    "isCurrentUser(user) has been deprecated in favor of isUserMyself(user) and will be removed in OctoPrint 3.0.0"
                 );
                 return self.isUserMyself(user);
             };
 
             self.isDeleteUserEnabled = (user) => {
                 return !self.isUserMyself(user);
+            };
+
+            self.deleteUserTooltip = (user) => {
+                if (self.isDeleteUserEnabled(user)) {
+                    return gettext("Delete user");
+                } else {
+                    return gettext("You cannot delete your own account");
+                }
             };
 
             self.apikeysVisible = ko.observable(false);
@@ -164,7 +173,6 @@ $(function () {
             });
 
             self.requestData = function () {
-                if (!CONFIG_ACCESS_CONTROL) return;
                 if (!access.loginState.hasPermissionKo(access.permissions.ADMIN)) return;
 
                 return OctoPrint.access.users.list().done(self.fromResponse);
@@ -178,8 +186,6 @@ $(function () {
             };
 
             self.showAddUserDialog = function () {
-                if (!CONFIG_ACCESS_CONTROL) return;
-
                 access.loginState.reauthenticateIfNecessary(() => {
                     self.currentUser(undefined);
 
@@ -205,8 +211,6 @@ $(function () {
             };
 
             self.confirmAddUser = function () {
-                if (!CONFIG_ACCESS_CONTROL) return;
-
                 var user = {
                     name: self.editor.name(),
                     password: self.editor.password(),
@@ -225,8 +229,6 @@ $(function () {
             };
 
             self.showEditUserDialog = function (user) {
-                if (!CONFIG_ACCESS_CONTROL) return;
-
                 var process = function (user) {
                     self.currentUser(user);
 
@@ -266,8 +268,6 @@ $(function () {
             };
 
             self.confirmEditUser = function () {
-                if (!CONFIG_ACCESS_CONTROL) return;
-
                 var user = self.currentUser();
                 user.active = self.editor.active();
                 user.groups = self.editor.groups();
@@ -283,8 +283,6 @@ $(function () {
             };
 
             self.confirmRemoveUser = (user) => {
-                if (!CONFIG_ACCESS_CONTROL) return;
-
                 if (user.name === access.loginState.username()) {
                     // we do not allow to delete ourselves
                     new PNotify({
@@ -313,8 +311,6 @@ $(function () {
             };
 
             self.showChangePasswordDialog = function (user) {
-                if (!CONFIG_ACCESS_CONTROL) return;
-
                 const proceed = () => {
                     self.currentUser(user);
                     self.changePasswordDialog.modal("show");
@@ -328,8 +324,6 @@ $(function () {
             };
 
             self.confirmChangePassword = function () {
-                if (!CONFIG_ACCESS_CONTROL) return;
-
                 const proceed = () => {
                     self.updatePassword(
                         self.currentUser().name,
@@ -357,8 +351,6 @@ $(function () {
             };
 
             self.confirmGenerateApikey = function () {
-                if (!CONFIG_ACCESS_CONTROL) return;
-
                 access.loginState.reauthenticateIfNecessary(() => {
                     self.generateApikey(self.currentUser().name).done(
                         function (response) {
@@ -394,8 +386,6 @@ $(function () {
             };
 
             self.confirmDeleteApikey = function () {
-                if (!CONFIG_ACCESS_CONTROL) return;
-
                 access.loginState.reauthenticateIfNecessary(() => {
                     self.deleteApikey(self.currentUser().name).done(function () {
                         self._updateApikey(undefined);
@@ -431,7 +421,7 @@ $(function () {
                         .reject("You are not authorized to perform this action")
                         .promise();
                 }
-                if (!access.loginState.credentialsSeen()) {
+                if (!access.loginState.checkCredentialsSeen()) {
                     return $.Deferred()
                         .reject("You need to reauthenticate to perform this action")
                         .promise();
@@ -449,7 +439,7 @@ $(function () {
                         .reject("You are not authorized to perform this action")
                         .promise();
                 }
-                if (!access.loginState.credentialsSeen()) {
+                if (!access.loginState.checkCredentialsSeen()) {
                     return $.Deferred()
                         .reject("You need to reauthenticate to perform this action")
                         .promise();
@@ -462,25 +452,22 @@ $(function () {
                 if (!user) {
                     throw OctoPrint.InvalidArgumentError("user must be set");
                 }
-                if (!access.loginState.credentialsSeen()) {
+                if (!access.loginState.checkCredentialsSeen()) {
                     return $.Deferred()
                         .reject("You need to reauthenticate to perform this action")
                         .promise();
                 }
 
                 return OctoPrint.access.users
-                    .update(
-                        user.name,
-                        user.active,
-                        user.admin,
-                        user.permissions,
-                        user.groups
-                    )
+                    .update(user.name, user.active, user.permissions, user.groups)
                     .done(self.fromResponse);
             };
 
             self.updatePassword = function (username, password, current) {
-                if (!access.loginState.credentialsSeen()) {
+                if (
+                    username !== access.loginState.username() &&
+                    !access.loginState.checkCredentialsSeen()
+                ) {
                     return $.Deferred()
                         .reject("You need to reauthenticate to perform this action")
                         .promise();
@@ -489,7 +476,7 @@ $(function () {
             };
 
             self.generateApikey = function (username) {
-                if (!access.loginState.credentialsSeen()) {
+                if (!access.loginState.checkCredentialsSeen()) {
                     return $.Deferred()
                         .reject("You need to reauthenticate to perform this action")
                         .promise();
@@ -500,7 +487,7 @@ $(function () {
             };
 
             self.deleteApikey = function (username) {
-                if (!access.loginState.credentialsSeen()) {
+                if (!access.loginState.checkCredentialsSeen()) {
                     return $.Deferred()
                         .reject("You need to reauthenticate to perform this action")
                         .promise();
@@ -853,7 +840,7 @@ $(function () {
                 if (!group) {
                     throw OctoPrint.InvalidArgumentError("group must be set");
                 }
-                if (!access.loginState.credentialsSeen()) {
+                if (!access.loginState.checkCredentialsSeen()) {
                     return $.Deferred()
                         .reject("You need to reauthenticate to perform this action")
                         .promise();
@@ -866,7 +853,7 @@ $(function () {
                 if (!group) {
                     throw OctoPrint.InvalidArgumentError("group must be set");
                 }
-                if (!access.loginState.credentialsSeen()) {
+                if (!access.loginState.checkCredentialsSeen()) {
                     return $.Deferred()
                         .reject("You need to reauthenticate to perform this action")
                         .promise();
@@ -882,7 +869,7 @@ $(function () {
                 if (!group) {
                     throw OctoPrint.InvalidArgumentError("group must be set");
                 }
-                if (!access.loginState.credentialsSeen()) {
+                if (!access.loginState.checkCredentialsSeen()) {
                     return $.Deferred()
                         .reject("You need to reauthenticate to perform this action")
                         .promise();

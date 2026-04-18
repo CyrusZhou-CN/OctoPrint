@@ -20,7 +20,6 @@ import octoprint.filemanager.util
 import octoprint.slicing
 from octoprint.access.permissions import Permissions
 from octoprint.events import Events
-from octoprint.filemanager.destinations import FileDestinations
 from octoprint.filemanager.storage import (
     AnalysisDimensions,
     AnalysisFilamentUse,
@@ -180,8 +179,8 @@ def _create_etag(path, filter=None, recursive=False, lm=None):
     lastmodified_factory=lambda: _create_lastmodified(
         request.path, request.values.get("recursive", False)
     ),
-    unless=lambda: request.values.get("force", False)
-    or request.values.get("_refresh", False),
+    unless=lambda: request.values.get("force", "false") in valid_boolean_trues
+    or request.values.get("_refresh", "false") in valid_boolean_trues,
 )
 def readGcodeFiles():  # pre 2.0.0
     filter = request.values.get("filter", False)
@@ -224,8 +223,8 @@ def readGcodeFiles():  # pre 2.0.0
     lastmodified_factory=lambda: _create_lastmodified(
         request.path, request.values.get("recursive", False)
     ),
-    unless=lambda: request.values.get("force", False)
-    or request.values.get("_refresh", False),
+    unless=lambda: request.values.get("force", "false") in valid_boolean_trues
+    or request.values.get("_refresh", "false") in valid_boolean_trues,
 )
 def readGcodeFiles_post_2_0_0():  # 2.0.0+
     filter = request.values.get("filter", False)
@@ -336,8 +335,8 @@ def runFilesTest():
     lastmodified_factory=lambda: _create_lastmodified(
         request.path, request.values.get("recursive", False)
     ),
-    unless=lambda: request.values.get("force", False)
-    or request.values.get("_refresh", False),
+    unless=lambda: request.values.get("force", "false") in valid_boolean_trues
+    or request.values.get("_refresh", "false") in valid_boolean_trues,
 )
 def readGcodeFilesForOrigin(origin):
     try:
@@ -385,18 +384,23 @@ def readGcodeFilesForOrigin(origin):
 @with_revalidation_checking(
     etag_factory=lambda lm=None: _create_etag(
         request.path,
+        recursive=request.values.get("recursive", "false") in valid_boolean_trues,
         lm=lm,
     ),
-    lastmodified_factory=lambda: _create_lastmodified(request.path, False),
-    unless=lambda: request.values.get("force", False)
-    or request.values.get("_refresh", False),
+    lastmodified_factory=lambda: _create_lastmodified(
+        request.path, request.values.get("recursive", "false") in valid_boolean_trues
+    ),
+    unless=lambda: request.values.get("force", "false") in valid_boolean_trues
+    or request.values.get("_refresh", "false") in valid_boolean_trues,
 )
 def readGcodeFile(target, filename):
     try:
         if not _validate_filename(target, filename):
             abort(404)
 
-        file = _getFileDetails(target, filename)
+        recursive = request.values.get("recursive", "false") in valid_boolean_trues
+
+        file = _getFileDetails(target, filename, recursive=recursive)
         if not file:
             abort(404)
 
@@ -406,17 +410,25 @@ def readGcodeFile(target, filename):
         abort(404)
 
 
-def _getFileDetails(origin, path):
+def _getFileDetails(origin, path, recursive=True):
     if "/" in path:
         parent, _ = path.rsplit("/", 1)
     else:
         parent = None
 
-    data = fileManager.get_storage_entry(origin, path)
-    if not data:
-        return None
+    if recursive:
+        data = fileManager.get_storage_entry(origin, path)
+        if not data:
+            return None
 
-    return _analyse_and_convert_recursively(origin, [data], path=parent)[0]
+        return _analyse_and_convert_recursively(origin, [data], path=parent)[0]
+
+    else:
+        files = _getFileList(origin, path=parent, recursive=False, level=1)
+        for f in files:
+            if f.path == path:
+                return f
+        return None
 
 
 @time_this(
@@ -662,6 +674,7 @@ def _analyse_and_convert_recursively(
                     prints=prints,
                     refs=refs,
                     gcodeAnalysis=analysis,
+                    statistics=metadata,
                     **additional,
                 )
             )
@@ -683,19 +696,19 @@ def _verifyFolderExists(origin, foldername):
     return fileManager.folder_exists(origin, foldername)
 
 
-def _isBusy(target, path):  # TODO
+def _isBusy(target, path):
     currentOrigin, currentPath = _getCurrentFile()
     if (
         currentPath is not None
         and currentOrigin == target
-        and fileManager.file_in_path(FileDestinations.LOCAL, path, currentPath)
+        and fileManager.file_in_path(target, path, currentPath)
         and (printer.is_printing() or printer.is_paused())
     ):
         return True
 
     return any(
-        target == x[0] and fileManager.file_in_path(FileDestinations.LOCAL, path, x[1])
-        for x in fileManager.get_busy_files()
+        target == busy_storage and fileManager.file_in_path(target, path, busy_path)
+        for busy_storage, busy_path in fileManager.get_busy_files()
     )
 
 
@@ -769,9 +782,7 @@ def uploadGcodeFile(target):
                     canonFilename = request.values.get("filename")
 
                 futurePath = fileManager.sanitize_path(target, canonicalizedPath)
-                futureFilename = fileManager.sanitize_name(
-                    FileDestinations.LOCAL, canonFilename
-                )
+                futureFilename = fileManager.sanitize_name(target, canonFilename)
             except Exception:
                 _logger.exception(f"Error canonicalizing {upload_name} against {target}")
                 canonFilename = None

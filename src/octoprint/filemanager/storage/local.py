@@ -30,7 +30,7 @@ from octoprint.util import (
 from octoprint.util.files import sanitize_filename
 from octoprint.util.tz import LOCAL_TZ
 
-from . import (
+from .common import (
     AnalysisDimensions,
     AnalysisFilamentUse,
     AnalysisResult,
@@ -616,7 +616,7 @@ class LocalFileStorage(StorageInterface):
 
         # make sure folders exist
         if not os.path.exists(path):
-            # TODO persist display names of path segments!
+            # FIXME persist display names of path segments!
             os.makedirs(path)
 
         # save the file
@@ -779,11 +779,11 @@ class LocalFileStorage(StorageInterface):
 
         return self.path_in_storage(destination_data["fullpath"])
 
-    def has_analysis(self, path):
+    def has_analysis(self, path: str) -> bool:
         metadata = self.get_metadata(path)
         return metadata and "analysis" in metadata
 
-    def get_metadata(self, path, default=None):
+    def get_metadata(self, path: str, default=None) -> dict:
         path, name = self.sanitize(path)
         return self._get_metadata_entry(path, name, default=default)
 
@@ -804,14 +804,18 @@ class LocalFileStorage(StorageInterface):
         thumbnails = self._get_thumbnails(path, name)
         return thumbnails and len(thumbnails) > 0
 
-    def get_thumbnail(self, path, sizehint=None) -> StorageThumbnail:
+    def get_thumbnail(self, path, platehint=None, sizehint=None) -> StorageThumbnail:
+        # platehint is currently not supported on local storage
         sh, thumb = self._thumbnail_from_sizehint(path, sizehint=sizehint)
         if not thumb:
             return None
 
         return self._to_thumbnail_info(thumb, sh, path)
 
-    def read_thumbnail(self, path, sizehint=None) -> tuple[StorageThumbnail, typing.IO]:
+    def read_thumbnail(
+        self, path, platehint=None, sizehint=None
+    ) -> tuple[StorageThumbnail, typing.IO]:
+        # platehint is currently not supported on local storage
         sh, thumb = self._thumbnail_from_sizehint(path, sizehint=sizehint)
         if not thumb:
             return None
@@ -1579,7 +1583,7 @@ class LocalFileStorage(StorageInterface):
 
         return entry_data
 
-    def _get_metadata_entry(self, path, name, default=None):
+    def _get_metadata_entry(self, path: str, name: str, default=None) -> dict:
         with self._get_metadata_lock(path):
             metadata = self._get_metadata(path)
             return metadata.get(name, default)
@@ -1715,7 +1719,7 @@ class LocalFileStorage(StorageInterface):
                 except Exception:
                     self._logger.exception(f"Error copying/moving {src} to {dst}")
 
-    def _get_metadata(self, path, force=False):
+    def _get_metadata(self, path: str, force=False) -> dict:
         import json
 
         if not force:
