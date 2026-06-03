@@ -328,31 +328,6 @@ $(function () {
             };
         };
 
-        self._fromResponse_global_api_key = (result, context) => {
-            if (result === "ok") return;
-
-            const title = gettext("Deprecated global API key detected");
-            const html =
-                "<p>" +
-                gettext("Your OctoPrint instance has a global API key set.") +
-                "</p><p>" +
-                _.sprintf(
-                    gettext(
-                        'It is recommended to no longer use the global API key as it\'s one single key that gives full admin access to your whole OctoPrint instance. It will be removed in OctoPrint 2.1.0. Instead of using the global key you should create individual <a href="%(url)s" target="_blank" rel="noopener noreferrer">Application Keys</a> for your third party clients. That way they get permissions matching the user account used for key creation and you can also revoke access to one app without having to change the keys for all other apps. It\'s also recommended to create a user account without admin access and use that for third party clients where possible. '
-                    ),
-                    {
-                        url: "https://docs.octoprint.org/en/main/bundledplugins/appkeys.html"
-                    }
-                ) +
-                "</p>";
-
-            return {
-                title: title,
-                html: html,
-                result: result
-            };
-        };
-
         self._fromResponse_only_admins = (result, context) => {
             if (result === "ok") return;
 
@@ -375,6 +350,28 @@ $(function () {
                     "While the likelihood of anyone being able to abuse your account or a leaked API key is pretty small as long as you don't make OctoPrint accessible on the public internet or another hostile network, it's always a good idea to follow best security practices and shrink the attack surface as much as possible, even in local setups."
                 ) +
                 "</p>";
+
+            return {
+                title: title,
+                html: html,
+                result: result
+            };
+        };
+
+        self._fromResponse_gtt_unusable = (result, context) => {
+            if (result === "ok") return;
+
+            const title = gettext("GCODE Thumbnail Tool unavailable");
+            const html =
+                "<p>" +
+                gettext(
+                    "The GCODE Thumbnail Tool, which is used for the native thumbnail support on the local storage, cannot be loaded."
+                ) +
+                "</p><p>" +
+                gettext(
+                    'The most likely cause for this are one or more missing OS dependencies for the used image library "Pillow". If you want to fix this, please see the following FAQ entry:'
+                ) +
+                "</p><p><a href='https://faq.octoprint.org/gtt-unavailable' target='_blank' rel='noopener noreferrer'>How to fix unavailability of GCODE Thumbnail Tool</a></p>";
 
             return {
                 title: title,

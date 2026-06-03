@@ -27,14 +27,14 @@ Look for two things in your code:
 
 1. Imports of other plugin templates in your own plugin's templates, e.g.
 
-   ``` jinja2
+   ``` jinja
    {% include "snippets/my_snippet.jinja2" %}
    ```
 
    will only be resolved relatively to the current plugin, and thus need
    to be prefixed referencing the target plugin going forward:
 
-   ``` jinja2
+   ``` jinja
    {% include "plugin_some_other_plugin/snippets/my_snippet.jinja2" %}
    ```
 2. Templates rendered by your plugin. e.g. in a custom route created through the [`BlueprintPlugin` mixin](#sec-plugins-mixins-blueprintplugin) need to be prefixed as well. Example:
@@ -125,6 +125,16 @@ Should your plugin for whatever reason rely on it instead of having `accessViewM
 
 1. add a dependency to `accessViewModel` in your plugin's view model
 2. replace usages of `self.settingsViewModel.users` (or however you called the parameter you keep the injected `SettingsViewModel` instance in) to `self.accessViewModel.users`
+
+```{deprecated} 2.0.0
+```
+
+(sec-plugins-deprecations-2_1_0-system_event_shell)=
+### Change of default for `shell` argument in system command event subscriptions
+
+System command event subscriptions configured in `events.yaml` that do not explicitly define the `shell` argument currently default to `shell=True` on the resulting command call. As that is a potential security issue, OctoPrint 2.1.0 will change this default to `shell=False`.
+
+If you rely on shell behaviour (e.g. shell expansion, pipes, redirection) in your event subscriptions, you need to add `shell: true` to them explicitly now to avoid breakage in 2.1.0.
 
 ```{deprecated} 2.0.0
 ```
@@ -255,12 +265,32 @@ The payload of [the `TransferStarted`, `TransferDone` and `TransferFailed` event
 ```{deprecated} 2.0.0
 ```
 
+(sec-plugins-deprecations-3_0_0-jsclient_appkeys_revokekey)=
+### Removal of renamed `OctoPrintClient.plugins.appkeys.revokeKey`
+
+`OctoPrintClient.plugins.appkeys.revokeKey` has been renamed to `OctoPrintClient.plugins.appkeys.revokeKeyForApp`.
+
+The old name still works, but will display a deprecation warning in the browser console. If your plugin or other client is using this method, make sure to switch to the new name.
+
+```{deprecated} 1.10.0
+```
+
+(sec-plugins-deprecations-3_0_0-api_system)=
+### Removal of the `POST /api/system` compatibility wrapper
+
+The legacy `POST /api/system` API endpoint has been replaced by `POST /api/system/commands/custom/<action>` since 1.3.0. The old endpoint is still kept as a compatibility wrapper that internally redirects to the new one while logging a deprecation warning, and will be removed in OctoPrint 3.0.0.
+
+If your plugin or other client is still issuing requests against `POST /api/system`, switch them over to `POST /api/system/commands/custom/<action>` now.
+
+```{deprecated} 1.3.0
+```
+
 (sec-plugins-deprecations-undetermined)=
 ## Deprecations that don't yet have a removal version defined
 
 ### Removal of deprecated methods on `octoprint.printer.standard.Printer`, also known as `self._printer`
 
-- `get_connection_options` -> use `ConnectedPrinter.all()` in combination with `get_connection_option` on the returned `ConnectedPrinter` instances instead
+- `get_connection_options` -> use `ConnectedPrinter.all()` in combination with `connection_options` on the returned `ConnectedPrinter` instances instead
 - `select_file` -> `set_job`
 - `unselect_file` -> `set_job` with `None`
 - `fake_ack` -> `repair_communication`
@@ -279,6 +309,84 @@ The payload of [the `TransferStarted`, `TransferDone` and `TransferFailed` event
 ```{deprecated} 2.0.0
 ```
 
+#### Migration example: `select_file`
+
+``` python
+from octoprint.filemanager import FileDestinations
+from octoprint.util.version import is_octoprint_compatible
+
+if is_octoprint_compatible(">=2"):
+    job = self._file_manager.create_job(storage, path)
+    self._printer.set_job(job, print_after_select=False)
+else:
+    is_sd = storage == FileDestinations.SDCARD
+    file_to_select = path if is_sd else self._file_manager.path_on_disk(storage, path)
+    self._printer.select_file(file_to_select, sd=is_sd, printAfterSelect=False)
+```
+
+#### Migration example: `unselect_file`
+
+``` python
+from octoprint.util.version import is_octoprint_compatible
+
+if is_octoprint_compatible(">=2"):
+    self._printer.set_job(None)
+else:
+    self._printer.unselect_file()
+```
+
+#### Migration example: `refresh_sd_files` & `get_sd_files`
+
+```python
+from octoprint.filemanager import FileDestinations
+from octoprint.util.version import is_octoprint_compatible
+
+if is_octoprint_compatible(">=2"):
+    self._file_manager.list_storage_entries([FileDestinations.PRINTER], force_refresh=blocking)
+else:
+    self._printer.get_sd_files(blocking=blocking)
+```
+
+#### Migration example: `can_modify_file`
+
+``` python
+from octoprint.filemanager import FileDestinations
+from octoprint.util.version import is_octoprint_compatible
+
+if is_octoprint_compatible(">=2"):
+    current_job = self._printer.current_job
+    is_current_job = current_job is not None and current_job.path == path and current_job.storage == storage
+    return not (is_current_job and (self._printer.is_printing() or self._printer.is_paused()))
+else:
+    is_sd = storage == FileDestinations.SDCARD
+    storage_path = path if is_sd else self._file_manager.path_on_disk(storage, path)
+    return self._printer.can_modify_file(storage_path, is_sd)
+```
+
+#### Migration example: `is_current_file`
+
+``` python
+from octoprint.filemanager import FileDestinations
+from octoprint.util.version import is_octoprint_compatible
+
+if is_octoprint_compatible(">=2"):
+    current_job = self._printer.current_job
+    return current_job is not None and current_job.path == path and current_job.storage == storage
+else:
+    is_sd = storage == FileDestinations.SDCARD
+    storage_path = path if is_sd else self._file_manager.path_on_disk(storage, path)
+    return self._printer.is_current_file(storage_path, is_sd)
+```
+
+### Removal of direct access to `octoprint.util.comm`
+
+The `octoprint.util.comm` module has been moved into the bundled plugin `serial_connector` and is now available as `octoprint.plugins.serial_connector.serial_comm`. Direct access to `octoprint.util.comm` is deprecated and only kept as a compatibility layer that re-exports from the new location.
+
+If your plugin imports anything from `octoprint.util.comm`, switch its imports over to `octoprint.plugins.serial_connector.serial_comm`.
+
+```{deprecated} 2.0.0
+```
+
 ### Removal of deprecated methods on `octoprint.filemanager.FileManager`, also known as `self._filemanager`
 
 - `list_files` -> `list_storage_entries`
@@ -291,7 +399,7 @@ The payload of [the `TransferStarted`, `TransferDone` and `TransferFailed` event
 
 ### Removal of deprecated methods on `octoprint.filemanager.storage.StorageInterface` and thus any storages
 
-- `last_modified` -> `get_last_modified`
+- `last_modified` -> `get_lastmodified`
 - `get_file` -> `get_storage_entry`
 - `list_files` -> `list_storage_entries`
 - `add_link` -> no alternative
@@ -312,4 +420,57 @@ Replaced by `flask.request.remote_addr`.
 `octoprint.plugin.PluginInfo.blacklisted` has been renamed to `octoprint.plugin.PluginInfo.blocklisted`. Adjust calling code accordingly.
 
 ```{deprecated} 2.0.0
+```
+
+### `octoprint.util.thaw_immutabledict` renamed to `thaw_frozendict`
+
+`octoprint.util.thaw_immutabledict` has been renamed to `octoprint.util.thaw_frozendict`. Adjust calling code accordingly.
+
+```{deprecated} 1.8.0
+```
+
+### Removal of the `serial.*` settings compatibility overlay
+
+All settings previously located under `serial.*` have been moved with the migration of the serial communication stack to the bundled `serial_connector` plugin. A read-only compatibility overlay exposes the new settings under their old `serial.*` paths: reads return the current value and log a deprecation warning, while writes are silently dropped. The overlay will be removed in a future release.
+
+If your plugin reads or writes settings under `serial.*`, switch it over to the new locations:
+
+- Connection parameters:
+  - `serial.port` -> `printerConnection.preferred.parameters.port`
+  - `serial.baudrate` -> `printerConnection.preferred.parameters.baudrate`
+  - `serial.autoconnect` -> `printerConnection.autoconnect`
+  - `serial.autorefresh` -> `printerConnection.autorefresh`
+  - `serial.autorefreshInterval` -> `printerConnection.autorefreshInterval`
+- Suppressed command notifications:
+  - `serial.notifySuppressedCommands` -> `feature.notifySuppressedCommands`
+- Checksum and error handling:
+  - `serial.alwaysSendChecksum` / `serial.neverSendChecksum` -> `plugins.serial_connector.sendChecksum` (which is now an enum with values: `always`, `never`, `printing`)
+  - `serial.disconnectOnErrors` / `serial.ignoreErrorsFromFirmware` -> `plugins.serial_connector.errorHandling` (which is now an enum with values: `disconnect`, `ignore`, `cancel`)
+- Blocklisted ports and baudrates:
+  - `serial.blacklistedPorts` -> `plugins.serial_connector.blocklistedPorts`
+  - `serial.blacklistedBaudrates` -> `plugins.serial_connector.blocklistedBaudrates`
+- All other former `serial.*` settings -> `plugins.serial_connector.*` with the same key name
+
+```{deprecated} 2.0.0
+```
+
+### Removal of the `Blacklist` settings compatibility overlay
+
+The settings keys containing `Blacklist` have been renamed to `Blocklist`. A read-only compatibility overlay exposes the new settings under their old names: reads return the current value and log a deprecation warning, while writes are silently dropped. The overlay will be removed in a future release.
+
+If your plugin reads or writes one of these settings, switch it over to the new names:
+
+- `feature.autoUppercaseBlacklist` -> `feature.autoUppercaseBlocklist`
+- `server.pluginBlacklist` -> `server.pluginBlocklist`
+
+```{deprecated} 2.0.0
+```
+
+### Removal of the `webcam.*` settings compatibility overlay
+
+The top-level `webcam.*` settings have been superseded by the new webcam system introduced in OctoPrint 1.9.0, with configuration now provided by plugins implementing the [`WebcamProviderPlugin` mixin](#sec-plugins-mixins-webcamproviderplugin). A read-only compatibility overlay exposes the configuration of the currently configured default webcam under the old `webcam.*` paths: reads return the current value and log a deprecation warning, while writes are silently dropped. The overlay will be removed in a future release.
+
+If your plugin reads or writes webcam configuration via the `webcam.*` global settings paths, switch it over to the methods provided by the [`WebcamProviderPlugin` mixin](#sec-plugins-mixins-webcamproviderplugin).
+
+```{deprecated} 1.9.0
 ```

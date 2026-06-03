@@ -92,7 +92,7 @@ Additionally:
 
 :::{note}
 Using another IDE than the ones below? Please send a
-[Pull Request](https://github.com/OctoPrint/OctoPrint/blob/master/CONTRIBUTING.md#pull-requests) to get the necessary
+[Pull Request](https://github.com/OctoPrint/OctoPrint/blob/dev/CONTRIBUTING.md#pull-requests) to get the necessary
 steps into this guide!
 :::
 
@@ -272,6 +272,6 @@ Consider this very much outdated!
       - disable "Auto-save edited files to trigger the watched"
       - enable "Trigger the watched on external changes"
 
-To switch between virtual environments (e.g. Python 3.9 and 3.14), all you need to do now is change the Project Default Interpreter and restart
+To switch between virtual environments (e.g. Python 3.10 and 3.14), all you need to do now is change the Project Default Interpreter and restart
 OctoPrint. On current PyCharm versions you can do that right from a small selection field in the footer of the IDE.
 Otherwise go through Settings.

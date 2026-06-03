@@ -5,6 +5,7 @@ import concurrent.futures
 import hashlib
 import logging
 import os
+import threading
 import time
 from urllib.parse import urlencode
 
@@ -17,6 +18,7 @@ from octoprint.util import RepeatedTimer
 from octoprint.util.version import get_octoprint_version_string
 
 TRACKING_URL = "https://tracking.octoprint.org/track/{id}/{event}/"
+FIRMWARE_INFO_TIMEOUT = 15
 
 
 # noinspection PyMissingConstructor
@@ -42,7 +44,7 @@ class TrackingPlugin(
         self._pong_worker = None
         self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
 
-        self._record_next_firmware_info = False
+        self._printer_connected_timer = None
 
         self._startup_time = time.monotonic()
 
@@ -150,10 +152,17 @@ class TrackingPlugin(
 
         elif event in (Events.CONNECTED,):
             self._printer_connector = payload.get("connector")
-            self._record_next_firmware_info = True
 
-        elif event in (Events.FIRMWARE_DATA,) and self._record_next_firmware_info:
-            self._record_next_firmware_info = False
+            self._printer_connected_timer = threading.Timer(
+                FIRMWARE_INFO_TIMEOUT, self._track_printer_event, (event, payload)
+            )
+            self._printer_connected_timer.start()
+
+        elif (
+            event in (Events.FIRMWARE_DATA,) and self._printer_connected_timer is not None
+        ):
+            self._printer_connected_timer.cancel()
+            self._printer_connected_timer = None
             self._track_printer_event(event, payload)
 
         elif event in (Events.SLICING_STARTED,):
@@ -436,6 +445,9 @@ class TrackingPlugin(
         track_event = None
         args = {"origin": payload.get("origin"), "file": sha.hexdigest()}
 
+        if "connector" in payload:
+            args["printer_connector"] = payload["connector"]
+
         if event == Events.PRINT_STARTED:
             track_event = "print_started"
         elif event == Events.PRINT_DONE:
@@ -486,14 +498,24 @@ class TrackingPlugin(
             self._track(track_event, **args)
 
     def _track_printer_event(self, event, payload):
+        if self._printer_connected_timer:
+            self._printer_connected_timer.cancel()
+            self._printer_connected_timer = None
+
         if not self._settings.get_boolean(["events", "printer"]):
             return
 
-        if event in (Events.FIRMWARE_DATA,):
-            args = {"firmware_name": payload["name"]}
-            if self._printer_connector:
-                args["printer_connector"] = self._printer_connector
-            self._track("printer_connected", **args)
+        if event not in (Events.CONNECTED, Events.FIRMWARE_DATA):
+            return
+
+        args = {}
+        if self._printer_connector:
+            args["printer_connector"] = self._printer_connector
+
+        if event == Events.FIRMWARE_DATA:
+            args["firmware_name"] = payload["name"]
+
+        self._track("printer_connected", **args)
 
     def _track_printer_safety_event(self, event, payload):
         if not self._settings.get_boolean(["events", "printer_safety_check"]):
@@ -601,6 +623,6 @@ __plugin_description__ = (
 __plugin_url__ = "https://tracking.octoprint.org"
 __plugin_author__ = "Gina Häußge"
 __plugin_license__ = "AGPLv3"
-__plugin_pythoncompat__ = ">=3.9,<4"
+__plugin_pythoncompat__ = ">=3.10,<4"
 
 __plugin_implementation__ = TrackingPlugin()

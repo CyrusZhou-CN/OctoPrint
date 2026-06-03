@@ -53,7 +53,7 @@ $(function () {
         self.moveDestinationFullpath = ko.pureComputed(function () {
             // Join the paths for renaming
             if (self.moveSourceFilename() !== self.moveDestinationFilename()) {
-                if (self.moveDestination() === "/") {
+                if (self.moveDestination().endsWith("/")) {
                     return self.moveDestination() + self.moveDestinationFilename();
                 } else {
                     return self.moveDestination() + "/" + self.moveDestinationFilename();
@@ -134,7 +134,7 @@ $(function () {
                 let result = [];
                 entries.forEach((entry) => {
                     if (entry.type !== "folder") return;
-                    result.push("/" + entry.path);
+                    result.push("/" + entry.path + "/");
 
                     if (entry.children) {
                         result = result.concat(createFolderList(entry.children));
@@ -213,6 +213,10 @@ $(function () {
                 (!self.isPrinting() || !!capabilities.concurrent_printing)
             );
         };
+        self.storageHasThumbnails = (storage) => {
+            const capabilities = self.storageCapabilities(storage);
+            return !!capabilities.thumbnails;
+        };
 
         self.currentStorage = ko.observable("local");
         self.currentStorage.subscribe((val) => {
@@ -256,6 +260,10 @@ $(function () {
         self.currentStorageCanAddFolder = ko.pureComputed(() => {
             const storage = self.currentStorage();
             return self.storageCanAddFolder(storage);
+        });
+        self.currentStorageHasThumbnails = ko.pureComputed(() => {
+            const storage = self.currentStorage();
+            return self.storageHasThumbnails(storage);
         });
 
         self.freeSpaceString = ko.pureComputed(function () {
@@ -370,8 +378,8 @@ $(function () {
                     (child) =>
                         isCurrentlySelected(child) ||
                         !(
-                            child.prints !== undefined &&
-                            child.prints.success !== undefined &&
+                            child.prints &&
+                            typeof child.prints.success === "number" &&
                             child.prints.success > 0
                         )
                 )
@@ -561,6 +569,25 @@ $(function () {
                 }
                 self.listHelper.selectNone();
             }
+        };
+
+        self.refreshingThumbnails = ko.observable(false);
+        self.refreshThumbnails = function (recursive) {
+            if (self.refreshingThumbnails()) return;
+
+            const storage = self.currentStorage();
+            if (!self.storageHasThumbnails(storage)) return;
+
+            self.refreshingThumbnails(true);
+
+            OctoPrint.files
+                .refreshThumbnails(storage, self.currentPath(), {
+                    force: true,
+                    recursive: recursive
+                })
+                .always(() => {
+                    self.refreshingThumbnails(false);
+                });
         };
 
         self.fromCurrentData = function (data) {
@@ -926,7 +953,7 @@ $(function () {
             var slashPos = entry.path.lastIndexOf("/");
             var current;
             if (slashPos >= 0) {
-                current = "/" + entry.path.substr(0, slashPos);
+                current = "/" + entry.path.substr(0, slashPos) + "/";
             } else {
                 current = "/";
             }

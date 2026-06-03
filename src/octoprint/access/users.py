@@ -23,20 +23,10 @@ NOLOGIN_PWHASH = "nologin"
 
 password_hashers = []
 
-try:
-    from libpass.hash import pbkdf2_sha256
-
-    LIBPASS = True
-except ImportError:  # Python < 3.9
-    from passlib.hash import pbkdf2_sha256
-
-    LIBPASS = False
+from passlib.hash import pbkdf2_sha256
 
 try:
-    if LIBPASS:
-        from libpass.hash import argon2
-    else:
-        from passlib.hash import argon2
+    from passlib.hash import argon2
 
     # test if we can actually hash and verify, if not we won't use this backend
     hash = argon2.hash("test")
@@ -78,9 +68,6 @@ class UserManager(GroupChangeListener):
 
     def anonymous_user_factory(self):
         return AnonymousUser([self._group_manager.guest_group])
-
-    def api_user_factory(self):  # TODO remove in 2.1.0
-        return ApiUser([self._group_manager.admin_group, self._group_manager.user_group])
 
     def internal_user_factory(self):
         return InternalUser(
@@ -746,7 +733,7 @@ class FilebasedUserManager(UserManager):
             self._settings.save()
 
     def signature_key_for_user(self, username, secret):
-        if username == "_internal" or username == "_api":  # TODO remove _api in 2.1.0
+        if username == "_internal":
             return super().signature_key_for_user(username, secret)
         if username not in self._users:
             raise UnknownUser(username)
@@ -1218,12 +1205,7 @@ class SessionUser(wrapt.ObjectProxy):
         )
 
 
-##~~ User object to use when global api key is used to access the API
-
-
-class ApiUser(User):  # TODO remove in 2.1.0
-    def __init__(self, groups):
-        User.__init__(self, "_api", "", True, [], groups)
+##~~ User object to use for internal user
 
 
 class InternalUser(User):

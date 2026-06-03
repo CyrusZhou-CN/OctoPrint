@@ -278,7 +278,7 @@ class CommonPrinterMixin:
         Arguments:
             amount (int, float): The amount of material to extrude in mm
             speed (int, None): Speed at which to extrude (F parameter). If set to ``None`` (or left out)
-            the maximum speed of E axis from the printer profile will be used.
+                the maximum speed of E axis from the printer profile will be used.
             tags (set of str): An optional set of tags to attach to the command(s) throughout their lifecycle
         """
 
@@ -842,7 +842,7 @@ class PrinterMixin(CommonPrinterMixin):
 
     @classmethod
     @deprecated(
-        message="get_connection_option has been deprecated and will be removed in a future version. Please use ConnectedPrinter.all() in combination with get_connection_option on the returned ConnectedPrinter instances instead.",
+        message="get_connection_options has been deprecated and will be removed in a future version. Please use ConnectedPrinter.all() in combination with connection_options on the returned ConnectedPrinter instances instead.",
         since="2.0.0",
     )
     def get_connection_options(cls, *args, **kwargs):

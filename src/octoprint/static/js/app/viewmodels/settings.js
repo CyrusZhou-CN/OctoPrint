@@ -124,13 +124,10 @@ $(function () {
         );
         self.locale_languages = _.keys(AVAILABLE_LOCALES);
 
-        self.api_key = ko.observable(undefined);
         self.api_allowCrossOrigin = ko.observable(undefined);
 
-        self.apiKeyVisible = ko.observable(false);
-        self.revealingApiKey = ko.observable(false);
-
         self.reauthReqs = undefined;
+        self.accessControl_defaultReauthenticationTimeout = ko.observable(undefined);
 
         self.appearance_name = ko.observable(undefined);
         self.appearance_color = ko.observable(undefined);
@@ -338,15 +335,67 @@ $(function () {
             self.temperature_profiles.remove(profile);
         };
 
+        self.defaultTerminalFilters =
+            typeof DEFAULT_TERMINAL_FILTERS !== "undefined"
+                ? DEFAULT_TERMINAL_FILTERS
+                : [];
+
+        self.terminalFilterHasDefault = function (filter) {
+            return !!_.find(self.defaultTerminalFilters, {name: filter.name()});
+        };
+
+        self.terminalFilterMatchesDefault = function (filter) {
+            var def = _.find(self.defaultTerminalFilters, {name: filter.name()});
+            return !!def && filter.regex() === def.regex;
+        };
+
+        self.terminalFiltersMatchDefaults = ko.pureComputed(function () {
+            return _.isEqual(
+                _.map(self.terminalFilters(), function (f) {
+                    return {name: f.name(), regex: f.regex()};
+                }),
+                self.defaultTerminalFilters
+            );
+        });
+
+        self._wrapTerminalFilter = function (filter) {
+            return {
+                name: ko.observable(filter.name),
+                regex: ko.observable(filter.regex)
+            };
+        };
+
         self.addTerminalFilter = function () {
-            self.terminalFilters.push({
-                name: "New",
-                regex: "(>>>\\s+(N\\d+\\s+)?M105)|(<<<\\s+(ok\\s+([PBN]\\d+\\s+)*)?.*([BCLPR]|T\\d*):-?\\d+)"
-            });
+            self.terminalFilters.push(
+                self._wrapTerminalFilter({
+                    name: "New",
+                    regex: "(>>>\\s+(N\\d+\\s+)?M105)|(<<<\\s+(ok\\s+([PBN]\\d+\\s+)*)?.*([BCLPR]|T\\d*):-?\\d+)"
+                })
+            );
         };
 
         self.removeTerminalFilter = function (filter) {
             self.terminalFilters.remove(filter);
+        };
+
+        self.resetTerminalFilter = function (filter) {
+            var def = _.find(self.defaultTerminalFilters, {name: filter.name()});
+            if (def) {
+                filter.regex(def.regex);
+            }
+        };
+
+        self.resetAllTerminalFilters = function () {
+            showConfirmationDialog(
+                gettext(
+                    "This will reset all terminal filters to their defaults. Any custom filters will be lost."
+                ),
+                function () {
+                    self.terminalFilters(
+                        _.map(self.defaultTerminalFilters, self._wrapTerminalFilter)
+                    );
+                }
+            );
         };
 
         self.testWebcamFfmpegPathBusy = ko.observable(false);
@@ -628,52 +677,6 @@ $(function () {
             self.settingsDialog.modal("hide");
         };
 
-        self.generateApiKey = () => {
-            showConfirmationDialog(
-                gettext(
-                    "This will generate a new API Key. The old API Key will cease to function immediately."
-                ),
-                () => {
-                    self.loginState.reauthenticateIfNecessary(() => {
-                        OctoPrint.settings.generateApiKey().done((response) => {
-                            self.api_key(response.apikey);
-                            self.requestData();
-                        });
-                    });
-                }
-            );
-        };
-
-        self.deleteApiKey = () => {
-            if (!self.api_key()) return;
-
-            showConfirmationDialog(
-                gettext(
-                    "This will delete the API Key. It will cease to function immediately."
-                ),
-                () => {
-                    self.loginState.reauthenticateIfNecessary(() => {
-                        OctoPrint.settings.deleteApiKey().done(() => {
-                            self.api_key(undefined);
-                        });
-                    });
-                }
-            );
-        };
-
-        self.copyApiKey = function () {
-            copyToClipboard(self.api_key());
-        };
-
-        self.revealApiKey = () => {
-            self.loginState.reauthenticateIfNecessary(() => {
-                self.revealingApiKey(true);
-                self.requestData().always(() => {
-                    self.revealingApiKey(false);
-                });
-            });
-        };
-
         self.showTranslationManager = function () {
             self.translationManagerDialog.modal();
             return false;
@@ -828,6 +831,11 @@ $(function () {
                         return result;
                     }
                 },
+                terminalFilters: function () {
+                    return _.map(self.terminalFilters(), function (filter) {
+                        return {name: filter.name(), regex: filter.regex()};
+                    });
+                },
                 temperature: {
                     profiles: function () {
                         var result = [];
@@ -963,7 +971,7 @@ $(function () {
                     }
                 },
                 terminalFilters: function (value) {
-                    self.terminalFilters($.extend(true, [], value));
+                    self.terminalFilters(_.map(value, self._wrapTerminalFilter));
                 },
                 temperature: {
                     profiles: function (value) {
@@ -1049,9 +1057,6 @@ $(function () {
             mapToObservables(serverChangedData, specialMappings, clientChangedData);
 
             firstRequest.resolve();
-
-            // this should only ever return true if we triggered the request through the "reveal api key" button
-            self.apiKeyVisible(self.revealingApiKey());
 
             // if autologinLocal is enabled and the heads-up not yet acknowledged, show it now
             if (
@@ -1292,7 +1297,6 @@ $(function () {
                 };
 
         self.onUserCredentialsOutdated = () => {
-            self.apiKeyVisible(false);
             self.requestData();
         };
 

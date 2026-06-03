@@ -41,9 +41,10 @@ from octoprint.util.version import (
 
 from . import cli, exceptions, updaters, util, version_checks
 
-# OctoPi 1.0.0+
-MINIMUM_PYTHON = "3.9"
-MINIMUM_SETUPTOOLS = "44.1"
+# OctoPi 1.1.0+
+MINIMUM_PYTHON = "3.10"
+MINIMUM_SETUPTOOLS = "66"
+
 MINIMUM_PIP = "22.3"
 
 
@@ -62,9 +63,12 @@ class SoftwareUpdatePlugin(
     octoprint.plugin.WizardPlugin,
     octoprint.plugin.EventHandlerPlugin,
 ):
-    COMMIT_TRACKING_TYPES = ("github_commit", "bitbucket_commit")
+    COMMIT_TRACKING_TYPES = ("github_commit", "forgejo_commit", "bitbucket_commit")
     CURRENT_TRACKING_TYPES = COMMIT_TRACKING_TYPES + ("httpheader", "jsondata")
-    RELEASE_TRACKING_TYPES = ("github_release",)
+    RELEASE_TRACKING_TYPES = (
+        "github_release",
+        "forgejo_release",
+    )
 
     OCTOPRINT_RESTART_TYPES = ("pip", "single_file_plugin")
 
@@ -662,7 +666,7 @@ class SoftwareUpdatePlugin(
             "checks": {
                 "octoprint": {
                     "type": "github_release",
-                    "user": "foosel",
+                    "user": "OctoPrint",
                     "repo": "OctoPrint",
                     "method": "pip",
                     "pip": "https://github.com/OctoPrint/OctoPrint/archive/{target_version}.zip",
@@ -1427,7 +1431,7 @@ class SoftwareUpdatePlugin(
             # switched release channel
             if "channel" in data:
                 if (
-                    populated_check["type"] == "github_release"
+                    populated_check["type"] in self.RELEASE_TRACKING_TYPES
                     and "stable_branch" in populated_check
                     and "prerelease_branches" in populated_check
                 ):
@@ -1728,11 +1732,11 @@ class SoftwareUpdatePlugin(
                         }
 
                         if (
-                            populated_check["type"] == "github_release"
+                            populated_check["type"] in self.RELEASE_TRACKING_TYPES
                             and "stable_branch" in populated_check
                             and "prerelease_branches" in populated_check
                         ):
-                            # target supports release channels via github branches and releases
+                            # target supports release channels via branches and releases
                             def to_release_channel(branch_info):
                                 return {
                                     "name": branch_info["name"],
@@ -2344,6 +2348,13 @@ class SoftwareUpdatePlugin(
 
         result = dict(check)
 
+        if check.get("type") == "codeberg_release":
+            result["type"] = "forgejo_release"
+            result["forge"] = "codeberg"
+        elif check.get("type") == "codeberg_commit":
+            result["type"] = "forgejo_commit"
+            result["forge"] = "codeberg"
+
         if target == "octoprint":
             displayName = check.get("displayName")
             if displayName is None:
@@ -2359,8 +2370,14 @@ class SoftwareUpdatePlugin(
 
             result["released_version"] = is_released_octoprint_version()
 
-            if check["type"] in self.COMMIT_TRACKING_TYPES:
+            if result["type"] in self.COMMIT_TRACKING_TYPES:
                 result["current"] = REVISION if REVISION else "unknown"
+
+                branch = result.get("branch")
+                if branch is None or branch == "master":
+                    result["branch"] = (
+                        "main"  # make sure we default to the existing main branch vs removed master, see #5400
+                    )
             else:
                 result["current"] = VERSION
 
@@ -2397,7 +2414,7 @@ class SoftwareUpdatePlugin(
                 # displayVersion AND current missing or None
                 result["displayVersion"] = "unknown"
 
-            if check["type"] in self.CURRENT_TRACKING_TYPES:
+            if result["type"] in self.CURRENT_TRACKING_TYPES:
                 result["current"] = check.get("current", None)
             else:
                 result["current"] = check.get(
@@ -2405,7 +2422,7 @@ class SoftwareUpdatePlugin(
                 )
 
         if (
-            check["type"] in self.RELEASE_TRACKING_TYPES
+            result["type"] in self.RELEASE_TRACKING_TYPES
             and result["current"]
             and (check.get("prerelease", None) or not is_stable(result["current"]))
         ):
@@ -2416,22 +2433,21 @@ class SoftwareUpdatePlugin(
             # between RCs + stable for the same version release
             result["force_base"] = False
 
-            if check["type"] == "github_release":
-                if check.get("prerelease", None):
-                    # we are tracking prereleases => we want to be on the correct prerelease channel/branch
-                    channel = check.get("prerelease_channel", None)
-                    if channel:
-                        # if we have a release channel, we also set our update_branch here to our release channel
-                        # in case it's not already set
-                        result["update_branch"] = check.get("update_branch", channel)
+            if check.get("prerelease", None):
+                # we are tracking prereleases => we want to be on the correct prerelease channel/branch
+                channel = check.get("prerelease_channel", None)
+                if channel:
+                    # if we have a release channel, we also set our update_branch here to our release channel
+                    # in case it's not already set
+                    result["update_branch"] = check.get("update_branch", channel)
 
-                else:
-                    # we are not tracking prereleases, but aren't on the stable branch either => switch back
-                    # to stable branch on update
-                    result["update_branch"] = check.get(
-                        "update_branch",
-                        check.get("stable_branch", {"branch": "main"})["branch"],
-                    )
+            else:
+                # we are not tracking prereleases, but aren't on the stable branch either => switch back
+                # to stable branch on update
+                result["update_branch"] = check.get(
+                    "update_branch",
+                    check.get("stable_branch", {"branch": "main"})["branch"],
+                )
 
             if check.get("update_script", None):
                 # we force an exact version & python inequality check, to be able to downgrade
@@ -2540,14 +2556,14 @@ class SoftwareUpdatePlugin(
 
         return None
 
-    def _get_octoprint_tracked_branch(self, checks=None):
+    def _get_octoprint_tracked_branch(self, checks=None, default="main"):
         if checks is None:
             checks = self._get_configured_checks()
 
         if "octoprint" not in checks:
-            return None
+            return default
 
-        return checks["octoprint"].get("branch")
+        return checks["octoprint"].get("branch", default)
 
     def _get_octoprint_pip_target(self, checks=None):
         if checks is None:
@@ -2573,7 +2589,7 @@ __plugin_disabling_discouraged__ = gettext(
     "your system at risk."
 )
 __plugin_license__ = "AGPLv3"
-__plugin_pythoncompat__ = ">=3.9,<4"
+__plugin_pythoncompat__ = ">=3.10,<4"
 
 
 def __plugin_load__():

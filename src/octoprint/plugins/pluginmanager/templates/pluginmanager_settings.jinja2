@@ -472,7 +472,23 @@
                             <li>
                                 <a href="javascript:void(0)"
                                    data-bind="click: function() { repositoryplugins.changeSorting('stars'); }"><i class="fas fa-check"
-   data-bind="style: {visibility: repositoryplugins.currentSorting() == 'stars' ? 'visible' : 'hidden'}"></i> {{ _("Sort by Github stars") }} ({{ _("descending") }})</a>
+   data-bind="style: {visibility: repositoryplugins.currentSorting() == 'stars' ? 'visible' : 'hidden'}"></i> {{ _("Sort by GitHub stars") }} ({{ _("descending") }})</a>
+                            </li>
+                            <li class="divider"></li>
+                            <li>
+                                <a href="javascript:void(0)"
+                                   data-bind="click: function() { repositoryplugins.toggleFilter('hide_commercial'); }"><i class="fas fa-check"
+   data-bind="style: {visibility: _.contains(repositoryplugins.currentFilters(), 'hide_commercial') ? 'visible' : 'hidden'}"></i> {{ _("Hide commercial plugins") }}</a>
+                            </li>
+                            <li>
+                                <a href="javascript:void(0)"
+                                   data-bind="click: function() { repositoryplugins.toggleFilter('hide_ai_developed'); }"><i class="fas fa-check"
+   data-bind="style: {visibility: _.contains(repositoryplugins.currentFilters(), 'hide_ai_developed') ? 'visible' : 'hidden'}"></i> {{ _("Hide AI developed plugins") }}</a>
+                            </li>
+                            <li>
+                                <a href="javascript:void(0)"
+                                   data-bind="click: function() { repositoryplugins.toggleFilter('hide_abandoned'); }"><i class="fas fa-check"
+   data-bind="style: {visibility: _.contains(repositoryplugins.currentFilters(), 'hide_abandoned') ? 'visible' : 'hidden'}"></i> {{ _("Hide abandoned plugins") }}</a>
                             </li>
                             <li class="divider"></li>
                             <li>
@@ -581,6 +597,8 @@
                                            data-bind="visible: $data.attributes.includes('commercial')"><i class="fas fa-coins"></i> {{ _("Commercial") }}</small>
                                     <small class="label label-success"
                                            data-bind="visible: $data.attributes.includes('free-tier')"><i class="fas fa-thumbs-up"></i> {{ _("Free tier") }}</small>
+                                    <small class="label label-important"
+                                           data-bind="visible: $data.attributes.includes('ai-developed')"><i class="fas fa-robot"></i> {{ _("AI developed") }}</small>
                                 </div>
                             </div>
 
@@ -626,7 +644,7 @@
                         {{ _("Install") }}
                     </button>
                 </div>
-                <span class="help-block" data-bind="visible: invalidUrl">{{ _('This does not look like a valid URL. Expected http, https or any of the <a href="%(url)s" target="_blank">supported VCS URLs</a>.', url='https://pip.pypa.io/en/stable/reference/pip_install/#vcs-support') }}</span>
+                <span class="help-block" data-bind="visible: invalidUrl">{{ _('This does not look like a valid URL. Expected http, https or any of the <a href="%(url)s" target="_blank">supported VCS URLs</a>.', url='https://pip.pypa.io/en/stable/topics/vcs-support/') }}</span>
             </form>
 
             <h4>{{ _("... from an uploaded file") }}</h4>

@@ -848,7 +848,7 @@ def uploadGcodeFile(target):
                 to_select or to_print or reselect
             ):
                 job = fileManager.create_job(target, added_file, owner=user)
-                printer.set_job(job, printer_after_select=to_print)
+                printer.set_job(job, print_after_select=to_print)
 
             if userdata is not None:
                 # upload included userdata, add this now to the metadata
@@ -978,12 +978,12 @@ def uploadGcodeFile(target):
         abort(404)
 
 
+@api.route("/files/<string:storage>/", methods=["POST"])
 @api.route("/files/<string:storage>/<path:path>", methods=["POST"])
 @no_firstrun_access
-def gcodeFileCommand(storage, path):
+def gcodeFileCommand(storage, path=""):
     try:
-        if not _validate_filename(storage, path):
-            abort(404)
+        _validate_filename(storage, path)
 
         # valid file commands, dict mapping command name to mandatory parameters
         valid_commands = {
@@ -1352,6 +1352,11 @@ def gcodeFileCommand(storage, path):
                 sanitized_source = fileManager.path_in_storage(storage, path)
 
                 destination = data["destination"]
+                if fileManager.folder_exists(
+                    dst_storage, destination
+                ) and not destination.endswith("/"):
+                    destination += "/"  # ensure target folders end on /, see #5393
+
                 dst_path, dst_name = fileManager.split_path(dst_storage, destination)
                 if not dst_name:
                     dst_name = name
