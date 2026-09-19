@@ -3,6 +3,7 @@ import logging
 from flask_babel import gettext
 
 import octoprint.plugin
+from octoprint.access.permissions import Permissions
 from octoprint.logging.handlers import TriggeredRolloverLogHandler
 from octoprint.settings import valid_boolean_trues
 
@@ -62,6 +63,15 @@ class SerialConnectorPlugin(
         from .config_schema import SerialConfig
 
         return SerialConfig().model_dump()
+
+    def get_settings_restricted_paths(self):
+        return {
+            Permissions.SETTINGS: [
+                [key]
+                for key in self.get_settings_defaults().keys()
+                if key not in ("log", "ignoreEmptyPorts")
+            ]
+        }
 
     def on_settings_save(self, data: dict) -> dict:
         if "log" in data:

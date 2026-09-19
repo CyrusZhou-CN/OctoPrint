@@ -14,6 +14,9 @@ class TemperatureProfile(BaseModel):
     bed: int
     """Bed temperature to set with the profile."""
 
+    chamber: int = 0
+    """Chamber temperature to set with the profile."""
+
 
 class TemperatureConfig(BaseModel):
     profiles: list[TemperatureProfile] = [

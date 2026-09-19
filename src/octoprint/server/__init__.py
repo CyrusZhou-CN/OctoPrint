@@ -1370,7 +1370,6 @@ class Server:
         )
 
         js_libs = [
-            "js/lib/babel-polyfill.min.js",
             "js/lib/jquery/jquery.min.js",
             "js/lib/modernizr.custom.js",
             "js/lib/lodash.min.js",
@@ -1409,6 +1408,7 @@ class Server:
             "js/lib/pusher.color.min.js",
             "js/lib/detectmobilebrowser.js",
             "js/lib/ua-parser.min.js",
+            "js/lib/zip.min.js",
             "js/lib/md5.min.js",
             "js/lib/bootstrap-slider-knockout-binding.js",
             "js/lib/loglevel.min.js",
@@ -2220,6 +2220,8 @@ class Server:
             "path": self._settings.get(["server", "uploads", "pathSuffix"]),
         }
 
+        uploadtemp = self._settings.getBaseFolder("uploadtemp")
+
         server_routes.append(
             (
                 r".*",
@@ -2233,6 +2235,7 @@ class Server:
                         headers=added_headers,
                         removed_headers=removed_headers,
                     ),
+                    "path": uploadtemp,
                     "file_prefix": "octoprint-file-upload-",
                     "file_suffix": ".tmp",
                     "suffixes": upload_suffixes,

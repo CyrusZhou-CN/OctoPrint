@@ -8,6 +8,7 @@ import octoprint.access.permissions
 import octoprint.plugin
 import octoprint.settings
 from octoprint.access.groups import ADMIN_GROUP
+from octoprint.access.permissions import Permissions
 from octoprint.util import RepeatedTimer
 
 from .checks import OK_RESULT
@@ -198,6 +199,16 @@ class HealthCheckPlugin(
             check.update_settings(self._settings_for_check(check.key))
 
         return result
+
+    def get_settings_restricted_paths(self):
+        return {
+            Permissions.SETTINGS: [["ignore_info_results"], ["ignore_warning_results"]],
+            "never": [
+                ["checks"],
+                ["disabled"],
+                ["check_interval"],
+            ],
+        }
 
     ##~~ SimpleApiPlugin
 

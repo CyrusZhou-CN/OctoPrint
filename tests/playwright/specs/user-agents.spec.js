@@ -80,7 +80,7 @@ const checkStringValue = (expected, actual) => {
 };
 
 USER_AGENTS.forEach(({ua, browser_name, browser_version, os_name, is_safari, is_mac}) => {
-    test.describe(`User Agent: ${ua ? ua : "default"}`, () => {
+    test.describe.parallel(`User Agent: ${ua ? ua : "default"}`, () => {
         test.use({userAgent: ua});
 
         test("error free page load", async ({page, ui}) => {

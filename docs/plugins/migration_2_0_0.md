@@ -100,10 +100,10 @@ However, it is *strongly* recommended to think whether some more granular (and p
 (sec-plugins-octo_2_0_0-server-storage-sdcard_value)=
 #### Changed value of `octoprint.filemanager.FileDestinations.SDCARD`
 
-The value of `FileDestinations.SDCARD` has changed from `printer` to `sdcard`. Any plugins that compared it against the hardcoded string will fail the comparison. Switch your code to using `FileDestinations.PRINTER` for all required checks! Example:
+The value of `FileDestinations.SDCARD` has changed from `sdcard` to `printer`. Any plugins that compared it against the hardcoded string will fail the comparison. Switch your code to using `FileDestinations.PRINTER` for all required checks! Example:
 
 ``` python
-from octoprint.storage import FileDestinations
+from octoprint.filemanager.destinations import FileDestinations
 
 if storage == FileDestinations.PRINTER:  # preferred!
     # do something
@@ -396,7 +396,7 @@ new signature. Refer to the documentation of [`OctoPrintClient.deprecatedVariabl
 (sec-plugins-octo_2_0_0-api-global_api_key)=
 ### Global API Key
 
-The Global API Key has been deprecated for a while, with 2.0.0 it is no longer automatically generated at startup and may thus be empty! [It will be removed entirely in 2.1.0](#sec-plugins-deprecations-2_1_0-global_apikey).
+The Global API Key has been deprecated for a while, with 2.0.0 it is no longer automatically generated at startup and may thus be empty! It has been removed entirely in 2.1.0.
 
 Instead of utilizing this key to talk to OctoPrint's API endpoints from plugin code, plugins
 should instead use [`self.plugin_apikey`](#octoprint.plugin.types.OctoPrintPlugin.plugin_apikey). Example:
@@ -438,6 +438,18 @@ Clients still relying on the old endpoints need to switch to the new ones.
 ### `admin` and `user` fields dropped on user responses on API
 
 Any API responses related to users no longer contain the `admin` and `user` fields. You can still determine these from the returned `groups`.
+
+(sec-plugins-octo_2_0_0-api-settings)=
+### Settings API has more granular permission checks
+
+The [Settings retrieval endpoint](#sec-api-settings-retrieve) now only returns the settings the user actually needs access to, depending on their permissions.
+
+With the `SETTINGS_READ` permission, only frontend-related settings are returned. Anything backend-only that the user also can't write is not returned.
+
+With the `SETTINGS` permission, most backend related settings are returned as well, except those related to access control and the (deprecated) global API key,
+which require the `ADMIN` permission.
+
+The data model will still be returned in full, however the restricted values will be set to `null` (in case of singular values) or an empty list (in case of lists).
 
 (sec-plugins-octo_2_0_0-project)=
 ## Project organisation

@@ -128,18 +128,15 @@ $(function () {
                 }
             },
             {
-                hide_commercial: (plugin) => {
+                filter_commercial: (plugin) => {
                     return !(
                         plugin.attributes && plugin.attributes.includes("commercial")
                     );
                 },
-                hide_ai_developed: (plugin) => {
+                filter_ai_developed: (plugin) => {
                     return !(
                         plugin.attributes && plugin.attributes.includes("ai-developed")
                     );
-                },
-                hide_abandoned: (plugin) => {
-                    return !plugin.abandoned;
                 },
                 filter_installed: function (plugin) {
                     return !self.installed(plugin);

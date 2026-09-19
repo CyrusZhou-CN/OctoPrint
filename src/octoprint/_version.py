@@ -46,16 +46,16 @@ BRANCH_VERSIONS = [
     # bugfix is the branch for preparation of the 1.11.x bugfix releases
     # so are any bug/... branches
     {
-        "tag": "1.11.7",
-        "commit": "4bef84e2966fc2eee8c8e7eed2c4f21be6a9c159",
+        "tag": "1.11.9",
+        "commit": "42be7409d4820431043da48ece30014e26b47073",
         "patterns": ["bugfix", "bug/.*"],
     },
-    # next is currently the branch for preparation of 2.0.0rc3
+    # next is currently the branch for preparation of 2.0.0rc6
     # so is regression/...
     {
-        "tag": "2.0.0rc3",
-        "commit": "d5e0d6a317d2ff50649b63e9dd4ce623e529b420",
-        "patterns": ["next", "regression/*"],
+        "tag": "2.0.0rc6",
+        "commit": "96e81a49ec3c630f8d4ce4d9492078c08cc3c062",
+        "patterns": ["next", "fixnext/.*", "wipnext/.*", "regression/.*"],
     },
     # dev is ongoing work towards 2.1.0
     # so are fix/..., wip/..., dependabot/...
@@ -182,7 +182,7 @@ def _get_short():
 
 def _get_tag():
     return os.environ.get(
-        "GIT_VERSION_TAG", _git("describe", "--tags", "--abbrev=0", "--always")
+        "GIT_VERSION_TAG", _git("describe", "--tags", "--abbrev=0", hide_stderr=True)
     )
 
 
@@ -196,6 +196,9 @@ def _get_dirty():
 
 
 def _get_distance(ref):
+    if ref is None:
+        return None
+
     distance = _git("rev-list", f"{ref}..HEAD", "--count")
     if distance is None:
         return None
@@ -245,19 +248,19 @@ def _get_data_from_git():
     # retrieves version info from git checkout, taking virtual tags into account
     branch = _get_branch()
     if _verbose:
-        print(f"Branch: {branch}")
+        print(f"Branch:   {branch}")
 
     is_dirty = _get_dirty()
     if _verbose:
-        print(f"Dirty:  {is_dirty}")  # noqa: E241
+        print(f"Dirty:    {is_dirty}")  # noqa: E241
 
     sha = _get_long()
     if _verbose:
-        print(f"SHA:    {sha}")  # noqa: E241
+        print(f"SHA:      {sha}")  # noqa: E241
 
     short = _get_short()
     if _verbose:
-        print(f"Short:  {short}")  # noqa: E241
+        print(f"Short:    {short}")  # noqa: E241
 
     tag = _get_tag()
     distance = _get_distance(tag)
@@ -276,6 +279,11 @@ def _get_data_from_git():
                 template = "{tag}.dev{distance}+g{short}"
                 dirty = ".dirty"
                 break
+
+    if _verbose:
+        print(f"Tag:      {tag}")  # noqa: E241
+    if _verbose:
+        print(f"Distance: {distance}")  # noqa: E241
 
     if is_dirty:
         template += dirty

@@ -5,12 +5,13 @@ __copyright__ = "Copyright (C) 2014 The OctoPrint Project - Released under terms
 import datetime
 import hashlib
 import logging
+import os
+import shutil
 import threading
 from collections.abc import Iterable
 from typing import Optional
 from urllib.parse import quote as urlquote
 
-import psutil
 from flask import abort, jsonify, make_response, request, url_for
 from werkzeug.exceptions import HTTPException
 
@@ -98,6 +99,8 @@ def _create_lastmodified(path, recursive):
                 storage, path=path_in_storage, recursive=recursive
             )
         except octoprint.filemanager.NoSuchStorage:
+            pass
+        except FileNotFoundError:
             pass
         except Exception:
             _logger.exception(
@@ -201,7 +204,7 @@ def readGcodeFiles():  # pre 2.0.0
         except octoprint.filemanager.NoSuchStorage:
             pass
 
-    usage = psutil.disk_usage(settings().getBaseFolder("uploads", check_writable=False))
+    usage = shutil.disk_usage(settings().getBaseFolder("uploads", check_writable=False))
 
     data = apischema.ReadGcodeFilesResponse_pre_2_0_0(
         files=files,
@@ -736,13 +739,17 @@ def uploadGcodeFile(target):
 
             # Store any additional user data the caller may have passed.
             userdata = None
-            if "userdata" in request.values:
+            if "userdata" in request.values and fileManager.capabilities(target).metadata:
                 import json
 
                 try:
                     userdata = json.loads(request.values["userdata"])
                 except Exception:
                     abort(400, description="userdata contains invalid JSON")
+
+                # make sure the target storage actually supports the provided userdata as additional metadata
+                if not fileManager.validate_additional_metadata(target, userdata):
+                    abort(400, description="userdata is invalid additional metadata")
 
             # evaluate select and print parameter and if set check permissions & preconditions
             # and adjust as necessary
@@ -852,9 +859,15 @@ def uploadGcodeFile(target):
 
             if userdata is not None:
                 # upload included userdata, add this now to the metadata
-                fileManager.set_additional_metadata(
-                    target, added_file, "userdata", userdata
-                )
+                try:
+                    fileManager.set_additional_metadata(
+                        target, added_file, "userdata", userdata
+                    )
+                except StorageError:
+                    # this should never happen as we already checked whether the storage
+                    # supports metadata and whether the provided userdata is valid, but
+                    # just in case...
+                    pass
 
             payload = {
                 "name": futureFilename,
@@ -1096,7 +1109,7 @@ def gcodeFileCommand(storage, path=""):
                 ):
                     abort(415, description="Cannot slice file, not a model file")
 
-                cores = psutil.cpu_count()
+                cores = os.cpu_count()
                 if (
                     slicer_instance.get_slicer_properties().get("same_device", True)
                     and (printer.is_printing() or printer.is_paused())
@@ -1115,8 +1128,6 @@ def gcodeFileCommand(storage, path=""):
                     destination = data["gcode"]
                     del data["gcode"]
                 else:
-                    import os
-
                     name, _ = os.path.splitext(path)
                     destination = (
                         name

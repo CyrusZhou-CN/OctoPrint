@@ -19,7 +19,17 @@ Retrieve current settings
    The :ref:`data model <sec-api-settings-datamodel>` is similar to what can be found in
    :ref:`config.yaml <sec-configuration-config_yaml>`, see below for details.
 
-   Requires the ``SETTINGS_READ`` permission.
+   Returned settings depend on the permissions of the requesting user. The data model will still be 
+   returned in full, however the restricted values will be set to `null` (in case of singular values) 
+   or an empty list (in case of lists).
+
+   Requires the ``SETTINGS_READ`` permission for read access to frontend-related settings, 
+   the ``SETTINGS`` permission for access of backend-related settings and the ``ADMIN`` permission
+   for access to access control and (deprecated) global API key settings.
+
+   .. versionchanged:: 2.0.0
+
+      More granular permission checking.
 
 .. _sec-api-settings-save:
 
@@ -68,23 +78,6 @@ Save settings
           "color": "black"
         }
       }
-
-.. _sec-api-settings-generateapikey:
-
-Regenerate the system wide API key
-==================================
-
-.. http:post:: /api/settings/apikey
-
-   Generates a new system wide API key.
-
-   Does not expect a body. Will return the generated API key as ``apikey``
-   property in the JSON object contained in the response body.
-
-   Requires admin rights.
-
-   :status 200:     No error
-   :status 403:     No admin rights
 
 .. _sec-api-settings-fetchtemplatedata:
 

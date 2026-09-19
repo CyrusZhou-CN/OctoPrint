@@ -94,6 +94,28 @@ class DiscoveryPlugin(
             "ignoredInterfaces": None,
         }
 
+    def get_settings_restricted_paths(self):
+        # The data from these keys is accessible through discovery on the LAN, so we allow authenticated users
+        # access too. Home Assistant also needs at least upnpUuid for the config flow, see #5445.
+        #
+        # Anything else is config.yaml only
+        ALLOWED_KEYS = (
+            "publicHost",
+            "publicPort",
+            "pathPrefix",
+            "httpUsername",
+            "httpPassword",
+            "upnpUuid",
+            "model",
+        )
+
+        keys = self.get_settings_defaults().keys()
+
+        return {
+            "user": [[key] for key in ALLOWED_KEYS],
+            "never": [[key] for key in keys if key not in ALLOWED_KEYS],
+        }
+
     ##~~ BlueprintPlugin API -- used for providing the SSDP device descriptor XML
 
     @octoprint.plugin.BlueprintPlugin.route("/discovery.xml", methods=["GET"])

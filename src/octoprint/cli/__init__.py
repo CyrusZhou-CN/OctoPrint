@@ -29,6 +29,44 @@ pass_octoprint_ctx = click.make_pass_decorator(OctoPrintContext, ensure=True)
 # ~~ Basic CLI initialization for plugins
 
 
+def init_settings_for_cli(ctx):
+    from octoprint import FatalStartupError, init_settings
+
+    try:
+        ctx.obj.settings = init_settings(
+            get_ctx_obj_option(ctx, "basedir", None),
+            get_ctx_obj_option(ctx, "configfile", None),
+            overlays=get_ctx_obj_option(ctx, "overlays", None),
+        )
+    except FatalStartupError as exc:
+        from traceback import format_exc
+
+        click.echo(format_exc(), err=True)
+        click.echo(
+            f"There was a fatal error initializing the settings manager: {str(exc)}",
+            err=True,
+        )
+        ctx.exit(-1)
+
+
+def init_pluginsystem_for_cli(ctx):
+    from octoprint import FatalStartupError, init_pluginsystem
+
+    try:
+        ctx.obj.plugin_manager = init_pluginsystem(
+            ctx.obj.settings, safe_mode=get_ctx_obj_option(ctx, "safe_mode", False)
+        )
+    except FatalStartupError as exc:
+        from traceback import format_exc
+
+        click.echo(format_exc(), err=True)
+        click.echo(
+            f"There was a fatal error initializing the plugin manager: {str(exc)}",
+            err=True,
+        )
+        ctx.exit(-1)
+
+
 def init_platform_for_cli(ctx):
     """
     Performs a basic platform initialization for the CLI.

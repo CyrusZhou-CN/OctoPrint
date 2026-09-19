@@ -3,7 +3,6 @@
 ## Web Interface
 
   * [Babel JavaScript Support](https://github.com/mitsuhiko/babel/blob/master/contrib/babel.js): BSD
-  * [@babel/polyfill](https://babeljs.io/docs/en/babel-polyfill/): MIT
   * [Bootstrap](http://getbootstrap.com/): Apache License 2.0
   * [Bootstrap Modal](http://jschr.github.io/bootstrap-modal/): Apache License 2.0
   * [Bootstrap Slider Knockout Binding](https://github.com/cosminstefanxp/bootstrap-slider-knockout-binding): MIT
@@ -38,6 +37,7 @@
   * [SockJS](https://github.com/sockjs/sockjs-client): MIT
   * [sprintf-js](http://alexei.ro/): BSD
   * [UAParser.js](https://faisalman.github.io/ua-parser-js/): MIT
+  * [zip.js](https://gildas-lormeau.github.io/zip.js/): BSD
 
 ## Server
 

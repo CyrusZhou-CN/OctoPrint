@@ -10,6 +10,7 @@ import tornado.websocket
 from flask_babel import gettext
 
 import octoprint.plugin
+from octoprint.access.permissions import Permissions
 from octoprint.util import get_fully_qualified_classname as fqcn  # noqa: F401
 from octoprint.util.version import (
     get_octoprint_version_string,
@@ -17,10 +18,10 @@ from octoprint.util.version import (
 )
 
 SENTRY_URL_SERVER = (
-    "https://aac2a371c5c3e0093d53df0bbb4df204@o118517.ingest.us.sentry.io/1373987"
+    "https://b037593ff257eefd404cfb8db7de369f@o118517.ingest.us.sentry.io/1373987"
 )
 SENTRY_URL_COREUI = (
-    "https://3435eb642790e16018a77037d0d7bebd@o118517.ingest.us.sentry.io/1374096"
+    "https://519b220af7901621fede4cbc48c21cc9@o118517.ingest.us.sentry.io/1374096"
 )
 
 SETTINGS_DEFAULTS = {
@@ -117,6 +118,14 @@ class ErrorTrackingPlugin(
 
         if old_enabled != enabled:
             _enable_errortracking()
+
+    def get_settings_restricted_paths(self):
+        return {
+            Permissions.SETTINGS: [
+                ["unique_id"],
+            ],
+            "never": [["enabled_unreleased"], ["url_server"], ["url_coreui"]],
+        }
 
 
 _enabled = False
