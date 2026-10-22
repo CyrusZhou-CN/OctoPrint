@@ -11,7 +11,7 @@ import inspect
 import logging
 import threading
 import time
-from typing import Any, Optional, Union, cast
+from typing import Any, cast
 
 from frozendict import frozendict
 
@@ -516,7 +516,7 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
             eventManager().fire(Events.DISCONNECTED)
 
     @property
-    def current_connection(self) -> Optional[ConnectedPrinter]:
+    def current_connection(self) -> ConnectedPrinter | None:
         return self._connection
 
     def emergency_stop(self, *args, **kwargs):
@@ -589,7 +589,7 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
 
     def get_additional_controls(
         self,
-    ) -> list[Union[PrinterCustomControl, PrinterCustomControlContainer]]:
+    ) -> list[PrinterCustomControl | PrinterCustomControlContainer]:
         controls = []
 
         if self._connection is not None:
@@ -1250,20 +1250,20 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
                                 job_progress.progress if job_progress else 0
                             )
 
-                            def finalize():
+                            def finalize(pl):
                                 self._file_manager.log_print(
-                                    payload["origin"],
-                                    payload["path"],
+                                    pl["origin"],
+                                    pl["path"],
                                     time.time(),
-                                    payload["time"],
+                                    pl["time"],
                                     False,
                                     self._printer_profile_manager.get_current_or_default()[
                                         "id"
                                     ],
                                 )
-                                eventManager().fire(Events.PRINT_FAILED, payload)
+                                eventManager().fire(Events.PRINT_FAILED, pl)
 
-                            thread = threading.Thread(target=finalize)
+                            thread = threading.Thread(target=finalize, args=(payload,))
                             thread.daemon = True
                             thread.start()
 
@@ -1275,7 +1275,10 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
                 except Exception:
                     self._logger.exception("Error while pausing the analysis queue")
 
+        ### other checks
+
         if state == ConnectedPrinterState.PRINTING and state != old_state:
+            # we are printing now but weren't before
             eventManager().fire(
                 Events.CHART_MARKED,
                 {"type": "printing", "label": "Printing"},
@@ -1285,6 +1288,7 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
             state == ConnectedPrinterState.CLOSED
             or state == ConnectedPrinterState.CLOSED_WITH_ERROR
         ):
+            # we closed the connection
             connector = None
             if self._connection is not None:
                 connector = self._connection.connector
@@ -1556,18 +1560,18 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
 
             payload["reason"] = "cancelled"
 
-            def finalize():
+            def finalize(pl):
                 self._file_manager.log_print(
-                    payload["origin"],
-                    payload["path"],
+                    pl["origin"],
+                    pl["path"],
                     time.time(),
-                    payload["time"],
+                    pl["time"],
                     False,
                     self._printer_profile_manager.get_current_or_default()["id"],
                 )
-                eventManager().fire(Events.PRINT_FAILED, payload)
+                eventManager().fire(Events.PRINT_FAILED, pl)
 
-            thread = threading.Thread(target=finalize)
+            thread = threading.Thread(target=finalize, args=(payload,))
             thread.daemon = True
             thread.start()
 
@@ -1768,21 +1772,20 @@ class Printer(PrinterMixin, ConnectedPrinterListenerMixin):
     def _update_progress_data_callback(self):
         printTimeLeftOrigin = None
 
-        if self._connection is None:
-            progress = None
-            filepos = None
-            printTime = None
-            cleanedPrintTime = None
-            printTimeLeft = None
-        else:
+        progress = None
+        filepos = None
+        printTime = None
+        cleanedPrintTime = None
+        printTimeLeft = None
+
+        if self._connection is not None:
             job_progress = self._connection.job_progress
-            if not job_progress:
-                return
-            progress = job_progress.progress
-            filepos = job_progress.pos
-            printTime = job_progress.elapsed
-            cleanedPrintTime = job_progress.cleaned_elapsed
-            printTimeLeft = job_progress.left_estimate
+            if job_progress:
+                progress = job_progress.progress
+                filepos = job_progress.pos
+                printTime = job_progress.elapsed
+                cleanedPrintTime = job_progress.cleaned_elapsed
+                printTimeLeft = job_progress.left_estimate
 
         if printTimeLeft is None:
             # no print time estimation from printer, let's do our own

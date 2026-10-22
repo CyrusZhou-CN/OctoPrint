@@ -6,13 +6,14 @@ import os
 import socket
 import sys
 from collections.abc import Generator
-from typing import Optional, Union
 
 import ifaddr
 import netaddr
 import requests
 import werkzeug.http
 from werkzeug.utils import secure_filename
+
+from octoprint.util.paths import is_sub_path_of
 
 _cached_check_v6 = None
 
@@ -72,7 +73,7 @@ def get_netmask(address) -> int:
 
 
 def get_lan_ranges(
-    additional_private: Optional[list[str]] = None,
+    additional_private: list[str] | None = None,
 ) -> set[netaddr.IPNetwork]:
     logger = logging.getLogger(__name__)
 
@@ -219,9 +220,9 @@ def unmap_v4_as_v6(address):
 
 
 def interface_addresses(
-    family: Optional[int] = None,
-    interfaces: Optional[list[str]] = None,
-    ignored: Optional[list[str]] = None,
+    family: int | None = None,
+    interfaces: list[str] | None = None,
+    ignored: list[str] | None = None,
 ) -> Generator[str, None, None]:
     """
     Retrieves all of the host's network interface addresses.
@@ -342,7 +343,7 @@ def download_file(url, folder, max_length=None, connect_timeout=3.05, read_timeo
         # FIXME check content-length against safety limit
 
         path = os.path.abspath(os.path.join(folder, filename))
-        assert path.startswith(folder)
+        assert is_sub_path_of(path, folder)
 
         with open(path, "wb") as f:
             for chunk in r.iter_content(chunk_size=8192):
@@ -379,7 +380,7 @@ def get_forwarded_for_addresses(forwarded_for: str) -> list[str]:
 
 
 def get_trusted_forwarded_for_addresses(
-    forwarded_for: str, trusted_proxies: Union[list[str], netaddr.IPSet]
+    forwarded_for: str, trusted_proxies: list[str] | netaddr.IPSet
 ) -> list[str]:
     if not isinstance(trusted_proxies, netaddr.IPSet):
         trusted_proxies = get_ipset_from_list(trusted_proxies)
@@ -393,7 +394,7 @@ def get_trusted_forwarded_for_addresses(
 
 
 def get_http_client_ip(
-    remote_addr: str, forwarded_for: str, trusted_proxies: Union[list[str], netaddr.IPSet]
+    remote_addr: str, forwarded_for: str, trusted_proxies: list[str] | netaddr.IPSet
 ) -> str:
     if not isinstance(trusted_proxies, netaddr.IPSet):
         trusted_proxies = get_ipset_from_list(trusted_proxies)

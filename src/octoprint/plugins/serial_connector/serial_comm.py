@@ -20,7 +20,7 @@ import threading
 import time
 from collections import deque, namedtuple
 from functools import partial
-from typing import IO, Union
+from typing import IO
 
 import serial
 import wrapt
@@ -3220,7 +3220,10 @@ class MachineCom:
                                 longname=data.longname,
                             )
 
-                    elif "File selected" in line:
+                        # Formerly triggered on "File selected", but this has been removed at least from Prusa Buddy firmware
+                        #
+                        # Looking at Marlin (even back to 1.x), it always reported "File opened" AND "File selected".
+                        # Same with Repetier. So we don't have to wait for "File selected".
                         if self._ignore_select:
                             self._ignore_select = False
                         elif self._currentFile is not None and self.isSdFileSelected():
@@ -6017,7 +6020,7 @@ class PrintingGcodeFileInformation(PrintingFileInformation):
 
     def __init__(
         self,
-        path_or_file: Union[str, IO],
+        path_or_file: str | IO,
         offsets_callback=None,
         current_tool_callback=None,
         user=None,
@@ -6046,9 +6049,9 @@ class PrintingGcodeFileInformation(PrintingFileInformation):
         if self._handle:
             self._start_pos = self._pos = self._handle.tell()
 
-            self._handle.seek(0, whence=os.SEEK_END)
-            self._size = self._handle.tell()
-            self._handle.seek(self._pos)
+            self._handle.seek(0, os.SEEK_END)  # seek to the end of the stream
+            self._size = self._handle.tell()  # get position = size
+            self._handle.seek(self._pos)  # return to where we were
         else:
             self._start_pos = self._pos = 0
             if not os.path.exists(self._filename) or not os.path.isfile(self._filename):
